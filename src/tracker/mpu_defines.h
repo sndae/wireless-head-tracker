@@ -1,10 +1,10 @@
 #ifndef MPU_DEFINES_H
 #define MPU_DEFINES_H
 
-/* These defines are copied from dmpDefaultMPU6050.c in the general MPL
- * releases. These defines may change for each DMP image, so be sure to modify
- * these values when switching to a new image.
- */
+// These defines are copied from dmpDefaultMPU6050.c in the general MPL
+// releases. These defines may change for each DMP image, so be sure to modify
+// these values when switching to a new image.
+ 
 #define CFG_LP_QUAT             (2712)
 #define END_ORIENT_TEMP         (1866)
 #define CFG_27                  (2742)
