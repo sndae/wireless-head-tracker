@@ -14,7 +14,6 @@
 #include "rf_protocol.h"
 #include "../dongle/reports.h"
 #include "mpu_simple.h"
-#include "mpu_regs.h"
 #include "sleeping.h"
 #include "rf_head.h"
 #include "settings.h"
@@ -54,6 +53,7 @@ void hw_init()
 }
 
 /*
+// This is a test for a new kind of calibration function.
 void test_bias(void)
 {
 	int32_t g[3];
@@ -135,7 +135,7 @@ uint16_t get_battery_voltage(void)
 
 int main(void)
 {
-	uint8_t more, ack, pckt_cnt = 0;
+	uint8_t more, ack;
 	uint8_t rf_pckt_ok = 0, rf_pckt_lost = 0;
 	uint8_t voltage_counter = 0;
 	
@@ -147,9 +147,9 @@ int main(void)
 	
 	for (;;)
 	{
-		pckt.flags = 0;	// reset flags
+		pckt.flags = 0;		// reset the flags
 		
-		// get the battery voltage on counter overflow (about once every 5 seconds)
+		// get the battery voltage every VOLTAGE_READ_EVERY iterations
 		if (++voltage_counter == VOLTAGE_READ_EVERY)
 		{
 			pckt.flags |= FLAG_VOLTAGE_VALID;
@@ -157,7 +157,9 @@ int main(void)
 			voltage_counter = 0;
 		}
 		
-		// wait for the interrupt
+		// Waits for the interrupt from the MPU-6050.
+		// Instead of polling, I should put the MCU to sleep and then have it awaken by the MPU-6050.
+		// However, I have not succeeded in the making the wakeup work reliably.
 		while (MPU_IRQ)
 			dbgPoll();
 		while (!MPU_IRQ);
@@ -167,15 +169,6 @@ int main(void)
 			do {
 				read_result = dmp_read_fifo(&pckt, &more);
 			} while (more);
-			
-			if (++pckt_cnt == 20  &&  dbgEmpty())
-			{
-				dprintf("g %4d %4d %4d  a %6d %6d %6d\n",
-							pckt.gyro[0], pckt.gyro[1], pckt.gyro[2],
-							pckt.accel[0], pckt.accel[1], pckt.accel[2]);
-
-				pckt_cnt = 0;
-			}
 			
 			if (read_result)
 			{

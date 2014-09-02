@@ -2,10 +2,15 @@
 #include <intrins.h>
 #endif
 
-// This is a bit-banged implementation of a subset of the I2C protocol.
+// This is a bit-banged implementation of a subset of the I2C protocol
+// with an emphasis on the MPU's command syntax.
+//
 // After days of trying to get around the bugs in the hardware module of
-// the chip's I2C (Two Wire Protocol) implementation, I've decided enough is enough,
-// and wrote this library. I've had no problems with it since.
+// nRF24LE1's I2C (Two Wire Protocol) implementation, I've decided enough
+// is enough, and wrote this library. I've had no problems with it since.
+//
+// I might make an assembler version of the library in the future. It would
+// be a good exercise in assembly programming.
 
 #include <stdio.h>
 #include <stdint.h>
@@ -120,6 +125,7 @@ bool i2c_read_bit(void)
 
 bool i2c_write_byte(uint8_t __data val)
 {
+	// send each bit
 	i2c_write_bit(val & 0x80);
 	i2c_write_bit(val & 0x40);
 	i2c_write_bit(val & 0x20);
@@ -136,6 +142,7 @@ uint8_t i2c_read_byte(bool should_ack)
 {
 	uint8_t result = 0;
 	
+	// read the bits
 	if (i2c_read_bit())		result |= 0x80;
 	if (i2c_read_bit())		result |= 0x40;
 	if (i2c_read_bit())		result |= 0x20;
@@ -164,8 +171,10 @@ bool i2c_write(uint8_t reg_addr, uint8_t data_len, const uint8_t* data_ptr)
 	
 	i2c_start();
 	
+	// send the address and the register
 	if (i2c_write_byte(MPU_ADDR_WRITE)  &&  i2c_write_byte(reg_addr))
 	{
+		// read the required number of bytes
 		while (data_len--)
 		{
 			if (!i2c_write_byte(*data_ptr++))
@@ -187,10 +196,12 @@ bool i2c_read(uint8_t reg_addr, uint8_t data_len, uint8_t *data_ptr)
 	
 	i2c_start();
 	
+	// setup a read
 	if (i2c_write_byte(MPU_ADDR_WRITE)  &&  i2c_write_byte(reg_addr))
 	{
 		i2c_start();		// repeated start
 
+		// now start reading
 		if (i2c_write_byte(MPU_ADDR_READ))
 		{
 			while (data_len--)
