@@ -9,7 +9,6 @@
 #include "i2c.h"
 #include "tracker.h"
 #include "mpu_regs.h"
-#include "mpu_defines.h"
 #include "mpu_dmp_firmware.h"
 #include "rf_protocol.h"
 #include "settings.h"
@@ -17,7 +16,12 @@
 
 // This is a simplified version of the Invensense eMPL library.
 // It only implements features of the library that are needed for this project.
-// This way the memory requirements (Flash and RAM) have been dramatically reduced.
+// This way the memory requirements (Flash and RAM) have been dramatically reduced,
+// and this makes it possible to use the MPU-6050 with nRF24LE1.
+//
+// I achieved this by making a logic analyzer capture of the I2C output of the full
+// eMPL library on an Arduino with the configuration I needed. Then I just 'replayed'
+// these I2C sequences in this library. This way I sacrifice flexibility for flash and RAM space.
 
 bool mpu_write_byte(uint8_t reg_addr, uint8_t val)
 {
@@ -30,7 +34,8 @@ uint8_t mpu_read_byte(uint8_t reg_addr, uint8_t* val)
 	uint8_t result;
 	result = i2c_read(reg_addr, 1, val);
 	return result ? 0 : 0xff;
-}*/
+}
+*/
 
 bool mpu_write_mem(uint16_t mem_addr, uint16_t length, const uint8_t* data2write)
 {
@@ -161,20 +166,22 @@ void mpu_read_accel_bias(int16_t* accel_bias)
 
 void mpu_set_accel_bias(const int16_t* accel_bias)
 {
-	//uint16_t swp;
 	uint8_t i;
 	uint8_t data[2];
 
-	// bit 0 of the 2 byte bias is for temp comp
+	// Bit 0 of the 2 byte bias is for temp comp
 	// calculations need to compensate for this and not change it
+	//
+	// Unlike the eMPL library, we achieve this by only incrementing/decrementing the
+	// accel bias with even values, thus preserving the parity of the bias and the least
+	// significant bit.
+	//
+	// However, it looks like MPU is temperature dependant, and doesn't do compensation
+	// regardless of the value of the last bit...
 	for (i = 0; i < 3; i++)
 	{
-		// SDCC recognizes byte swapping (SDCC manual 8.1.10)
-		//swp = accel_bias[i];
-		//swp = ((swp << 8) | (swp >> 8));
-		
 		data[0] = (accel_bias[i] >> 8) & 0xff;
-		data[1] = (accel_bias[i]) & 0xff;
+		data[1] = accel_bias[i] & 0xff;
 		
 		i2c_write(0x06 + i * 2, 2, data);
 	}
@@ -191,7 +198,9 @@ void dmp_enable_feature(bool send_cal_gyro)
 	mpu_write_mem(CFG_15, sizeof arr, arr);
 	}
 	{
-	const uint8_t __code arr[] = {0x20};		// setting this to D8 disables tap, but also messes up the fifo rates
+	// Changing 0x20 to 0xD8 disables tap, but also messes up the fifo rates. I have no idea why.
+	// So, I keep tap enabled, read it, but I don't use it.
+	const uint8_t __code arr[] = {0x20};
 	mpu_write_mem(CFG_27, sizeof arr, arr);
 	}
 	
@@ -223,8 +232,7 @@ void dmp_enable_feature(bool send_cal_gyro)
 	mpu_write_mem(CFG_20, sizeof arr, arr);
 	}
 	
-	// this configures tap which we don't need, but can't disable it
-	// because disabling tap messes up fifo rates
+	// this configures tap which we don't need
 	/*{
 	const uint8_t __code arr[] = {0x50,0x00};
 	mpu_write_mem(DMP_TAP_THX, sizeof arr, arr);
@@ -346,6 +354,9 @@ bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more)
 	if (!mpu_read_fifo_stream(PACKET_LENGTH, fifo_data, more))
 		return false;
 
+	// We're truncating the lower 16 bits of the quaternions.
+	// Only the higher 16 bits are really used in the calculations,
+	// so there's no point to drag the entire 32 bit integer around.
 	for (i = 0; i < 4; i++)
 		pckt->quat[i] = (fifo_data[i * 4] << 8) | fifo_data[1 + i * 4];
 
@@ -393,7 +404,6 @@ void dmp_init(bool send_cal_gyro)
 	dmp_enable_feature(send_cal_gyro);
 	
 	mpu_write_byte(INT_ENABLE, 0x00);
-	//mpu_write_byte(SMPLRT_DIV, 0x04);
 	mpu_write_byte(FIFO_EN, 0x00);
 	mpu_write_byte(INT_ENABLE, 0x02);
 	mpu_write_byte(INT_ENABLE, 0x00);
