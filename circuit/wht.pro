@@ -1,6 +1,6 @@
-update=23/04/2014 00:09:48
+update=08/09/2014 13:43:28
 version=1
-last_client=eeschema
+last_client=kicad
 [cvpcb]
 version=1
 NetIExt=net
@@ -32,15 +32,7 @@ ModuleOutlineThickness=0.15
 LibDir=
 [eeschema]
 version=1
-PageLayoutDescrFile=
-SubpartIdSeparator=0
-SubpartFirstId=65
-LibDir=
-NetFmtName=
-RptD_X=0
-RptD_Y=100
-RptLab=1
-LabSize=60
+LibDir=../circuit
 [eeschema/libraries]
 LibName1=power
 LibName2=device
@@ -72,3 +64,5 @@ LibName27=opto
 LibName28=atmel
 LibName29=contrib
 LibName30=valves
+LibName31=wht
+LibName32=nrf24le1
