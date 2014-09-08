@@ -9,4 +9,6 @@ copy /y wht-F_Mask.gts      order\wht.GTS
 copy /y wht-F_SilkS.gto     order\wht.GTO
 copy /y wht.drl             order\wht.TXT
 
-7za a -tzip WHTorder order\*.*
+cd order
+
+7za a -tzip WHTorder *.*
