@@ -546,8 +546,23 @@ void mpu_calibrate_bias(void)
 					new_settings.accel_bias[0], new_settings.accel_bias[1], new_settings.accel_bias[2]);
 
 	dbgFlush();
-	
+
 	mpu_init(false);
 
 	LED_YELLOW = 0;
+}
+
+#define TEMP_OFFSET		-521.0
+#define TEMP_SENS		340.0
+
+void mpu_get_temperature(int16_t* result)
+{
+    uint8_t tmp[2];
+    int16_t raw;
+
+    i2c_read(TEMP_OUT_H, 2, tmp);
+
+    raw = (tmp[0] << 8) | tmp[1];
+
+    *result = (int16_t)((35 + ((raw - TEMP_OFFSET) / TEMP_SENS)) * 65536L);
 }
