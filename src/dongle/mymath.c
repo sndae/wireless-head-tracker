@@ -8,7 +8,7 @@
 // This saves us about 400 bytes of flash
 
 // The only thing I've changed is that the functions are not declared reentrant,
-// and a making asincos() into asin().
+// and making asincos() into asin().
 
 #define PI          3.1415926536
 #define TWO_PI      6.2831853071
