@@ -22,7 +22,7 @@
 #define NUM_COUNTER_PACKETS	10
 uint8_t total_packets[NUM_COUNTER_PACKETS];		// holds the last ~1 second of packets
 
-uint16_t battery_voltage;
+uint16_t battery_voltage, temperature;
 
 // These are called by the USB code in usb.c
 void on_set_report(void)
@@ -132,6 +132,7 @@ void on_get_report(void)
 		pResult->dX = dX;
 		
 		pResult->battery_voltage = battery_voltage;
+		pResult->temperature = temperature;
 		
 		// send the data
 		in0bc = sizeof(FeatRep_Status);
@@ -195,6 +196,8 @@ void main(void)
 			
 			if (packet.flags & FLAG_VOLTAGE_VALID)
 				battery_voltage = packet.voltage;
+			if (packet.flags & FLAG_TEMPERATURE_VALID)
+				temperature = packet.temperature;
 
 			curr_packets++;
 			

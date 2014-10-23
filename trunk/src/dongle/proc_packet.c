@@ -84,6 +84,7 @@ bool process_packet(mpu_packet_t* pckt)
 	float newZ, newY, newX;
 	float qw, qx, qy, qz;
 	float qww, qxx, qyy, qzz;
+	float dzlimit;
 	int32_t iX, iY, iZ;
 	
 	const FeatRep_DongleSettings __xdata * pSettings = get_settings();
@@ -171,13 +172,15 @@ bool process_packet(mpu_packet_t* pckt)
 	
 	if (pSettings->is_linear)
 	{
-		iX = newX * pSettings->lin_fact_x;
-		iY = newY * pSettings->lin_fact_y;
-		iZ = newZ * pSettings->lin_fact_z;
+		iX = newX * pSettings->fact_x;
+		iY = newY * pSettings->fact_y;
+		iZ = newZ * pSettings->fact_z;
+		dzlimit = 30.0 * pSettings->fact_x * pSettings->autocenter;
 	} else {
-		iX = (0.000122076 * newX * newX * pSettings->exp_fact_x) * (newX / fabs(newX));
-		iY = (0.000122076 * newY * newY * pSettings->exp_fact_y) * (newY / fabs(newY));
-		iZ = (0.000122076 * newZ * newZ * pSettings->exp_fact_z) * (newZ / fabs(newZ));
+		iX = (0.000122076 * newX * newX * pSettings->fact_x) * (newX / fabs(newX));
+		iY = (0.000122076 * newY * newY * pSettings->fact_y) * (newY / fabs(newY));
+		iZ = (0.000122076 * newZ * newZ * pSettings->fact_z) * (newZ / fabs(newZ));
+		dzlimit = 33.0 * pSettings->fact_x * pSettings->autocenter;
 	}
 
 	// clamp after scaling to keep values within 16 bit range
@@ -190,13 +193,14 @@ bool process_packet(mpu_packet_t* pckt)
 	usb_joystick_report.y = iY;
 	usb_joystick_report.z = iZ;
 
-	// self centering
-	if (pSettings->is_selfcenter)
+	// autocentering
+	if (pSettings->autocenter)
 	{
 		// if we're looking ahead, give or take
 		//  and not moving
 		//  and pitch is levelish then start to count
-		if (labs(iX) < 3000  &&  labs(iX - lX) < 5  &&  labs(iY) < 600)
+		//if (labs(iX) < 3000  &&  labs(iX - lX) < 5  &&  labs(iY) < 600)
+		if (fabs(newX) < dzlimit  &&  fabs(newX - lX) < 1.4  &&  labs(iY) < 1000)
 		{
 			ticksInZone++;
 			dzX += iX;
@@ -204,14 +208,13 @@ bool process_packet(mpu_packet_t* pckt)
 			ticksInZone = 0;
 			dzX = 0.0;
 		}
-		lX = iX;
+		lX = newX;
 
 		// if we stayed looking ahead-ish long enough then adjust yaw offset
 		if (ticksInZone >= 10)
 		{
 			// NB this currently causes a small but visible jump in the
 			// view. Useful for debugging!
-			dzX *= 0.1;
 			cx += dzX * 0.1;
 			ticksInZone = 0;
 			dzX = 0.0;

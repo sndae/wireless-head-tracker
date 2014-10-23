@@ -12,8 +12,9 @@ extern __code const uint8_t DongleAddr[NRF_ADDR_SIZE];
 // these message is sent to the USB dongle over the radio
 enum mpu_packet_flags
 {
-	FLAG_RECENTER		= 0x01,
-	FLAG_VOLTAGE_VALID	= 0x02,
+	FLAG_RECENTER			= 0x01,
+	FLAG_VOLTAGE_VALID		= 0x02,
+	FLAG_TEMPERATURE_VALID	= 0x04,
 };
 
 typedef struct
@@ -22,7 +23,8 @@ typedef struct
 	int16_t		gyro[3];
 	int16_t		accel[3];
 	int16_t		quat[4];
-	int16_t		voltage;
+	int16_t		voltage;		// in units of 100th of a Volt, so 289 means 2.89V
+	int16_t		temperature;	// in units of 10th of a Celsius, so 289 means 28.9C
 } mpu_packet_t;
 
 typedef struct

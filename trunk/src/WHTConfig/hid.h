@@ -1,7 +1,8 @@
 #pragma once
 
-// We define only the stuff we need from the DDK bellow and load it dynamically from the DLLs.
-// This is dirty, of course, but it beats installing the entire Windows DDK because of only 5 function
+// We define only the stuff we need from the DDK and load it dynamically from the DLLs.
+// This is dirty, of course, but it beats installing the entire Windows DDK because
+// of only five functions and one structure
 
 #include <setupapi.h>
 

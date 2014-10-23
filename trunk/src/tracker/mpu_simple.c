@@ -476,8 +476,7 @@ void mpu_calibrate_bias(void)
 	// set default gyro bias
 	mpu_set_gyro_bias(new_settings.gyro_bias);
 	
-	dprintf("%s\ngyro %d %d %d\naccel %d %d %d\n",
-					"old",
+	dprintf("old\ngyro %d %d %d\naccel %d %d %d\n",
 					new_settings.gyro_bias[0], new_settings.gyro_bias[1], new_settings.gyro_bias[2],
 					new_settings.accel_bias[0], new_settings.accel_bias[1], new_settings.accel_bias[2]);
 	
@@ -532,7 +531,7 @@ void mpu_calibrate_bias(void)
 		else if (pckt.gyro[2] < -1)
 			new_settings.gyro_bias[2]++;
 
-		// push the biases to the MPU
+		// push the biases back to the MPU
 		mpu_set_gyro_bias(new_settings.gyro_bias);
 		mpu_set_accel_bias(new_settings.accel_bias);
 	}
@@ -540,8 +539,7 @@ void mpu_calibrate_bias(void)
 	// now save our settings
 	save_settings(&new_settings);
 	
-	dprintf("%s\ngyro %6d %6d %6d\naccel %6d %6d %6d\n",
-					"new",
+	dprintf("new\ngyro %6d %6d %6d\naccel %6d %6d %6d\n",
 					new_settings.gyro_bias[0], new_settings.gyro_bias[1], new_settings.gyro_bias[2],
 					new_settings.accel_bias[0], new_settings.accel_bias[1], new_settings.accel_bias[2]);
 
@@ -552,8 +550,8 @@ void mpu_calibrate_bias(void)
 	LED_YELLOW = 0;
 }
 
-#define TEMP_OFFSET		-521.0
-#define TEMP_SENS		340.0
+#define TEMP_OFFSET		521
+#define TEMP_SENS		34
 
 void mpu_get_temperature(int16_t* result)
 {
@@ -564,5 +562,6 @@ void mpu_get_temperature(int16_t* result)
 
     raw = (tmp[0] << 8) | tmp[1];
 
-    *result = (int16_t)((35 + ((raw - TEMP_OFFSET) / TEMP_SENS)) * 65536L);
+	// result in milli Celsius
+    *result = (int16_t)((350 + ((raw + TEMP_OFFSET) / TEMP_SENS)));
 }

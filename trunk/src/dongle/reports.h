@@ -6,8 +6,6 @@
 # pragma pack(1)
 #endif
 
-
-
 // This is the main HID joystick report.
 // It contains the axis data we're sending to the PC.
 
@@ -39,20 +37,16 @@ typedef struct
 {
 	uint8_t		report_id;		// == AXIS_CONFIG_REPORT_ID
 
-	uint8_t		is_selfcenter;
+	uint8_t		autocenter;		// 0 to 3
 	uint8_t		is_linear;
 
-	// linear factors
-	float		lin_fact_x;
-	float		lin_fact_y;
-	float		lin_fact_z;
+	// axis factors
+	float		fact_x;
+	float		fact_y;
+	float		fact_z;
 
-	// exponential factors
-	float		exp_fact_x;
-	float		exp_fact_y;
-	float		exp_fact_z;
-	
 	float		x_drift_comp;
+
 } FeatRep_DongleSettings;
 
 // *****************************************************************
@@ -116,6 +110,7 @@ typedef struct
 	float		dX;
 	
 	uint16_t	battery_voltage;
+	uint16_t	temperature;
 
 } FeatRep_Status;
 

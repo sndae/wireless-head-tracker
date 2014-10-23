@@ -45,12 +45,8 @@ __xdata FeatRep_DongleSettings default_settings =
 {
 	0,		// report_id		is_empty
 	
-	1,		// is_selfcenter
+	1,		// autocenter
 	0,		// is_linear
-
-	8.0,	// lin_fact_x
-	8.0,	// lin_fact_y
-	8.0,	// lin_fact_z
 
 	12.0,	// exp_fact_x
 	12.0,	// exp_fact_y

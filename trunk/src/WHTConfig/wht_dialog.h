@@ -18,9 +18,16 @@ private:
 	}
 
 	void InitStatusbar();
-	void SetStatusbarText(int part, const std::wstring& text);
+	void SetStatusbarText(int part, const std::wstring& text)
+	{
+		SendMessage(GetCtrl(IDC_STATUS_BAR), SB_SETTEXT, part, (LPARAM) text.c_str());
+	}
 
-	void SetCtrlText(int ctrl_id, const std::wstring& text);
+	void SetCtrlText(int ctrl_id, const std::wstring& text)
+	{
+		SendMessage(GetCtrl(ctrl_id), WM_SETTEXT, 0, (LPARAM) text.c_str());
+	}
+
 	void SetCtrlTextFloat(int ctrl_id, float flt)
 	{
 		SetCtrlText(ctrl_id, flt2str(flt));
@@ -40,7 +47,7 @@ private:
 
 	void SetComboSelection(int ctrl_id, int selection)
 	{
-		SendMessage(GetCtrl(ctrl_id), CB_SETCURSEL, 0, (LPARAM) selection);
+		SendMessage(GetCtrl(ctrl_id), CB_SETCURSEL, (WPARAM) selection, 0);
 	}
 
 	int GetComboSelection(int ctrl_id)

@@ -14,7 +14,8 @@
 // status bar "parts"
 #define STATBAR_RF_STATUS	0
 #define STATBAR_VOLTAGE		1
-#define STATBAR_VERSION		2
+#define STATBAR_TEMPERATURE	2
+#define STATBAR_VERSION		3
 
 BOOL CALLBACK WHTDialog::MyDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -62,7 +63,13 @@ WHTDialog::WHTDialog(HWND hDlg)
 	// init the the axis response combo box
 	AddComboString(IDC_CMB_AXIS_RESPONSE, L"Exponential");
 	AddComboString(IDC_CMB_AXIS_RESPONSE, L"Linear");
-	SetComboSelection(IDC_CMB_AXIS_RESPONSE, 0);		// select exponential
+	//SetComboSelection(IDC_CMB_AXIS_RESPONSE, 0);
+
+	AddComboString(IDC_CMB_AUTOCENTER, L"Off");
+	AddComboString(IDC_CMB_AUTOCENTER, L"Light");
+	AddComboString(IDC_CMB_AUTOCENTER, L"Medium");
+	AddComboString(IDC_CMB_AUTOCENTER, L"Heavy");
+	//SetComboSelection(IDC_CMB_AUTOCENTER, 0);
 
 	// disable the controls
 	ChangeConnectedStateUI(false);
@@ -70,7 +77,7 @@ WHTDialog::WHTDialog(HWND hDlg)
 	// setup the status bar
 	InitStatusbar();
 
-	SetStatusbarText(STATBAR_VERSION, L"Build: " WIDEN(__DATE__) L" " WIDEN(__TIME__));
+	SetStatusbarText(STATBAR_VERSION, WIDEN(__DATE__) L" " WIDEN(__TIME__));
 }
 
 WHTDialog::~WHTDialog()
@@ -139,7 +146,7 @@ void WHTDialog::OnCommand(int ctrl_id)
 		rep.command = CMD_CALIBRATE;
 		device.SetFeatureReport(rep);
 
-	} else if (ctrl_id == IDC_BTN_SEND_TO_TRACKER) {
+	} else if (ctrl_id == IDC_BTN_SEND_TO_DONGLE) {
 		SendConfigToDevice();
 	} else if (ctrl_id == IDC_BTN_CONNECT) {
 		if (device.IsOpen())
@@ -221,8 +228,11 @@ void WHTDialog::OnTimer()
 
 		const int BUFF_SIZE = 256;
 		wchar_t buff[BUFF_SIZE];
-		swprintf_s(buff, BUFF_SIZE, L"Battery voltage: %2.2fV", repStatus.battery_voltage / 100.0);
+		swprintf_s(buff, BUFF_SIZE, L"Batt. voltage: %2.2fV", repStatus.battery_voltage / 100.0);
 		SetStatusbarText(STATBAR_VOLTAGE, buff);
+
+		swprintf_s(buff, BUFF_SIZE, L"Temperature: %2.1f°C", repStatus.temperature / 10.0);
+		SetStatusbarText(STATBAR_TEMPERATURE, buff);
 
 	} else {
 
@@ -231,10 +241,8 @@ void WHTDialog::OnTimer()
 		SendMessage(GetCtrl(IDC_PRG_AXIS_Z), PBM_SETPOS, 0, 0);
 
 		SetStatusbarText(STATBAR_RF_STATUS, L"Disconnected");
-		SetStatusbarText(STATBAR_VOLTAGE, L"Battery voltage: <unknown>");
+		SetStatusbarText(STATBAR_VOLTAGE, L"Batt. voltage:");
 	}
-
-	// SetStatusbarText(STATBAR_VOLTAGE, int2str(GetTickCount()));
 }
 
 void WHTDialog::OnMinimize()
@@ -249,24 +257,21 @@ void WHTDialog::OnTrayNotify(LPARAM lParam)
 	{
 		Show();
 		RemoveTrayIcon();
+	//} else if (lParam == WM_RBUTTONDOWN) {
 	}
 }
 
 void WHTDialog::InitStatusbar()
 {
 	// make the status bar parts
-	const int NUM_PARTS = 3;
+	const int NUM_PARTS = 4;
 	int parts[NUM_PARTS];
-	parts[0] = 135;
-	parts[1] = 325;
-	parts[2] = -1;
+	parts[0] = 110;
+	parts[1] = 230;
+	parts[2] = 350;
+	parts[3] = -1;
 
 	SendMessage(GetCtrl(IDC_STATUS_BAR), SB_SETPARTS, NUM_PARTS, (LPARAM) parts);
-}
-
-void WHTDialog::SetStatusbarText(int part, const std::wstring& text)
-{
-	SendMessage(GetCtrl(IDC_STATUS_BAR), SB_SETTEXT, part, (LPARAM) text.c_str());
 }
 
 void WHTDialog::CreateTrayIcon()
@@ -301,11 +306,6 @@ void WHTDialog::RemoveTrayIcon()
 	Shell_NotifyIcon(NIM_DELETE, &nid);
 }
 
-void WHTDialog::SetCtrlText(int ctrl_id, const std::wstring& text)
-{
-	SendMessage(GetCtrl(ctrl_id), WM_SETTEXT, 0, (LPARAM) text.c_str());
-}
-
 float WHTDialog::GetCtrlTextFloat(int ctrl_id)
 {
 	const int BUFF_SIZE = 256;
@@ -322,18 +322,13 @@ void WHTDialog::ReadConfigFromDevice()
 	device.GetFeatureReport(rep);
 
 	SetComboSelection(IDC_CMB_AXIS_RESPONSE, rep.is_linear ? 1 : 0);
-
-	SetCheckState(IDC_CHK_SELFCENTER, rep.is_selfcenter != 0);
+	SetComboSelection(IDC_CMB_AUTOCENTER, rep.autocenter);
 
 	SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(rep.x_drift_comp));
 
-	SetCtrlText(IDC_EDT_LIN_FACT_X, flt2str(rep.lin_fact_x));
-	SetCtrlText(IDC_EDT_LIN_FACT_Y, flt2str(rep.lin_fact_y));
-	SetCtrlText(IDC_EDT_LIN_FACT_Z, flt2str(rep.lin_fact_z));
-
-	SetCtrlText(IDC_EDT_EXP_FACT_X, flt2str(rep.exp_fact_x));
-	SetCtrlText(IDC_EDT_EXP_FACT_Y, flt2str(rep.exp_fact_y));
-	SetCtrlText(IDC_EDT_EXP_FACT_Z, flt2str(rep.exp_fact_z));
+	SetCtrlText(IDC_EDT_FACT_X, flt2str(rep.fact_x));
+	SetCtrlText(IDC_EDT_FACT_Y, flt2str(rep.fact_y));
+	SetCtrlText(IDC_EDT_FACT_Z, flt2str(rep.fact_z));
 }
 
 void WHTDialog::ReadCalibrationData()
@@ -370,18 +365,12 @@ void WHTDialog::SendConfigToDevice()
 {
 	FeatRep_DongleSettings rep;
 
-	rep.is_linear = GetComboSelection(IDC_CMB_AXIS_RESPONSE) == 1 ? 1 : 0;
-	rep.is_selfcenter = GetCheckState(IDC_CHK_SELFCENTER) ? 1 : 0;
+	rep.is_linear = GetComboSelection(IDC_CMB_AXIS_RESPONSE);
+	rep.autocenter = GetComboSelection(IDC_CMB_AUTOCENTER);
 
-	//rep.x_drift_comp = GetCtrlTextFloat(IDC_EDT_APPLIED_DRIFT_COMP);
-
-	rep.lin_fact_x = GetCtrlTextFloat(IDC_EDT_LIN_FACT_X);
-	rep.lin_fact_y = GetCtrlTextFloat(IDC_EDT_LIN_FACT_Y);
-	rep.lin_fact_z = GetCtrlTextFloat(IDC_EDT_LIN_FACT_Z);
-
-	rep.exp_fact_x = GetCtrlTextFloat(IDC_EDT_EXP_FACT_X);
-	rep.exp_fact_y = GetCtrlTextFloat(IDC_EDT_EXP_FACT_Y);
-	rep.exp_fact_z = GetCtrlTextFloat(IDC_EDT_EXP_FACT_Z);
+	rep.fact_x = GetCtrlTextFloat(IDC_EDT_FACT_X);
+	rep.fact_y = GetCtrlTextFloat(IDC_EDT_FACT_Y);
+	rep.fact_z = GetCtrlTextFloat(IDC_EDT_FACT_Z);
 
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	device.SetFeatureReport(rep);
@@ -393,15 +382,12 @@ void WHTDialog::ChangeConnectedStateUI(bool is_connected)
 
 	EnableWindow(GetCtrl(IDC_BTN_READ_CALIBRATION), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_BTN_CALIBRATE), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_BTN_SEND_TO_TRACKER), is_connected ? TRUE : FALSE);
+	EnableWindow(GetCtrl(IDC_BTN_SEND_TO_DONGLE), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_BTN_RESET_DRIFT_COMP), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_BTN_SAVE_DRIFT_COMP), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_CMB_AXIS_RESPONSE), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_CHK_SELFCENTER), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_EDT_LIN_FACT_X), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_EDT_LIN_FACT_Y), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_EDT_LIN_FACT_Z), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_EDT_EXP_FACT_X), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_EDT_EXP_FACT_Y), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_EDT_EXP_FACT_Z), is_connected ? TRUE : FALSE);
+	EnableWindow(GetCtrl(IDC_CMB_AUTOCENTER), is_connected ? TRUE : FALSE);
+	EnableWindow(GetCtrl(IDC_EDT_FACT_X), is_connected ? TRUE : FALSE);
+	EnableWindow(GetCtrl(IDC_EDT_FACT_Y), is_connected ? TRUE : FALSE);
+	EnableWindow(GetCtrl(IDC_EDT_FACT_Z), is_connected ? TRUE : FALSE);
 }
