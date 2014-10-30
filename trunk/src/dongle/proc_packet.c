@@ -79,11 +79,13 @@ int32_t constrain_16bit(int32_t val)
 	return val;
 }
 
+// a little bit of manual subexpression elimination saves us a whopping 16 bytes of flash
+#define MANUAL_SUBEXPR_ELIM
+
 bool process_packet(mpu_packet_t* pckt)
 {
 	float newZ, newY, newX;
 	float qw, qx, qy, qz;
-	float qww, qxx, qyy, qzz;
 	float dzlimit;
 	int32_t iX, iY, iZ;
 	
@@ -96,20 +98,25 @@ bool process_packet(mpu_packet_t* pckt)
 
 	// calculate Yaw/Pitch/Roll
 
-	qww = qw * qw;
-	qxx = qx * qx;
-	qyy = qy * qy;
-	qzz = qz * qz;
-
 	// these three functions calls swallow up about 5kb of flash,
 	// and something needs to be done about this
-	newZ =  atan2(2.0 * (qy * qz + qw * qx), qww - qxx - qyy + qzz);
-	newY = -asin(-2.0 * (qx * qz - qw * qy));
-	newX = -atan2(2.0 * (qx * qy + qw * qz), qww + qxx - qyy - qzz);
+#ifdef MANUAL_SUBEXPR_ELIM
+	{
+		float qww, qxx, qyy, qzz;
+		qww = qw * qw;
+		qxx = qx * qx;
+		qyy = qy * qy;
+		qzz = qz * qz;
 
-	//newZ =  atan2(2.0 * (qy * qz + qw * qx), qw * qw - qx * qx - qy * qy + qz * qz);
-	//newY = -asin(-2.0 * (qx * qz - qw * qy));                                    
-	//newX = -atan2(2.0 * (qx * qy + qw * qz), qw * qw + qx * qx - qy * qy - qz * qz);
+		newZ =  atan2(2.0 * (qy * qz + qw * qx), qww - qxx - qyy + qzz);
+		newY = -asin(-2.0 * (qx * qz - qw * qy));
+		newX = -atan2(2.0 * (qx * qy + qw * qz), qww + qxx - qyy - qzz);
+	}
+#else
+	newZ =  atan2(2.0 * (qy * qz + qw * qx), qw * qw - qx * qx - qy * qy + qz * qz);
+	newY = -asin(-2.0 * (qx * qz - qw * qy));                                    
+	newX = -atan2(2.0 * (qx * qy + qw * qz), qw * qw + qx * qx - qy * qy - qz * qz);
+#endif
 
 	newX *= 10430.06;
 	newY *= 10430.06;
