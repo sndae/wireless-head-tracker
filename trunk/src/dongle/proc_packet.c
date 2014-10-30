@@ -12,7 +12,7 @@
 #include "dongle_settings.h"
 
 // process_packet function processes the data from the sensor MPU-6050 attached to the user's head,
-// and calculated xyz coordinates from the quaternions received.
+// and calculates xyz coordinates from the received quaternions.
 //
 // Almost the entire process_packet function is more-or-less copied from the ED Tracker project.
 // 
