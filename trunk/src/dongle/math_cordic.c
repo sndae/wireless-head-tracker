@@ -5,7 +5,8 @@
 #define CORDIC_NUM_BITS 	14
 #define ASIN_GAIN			0x10000000
 
-int16_t __code atanTable[CORDIC_NUM_BITS] = {
+int16_t __code atanTable[CORDIC_NUM_BITS] =
+{
 8192,	// 0
 4836,   // 1
 2555,   // 2
@@ -22,6 +23,92 @@ int16_t __code atanTable[CORDIC_NUM_BITS] = {
 1,      // 13
 // 1,		// 14
 };     
+
+
+// this is a CORDIC algorithm with double iteration
+int16_t iasin_cord(int32_t xf)
+{
+    uint8_t cnt;
+    int16_t result = 0;
+    int32_t x = ASIN_GAIN;
+	int32_t y = 0;
+    int32_t xi, yi;
+
+    for (cnt = 0; cnt < CORDIC_NUM_BITS; cnt++)
+    {
+		xi = x >> cnt;
+		yi = y >> cnt;
+
+        if (y < xf)
+		{
+			x -= yi;
+			y += xi;
+
+			xi = x >> cnt;
+			yi = y >> cnt;
+
+			x -= yi;
+			y += xi;
+
+			result += 2*atanTable[cnt];
+		} else {
+			x += yi;
+			y -= xi;
+
+			xi = x >> cnt;
+			yi = y >> cnt;
+
+			x += yi;
+			y -= xi;
+
+			result -= 2*atanTable[cnt];
+		}
+
+		xf += xf >> (cnt << 1);
+    }
+
+    return result;
+}
+
+int16_t iatan2_cord(int32_t y, int32_t x)
+{
+	int16_t result;
+	int32_t xi, yi;
+	uint8_t cnt;
+
+	if (x == 0)
+		return 0;
+
+	if (x < 0)
+	{
+		result = 32767;
+		x = -x;
+		y = -y;
+	} else {
+		result = 0;
+	}
+
+	for (cnt = 0; cnt < CORDIC_NUM_BITS; cnt++)
+	{
+		xi = x >> cnt;
+		yi = y >> cnt;
+
+		if (y < 0)
+		{
+			x -= yi;
+			y += xi;
+
+			result -= atanTable[cnt];
+		} else {
+			x += yi;
+			y -= xi;
+
+			result += atanTable[cnt];
+		}
+	}
+
+	return result;
+}
 
 /*
 #define PI 3.14159265358979323846F
@@ -61,9 +148,7 @@ float __code atanTable[] =
 	1.8626451492309570291E-09F,		// 30
 	9.3132257461547851536E-10F,		// 31
 };
-*/
 
-/*
 float asin_cordic(float xf)
 {
     uint8_t cnt;
@@ -154,88 +239,3 @@ float atan2_cordic(float y, float x)
 	return result;
 }
 */
-
-// this is a CORDIC algorithm with double iteration
-int16_t iasin_cord(int32_t xf)
-{
-    uint8_t cnt;
-    int16_t result = 0;
-    int32_t x = ASIN_GAIN;
-	int32_t y = 0;
-    int32_t xi, yi;
-
-    for (cnt = 0; cnt < CORDIC_NUM_BITS; cnt++)
-    {
-		xi = x >> cnt;
-		yi = y >> cnt;
-
-        if (y < xf)
-		{
-			x -= yi;
-			y += xi;
-
-			xi = x >> cnt;
-			yi = y >> cnt;
-
-			x -= yi;
-			y += xi;
-
-			result += 2*atanTable[cnt];
-		} else {
-			x += yi;
-			y -= xi;
-
-			xi = x >> cnt;
-			yi = y >> cnt;
-
-			x += yi;
-			y -= xi;
-
-			result -= 2*atanTable[cnt];
-		}
-
-		xf += xf >> (cnt << 1);
-    }
-
-    return result;
-}
-
-int16_t iatan2_cord(int32_t y, int32_t x)
-{
-	int16_t result;
-	int32_t xi, yi;
-	uint8_t cnt;
-
-	if (x == 0)
-		return 0;
-
-	if (x < 0)
-	{
-		result = 32767;
-		x = -x;
-		y = -y;
-	} else {
-		result = 0;
-	}
-
-	for (cnt = 0; cnt < CORDIC_NUM_BITS; cnt++)
-	{
-		xi = x >> cnt;
-		yi = y >> cnt;
-
-		if (y < 0)
-		{
-			x -= yi;
-			y += xi;
-
-			result -= atanTable[cnt];
-		} else {
-			x += yi;
-			y -= xi;
-
-			result += atanTable[cnt];
-		}
-	}
-
-	return result;
-}

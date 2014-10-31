@@ -2,12 +2,12 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include <compiler_mcs51.h>
 
 #include "rf_protocol.h"
 #include "proc_packet.h"
-#include "mymath.h"
 #include "math_cordic.h"
 #include "reports.h"
 #include "dongle_settings.h"
@@ -80,7 +80,8 @@ int32_t constrain_16bit(int32_t val)
 	return val;
 }
 
-// a little bit of manual subexpression elimination saves us a whopping 16 bytes of flash
+// a little bit of manual subexpression elimination
+// saves us a whopping 16 bytes of flash ;)
 #define MANUAL_SUBEXPR_ELIM
 
 bool process_packet(mpu_packet_t* pckt)
@@ -92,41 +93,36 @@ bool process_packet(mpu_packet_t* pckt)
 	const FeatRep_DongleSettings __xdata * pSettings = get_settings();
 	
 	// calculate Yaw/Pitch/Roll
-
-	// these three functions calls swallow up about 5kb of flash,
-	// and something needs to be done about this
 	{
-	int32_t qw, qx, qy, qz;
+		int32_t qw, qx, qy, qz;
 
-	qw = pckt->quat[0];
-	qx = pckt->quat[1];
-	qy = pckt->quat[2];
-	qz = pckt->quat[3];
+		qw = pckt->quat[0];
+		qx = pckt->quat[1];
+		qy = pckt->quat[2];
+		qz = pckt->quat[3];
 
+		// the CORDIC trig functions return angles in units already adjusted to the 16
+		// bit integer range, so there's no need to scale the results by 10430.06
+		
 #ifdef MANUAL_SUBEXPR_ELIM
-	{
-		int32_t qww, qxx, qyy, qzz;
+		{
+			int32_t qww, qxx, qyy, qzz;
 
-		qww = qw * qw;
-		qxx = qx * qx;
-		qyy = qy * qy;
-		qzz = qz * qz;
+			qww = qw * qw;
+			qxx = qx * qx;
+			qyy = qy * qy;
+			qzz = qz * qz;
 
-		newZ =  iatan2_cord(2 * (qy * qz + qw * qx), qww - qxx - qyy + qzz);
-		newY = -iasin_cord(-2 * (qx * qz - qw * qy));
-		newX = -iatan2_cord(2 * (qx * qy + qw * qz), qww + qxx - qyy - qzz);
-	}
+			newZ =  iatan2_cord(2 * (qy * qz + qw * qx), qww - qxx - qyy + qzz);
+			newY = -iasin_cord(-2 * (qx * qz - qw * qy));
+			newX = -iatan2_cord(2 * (qx * qy + qw * qz), qww + qxx - qyy - qzz);
+		}
 #else
-	newZ =  iatan2_cord(2 * (qy * qz + qw * qx), qw * qw - qx * qx - qy * qy + qz * qz);
-	newY = -iasin_cord(-2 * (qx * qz - qw * qy));                                    
-	newX = -iatan2_cord(2 * (qx * qy + qw * qz), qw * qw + qx * qx - qy * qy - qz * qz);
+		newZ =  iatan2_cord(2 * (qy * qz + qw * qx), qw * qw - qx * qx - qy * qy + qz * qz);
+		newY = -iasin_cord(-2 * (qx * qz - qw * qy));                                    
+		newX = -iatan2_cord(2 * (qx * qy + qw * qz), qw * qw + qx * qx - qy * qy - qz * qz);
 #endif
 	}
-
-	// radians to 16 bit integer range -32768->32767
-	//newX *= 10430.06;
-	//newY *= 10430.06;
-	//newZ *= 10430.06;
 
 	if (!calibrated)
 	{
@@ -190,9 +186,9 @@ bool process_packet(mpu_packet_t* pckt)
 		iZ = newZ * pSettings->fact_z;
 		dzlimit = 30.0 * pSettings->fact_x * pSettings->autocenter;
 	} else {
-		iX = (0.000122076 * newX * newX * pSettings->fact_x) * (newX / fabs(newX));
-		iY = (0.000122076 * newY * newY * pSettings->fact_y) * (newY / fabs(newY));
-		iZ = (0.000122076 * newZ * newZ * pSettings->fact_z) * (newZ / fabs(newZ));
+		iX = (0.000122076 * newX * newX * pSettings->fact_x) * (newX / fabsf(newX));
+		iY = (0.000122076 * newY * newY * pSettings->fact_y) * (newY / fabsf(newY));
+		iZ = (0.000122076 * newZ * newZ * pSettings->fact_z) * (newZ / fabsf(newZ));
 		dzlimit = 33.0 * pSettings->fact_x * pSettings->autocenter;
 	}
 
@@ -213,7 +209,7 @@ bool process_packet(mpu_packet_t* pckt)
 		//  and not moving
 		//  and pitch is levelish then start to count
 		//if (labs(iX) < 3000  &&  labs(iX - lX) < 5  &&  labs(iY) < 600)
-		if (fabs(newX) < dzlimit  &&  fabs(newX - lX) < 1.4  &&  labs(iY) < 1000)
+		if (fabsf(newX) < dzlimit  &&  fabsf(newX - lX) < 1.4  &&  labs(iY) < 1000)
 		{
 			ticksInZone++;
 			dzX += iX;

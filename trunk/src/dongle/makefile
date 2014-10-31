@@ -16,7 +16,7 @@ CFLAGS   += -DDBG_MODE=0 -DPRINTF=printf_tiny
 CFLAGS   += -DMATH_CORDIC
 LFLAGS    = --code-loc 0x0000 --code-size $(CODE_SIZE) --xram-loc 0x8000 --xram-size 0x800
 ASFLAGS   = -plosgff
-RELFILES  = main.rel proc_packet.rel usb_desc.rel mymath.rel math_cordic.rel rf_dngl.rel usb.rel reports.rel dongle_settings.rel
+RELFILES  = main.rel proc_packet.rel usb_desc.rel math_cordic.rel rf_dngl.rel usb.rel reports.rel dongle_settings.rel
 RELFILES += rf_addr.rel nrfutils.rel nrfdbg.rel nRF24L.rel crtxinit.rel
 
 VPATH    = ../mcu-lib:../tracker
