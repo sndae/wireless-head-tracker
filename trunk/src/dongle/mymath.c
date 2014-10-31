@@ -18,8 +18,7 @@ float fabs(float x)
     return fl.f;
 }
 
-#ifndef MATH_CORDIC
-
+/*
 // These are specialized versions of math functions from the SDCC library,
 // used in a desperate attempt to save some valuable flash space.
 // This saves us about 400 bytes of flash
@@ -216,5 +215,4 @@ float asin(float x)
     }
     return r;
 }
-
-#endif	// MATH_CORDIC
+*/
