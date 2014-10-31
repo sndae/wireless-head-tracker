@@ -3,6 +3,23 @@
 
 #include "mymath.h"
 
+union float_long
+{
+    float f;
+    long l;
+};
+
+float fabs(float x)
+{
+    union float_long fl;
+
+    fl.f = x;
+    fl.l &= 0x7fffffff;
+    return fl.f;
+}
+
+#ifndef MATH_CORDIC
+
 // These are specialized versions of math functions from the SDCC library,
 // used in a desperate attempt to save some valuable flash space.
 // This saves us about 400 bytes of flash
@@ -37,21 +54,6 @@
 
 #define Pasin(g)	(P2asin * g + P1asin)
 #define Qasin(g)	((Q2asin * g + Q1asin) * g + Q0asin)
-
-union float_long
-{
-    float f;
-    long l;
-};
-
-float fabs(float x)
-{
-    union float_long fl;
-
-    fl.f = x;
-    fl.l &= 0x7fffffff;
-    return fl.f;
-}
 
 float ldexp(float x, int pw2)
 {
@@ -127,12 +129,12 @@ float frexp(float x, int *pw2)
     long int i;
 
     fl.f=x;
-    /* Find the exponent (power of 2) */
+    // Find the exponent (power of 2)
     i  = ( fl.l >> 23) & 0x000000ff;
     i -= 0x7e;
     *pw2 = i;
-    fl.l &= 0x807fffff; /* strip all exponent bits */
-    fl.l |= 0x3f000000; /* mantissa between 0.5 and 1 */
+    fl.l &= 0x807fffff; // strip all exponent bits
+    fl.l |= 0x3f000000; // mantissa between 0.5 and 1
     return(fl.f);
 }
 
@@ -149,10 +151,10 @@ float sqrt(float x)
         return 0.0;
     }
     f=frexp(x, &n);
-    y=0.41731+0.59016*f; /*Educated guess*/
-    /*For a 24 bit mantisa (float), two iterations are sufficient*/
+    y=0.41731+0.59016*f; // Educated guess
+    // For a 24 bit mantisa (float), two iterations are sufficient
     y+=f/y;
-    y=ldexp(y, -2) + f/y; /*Faster version of 0.25 * y + f/y*/
+    y=ldexp(y, -2) + f/y; // Faster version of 0.25 * y + f/y
 
     if (n&1)
     {
@@ -214,3 +216,5 @@ float asin(float x)
     }
     return r;
 }
+
+#endif	// MATH_CORDIC
