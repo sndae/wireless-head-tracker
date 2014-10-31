@@ -1,11 +1,20 @@
-# currently, it will build and flash nRF24LU1+ 16 kbyte version
-# for the 32 kbyte version change -code-size to 0x8000 and nrfburn -f 32
+# set FLASH_SIZE_KB to either 16 or 32
+
+FLASH_SIZE_KB = 32
+
+ifeq ($(FLASH_SIZE_KB),32)
+    CODE_SIZE = 0x8000
+else ifeq ($(FLASH_SIZE_KB),16)
+    CODE_SIZE = 0x4000
+else
+    $(error Please set FLASH_SIZE_KB to either 16 or 32)
+endif
 
 TARGET    = whtdngl
 CFLAGS    = --model-large -I../tracker -I../mcu-lib -DNRF24LU1
 CFLAGS   += -DDBG_MODE=0 -DPRINTF=printf_tiny
 CFLAGS   += -DMATH_CORDIC
-LFLAGS    = --code-loc 0x0000 --code-size 0x4000 --xram-loc 0x8000 --xram-size 0x800
+LFLAGS    = --code-loc 0x0000 --code-size $(CODE_SIZE) --xram-loc 0x8000 --xram-size 0x800
 ASFLAGS   = -plosgff
 RELFILES  = main.rel proc_packet.rel usb_desc.rel mymath.rel math_cordic.rel rf_dngl.rel usb.rel reports.rel dongle_settings.rel
 RELFILES += rf_addr.rel nrfutils.rel nrfdbg.rel nRF24L.rel crtxinit.rel
@@ -28,4 +37,4 @@ clean:
 all: clean $(TARGET).hex
 
 flash: clean $(TARGET).hex
-	nrfburn -f 16 -w $(TARGET).hex
+	nrfburn -f $(FLASH_SIZE_KB) -w $(TARGET).hex

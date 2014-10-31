@@ -86,43 +86,47 @@ int32_t constrain_16bit(int32_t val)
 bool process_packet(mpu_packet_t* pckt)
 {
 	float newZ, newY, newX;
-	float qw, qx, qy, qz;
 	float dzlimit;
 	int32_t iX, iY, iZ;
 	
 	const FeatRep_DongleSettings __xdata * pSettings = get_settings();
 	
-	qw = pckt->quat[0] / 16384.0f;
-	qx = pckt->quat[1] / 16384.0f;
-	qy = pckt->quat[2] / 16384.0f;
-	qz = pckt->quat[3] / 16384.0f;
-
 	// calculate Yaw/Pitch/Roll
 
 	// these three functions calls swallow up about 5kb of flash,
 	// and something needs to be done about this
+	{
+	int32_t qw, qx, qy, qz;
+
+	qw = pckt->quat[0];
+	qx = pckt->quat[1];
+	qy = pckt->quat[2];
+	qz = pckt->quat[3];
+
 #ifdef MANUAL_SUBEXPR_ELIM
 	{
-		float qww, qxx, qyy, qzz;
+		int32_t qww, qxx, qyy, qzz;
+
 		qww = qw * qw;
 		qxx = qx * qx;
 		qyy = qy * qy;
 		qzz = qz * qz;
 
-		newZ =  atan2(2.0 * (qy * qz + qw * qx), qww - qxx - qyy + qzz);
-		newY = -asin(-2.0 * (qx * qz - qw * qy));
-		newX = -atan2(2.0 * (qx * qy + qw * qz), qww + qxx - qyy - qzz);
+		newZ =  iatan2_cord(2 * (qy * qz + qw * qx), qww - qxx - qyy + qzz);
+		newY = -iasin_cord(-2 * (qx * qz - qw * qy));
+		newX = -iatan2_cord(2 * (qx * qy + qw * qz), qww + qxx - qyy - qzz);
 	}
 #else
-	newZ =  atan2_cord(2.0 * (qy * qz + qw * qx), qw * qw - qx * qx - qy * qy + qz * qz);
-	newY = -asin_cord(-2.0 * (qx * qz - qw * qy));                                    
-	newX = -atan2_cord(2.0 * (qx * qy + qw * qz), qw * qw + qx * qx - qy * qy - qz * qz);
+	newZ =  iatan2_cord(2 * (qy * qz + qw * qx), qw * qw - qx * qx - qy * qy + qz * qz);
+	newY = -iasin_cord(-2 * (qx * qz - qw * qy));                                    
+	newX = -iatan2_cord(2 * (qx * qy + qw * qz), qw * qw + qx * qx - qy * qy - qz * qz);
 #endif
+	}
 
 	// radians to 16 bit integer range -32768->32767
-	newX *= 10430.06;
-	newY *= 10430.06;
-	newZ *= 10430.06;
+	//newX *= 10430.06;
+	//newY *= 10430.06;
+	//newZ *= 10430.06;
 
 	if (!calibrated)
 	{
