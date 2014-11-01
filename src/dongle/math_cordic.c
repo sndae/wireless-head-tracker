@@ -5,13 +5,18 @@
 #define CORDIC_NUM_BITS 	14
 #define ASIN_GAIN			0x10000000
 
+// These are CORDIC implementations of the atan2 and asin functions.
+// These take up about 2.5kb less flash than the standard C math library
+// versions. The return units are not radians, they are scaled to match
+// the range we need them in, which is -16383 to 16383.
+
 int16_t __code atanTable[CORDIC_NUM_BITS] =
 {
-8192,	// 0
-4836,   // 1
-2555,   // 2
-1297,   // 3
-651,    // 4
+8192,	// 0		== atan(1) * (0x8000 / PI)
+4836,   // 1		== atan(0.5) * (0x8000 / PI)
+2555,   // 2		== atan(0.25) * (0x8000 / PI)
+1297,   // 3		== atan(0.125) * (0x8000 / PI)
+651,    // 4		== ...
 326,    // 5
 163,    // 6
 81,     // 7
@@ -21,11 +26,12 @@ int16_t __code atanTable[CORDIC_NUM_BITS] =
 5,      // 11
 3,      // 12
 1,      // 13
-// 1,		// 14
 };     
 
-
-// this is a CORDIC algorithm with double iteration
+// We are doing the double iteration variant of the CORDIC algorithm
+// This is needed to keep the accuracy good enough for our purposes,
+// but comes at a price - it's about 3 times slower than the math
+// library implementation.
 int16_t iasin_cord(int32_t xf)
 {
     uint8_t cnt;
@@ -50,7 +56,7 @@ int16_t iasin_cord(int32_t xf)
 			x -= yi;
 			y += xi;
 
-			result += 2*atanTable[cnt];
+			result += 2 * atanTable[cnt];
 		} else {
 			x += yi;
 			y -= xi;
@@ -61,7 +67,7 @@ int16_t iasin_cord(int32_t xf)
 			x += yi;
 			y -= xi;
 
-			result -= 2*atanTable[cnt];
+			result -= 2 * atanTable[cnt];
 		}
 
 		xf += xf >> (cnt << 1);
@@ -70,38 +76,39 @@ int16_t iasin_cord(int32_t xf)
     return result;
 }
 
-int16_t iatan2_cord(int32_t y, int32_t x)
+int16_t iatan2_cord(int32_t x, int32_t y)
 {
 	int16_t result;
 	int32_t xi, yi;
 	uint8_t cnt;
 
-	if (x == 0)
-		return 0;
-
-	if (x < 0)
+	if (y < 0)
 	{
-		result = 32767;
-		x = -x;
+		result = 0x7fff;
+
+		if (x == 0)
+			return result;
+
 		y = -y;
+		x = -x;
 	} else {
 		result = 0;
 	}
 
 	for (cnt = 0; cnt < CORDIC_NUM_BITS; cnt++)
 	{
-		xi = x >> cnt;
 		yi = y >> cnt;
+		xi = x >> cnt;
 
-		if (y < 0)
+		if (x < 0)
 		{
-			x -= yi;
-			y += xi;
+			y -= xi;
+			x += yi;
 
 			result -= atanTable[cnt];
 		} else {
-			x += yi;
-			y -= xi;
+			y += xi;
+			x -= yi;
 
 			result += atanTable[cnt];
 		}
@@ -109,6 +116,9 @@ int16_t iatan2_cord(int32_t y, int32_t x)
 
 	return result;
 }
+
+// These are floating point version of the CORDIC atan2 and asin functions.
+// They are not needed for our project, but I'll keep them here for a while just in case.
 
 /*
 #define PI 3.14159265358979323846F
