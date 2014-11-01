@@ -242,6 +242,7 @@ void WHTDialog::OnTimer()
 
 		SetStatusbarText(STATBAR_RF_STATUS, L"Disconnected");
 		SetStatusbarText(STATBAR_VOLTAGE, L"Batt. voltage:");
+		SetStatusbarText(STATBAR_TEMPERATURE, L"Temperature:");
 	}
 }
 
