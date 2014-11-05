@@ -11,6 +11,7 @@
 #include "math_cordic.h"
 #include "reports.h"
 #include "dongle_settings.h"
+#include "mdu.h"
 
 // process_packet function processes the data from the sensor MPU-6050 attached to the user's head,
 // and calculates xyz coordinates from the received quaternions.
@@ -80,49 +81,34 @@ int32_t constrain_16bit(int32_t val)
 	return val;
 }
 
-// a little bit of manual subexpression elimination
-// saves us a whopping 16 bytes of flash ;)
-#define MANUAL_SUBEXPR_ELIM
-
 bool process_packet(mpu_packet_t* pckt)
 {
 	float newZ, newY, newX;
 	float dzlimit;
 	int32_t iX, iY, iZ;
+
+	int16_t qw, qx, qy, qz;
+	int32_t qww, qxx, qyy, qzz;
 	
 	const FeatRep_DongleSettings __xdata * pSettings = get_settings();
 	
 	// calculate Yaw/Pitch/Roll
-	{
-		int32_t qw, qx, qy, qz;
+	qw = pckt->quat[0];
+	qx = pckt->quat[1];
+	qy = pckt->quat[2];
+	qz = pckt->quat[3];
 
-		qw = pckt->quat[0];
-		qx = pckt->quat[1];
-		qy = pckt->quat[2];
-		qz = pckt->quat[3];
-
-		// the CORDIC trig functions return angles in units already adjusted to the 16
-		// bit integer range, so there's no need to scale the results by 10430.06
+	// the CORDIC trig functions return angles in units already adjusted to the 16
+	// bit integer range, so there's no need to scale the results by 10430.06
 		
-#ifdef MANUAL_SUBEXPR_ELIM
-		{
-			int32_t qww, qxx, qyy, qzz;
+	qww = mul_16x16(qw, qw);
+	qxx = mul_16x16(qx, qx);
+	qyy = mul_16x16(qy, qy);
+	qzz = mul_16x16(qz, qz);
 
-			qww = qw * qw;
-			qxx = qx * qx;
-			qyy = qy * qy;
-			qzz = qz * qz;
-
-			newZ =  iatan2_cord(2 * (qy * qz + qw * qx), qww - qxx - qyy + qzz);
-			newY = -iasin_cord(-2 * (qx * qz - qw * qy));
-			newX = -iatan2_cord(2 * (qx * qy + qw * qz), qww + qxx - qyy - qzz);
-		}
-#else
-		newZ =  iatan2_cord(2 * (qy * qz + qw * qx), qw * qw - qx * qx - qy * qy + qz * qz);
-		newY = -iasin_cord(-2 * (qx * qz - qw * qy));                                    
-		newX = -iatan2_cord(2 * (qx * qy + qw * qz), qw * qw + qx * qx - qy * qy - qz * qz);
-#endif
-	}
+	newZ =  iatan2_cord(2 * (mul_16x16(qy, qz) + mul_16x16(qw, qx)), qww - qxx - qyy + qzz);
+	newY = -iasin_cord(-2 * (mul_16x16(qx, qz) - mul_16x16(qw, qy)));
+	newX = -iatan2_cord(2 * (mul_16x16(qx, qy) + mul_16x16(qw, qz)), qww + qxx - qyy - qzz);
 
 	if (!calibrated)
 	{
@@ -197,7 +183,7 @@ bool process_packet(mpu_packet_t* pckt)
 	iY = constrain_16bit(iY);
 	iZ = constrain_16bit(iZ);
 
-	// Do it to it.
+	// set the values in the USB report
 	usb_joystick_report.x = iX;
 	usb_joystick_report.y = iY;
 	usb_joystick_report.z = iZ;
@@ -208,7 +194,6 @@ bool process_packet(mpu_packet_t* pckt)
 		// if we're looking ahead, give or take
 		//  and not moving
 		//  and pitch is levelish then start to count
-		//if (labs(iX) < 3000  &&  labs(iX - lX) < 5  &&  labs(iY) < 600)
 		if (fabsf(newX) < dzlimit  &&  fabsf(newX - lX) < 1.4  &&  labs(iY) < 1000)
 		{
 			ticksInZone++;
