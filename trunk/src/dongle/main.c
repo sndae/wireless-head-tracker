@@ -24,17 +24,16 @@ uint8_t total_packets[NUM_COUNTER_PACKETS];		// holds the last ~1 second of pack
 
 uint16_t battery_voltage, temperature;
 
-// These are called by the USB code in usb.c
+// the next two event handlers are called by the USB code in usb.c
 void on_set_report(void)
 {
 	if (out0buf[0] == DONGLE_SETTINGS_REPORT_ID)
 	{
 		const FeatRep_DongleSettings __xdata * pSettings = get_settings();
-		float old_drift = pSettings->x_drift_comp;
 
 		FeatRep_DongleSettings new_settings;
 		memcpy(&new_settings, out0buf, sizeof(FeatRep_DongleSettings));
-		new_settings.x_drift_comp = old_drift;
+		new_settings.x_drift_comp = pSettings->x_drift_comp;
 		
 		// save the data structure we've just received
 		save_settings(&new_settings);
@@ -51,6 +50,19 @@ void on_set_report(void)
 			recenter();
 		} else if (command == CMD_SAVE_DRIFT) {
 			save_x_drift_comp();
+		} else if (command == CMD_INC_DRIFT_COMP  ||  command == CMD_DEC_DRIFT_COMP) {
+		
+			const FeatRep_DongleSettings __xdata * pSettings = get_settings();
+
+			FeatRep_DongleSettings new_settings;
+			memcpy(&new_settings, pSettings, sizeof(FeatRep_DongleSettings));
+			if (command == CMD_INC_DRIFT_COMP)
+				new_settings.x_drift_comp += 0.1;
+			else
+				new_settings.x_drift_comp -= 0.1;
+			
+			// save the data structure we've just received
+			save_settings(&new_settings);
 		}
 	}
 }
@@ -103,8 +115,8 @@ void on_get_report(void)
 				pReport->accel_bias[1] = calib_data.accel_bias[1];
 				pReport->accel_bias[2] = calib_data.accel_bias[2];
 
-				dprintf("%c %d %d %d\n", calib_data.is_calibrated ? 'C' : 'N',
-										calib_data.accel_bias[0], calib_data.accel_bias[1], calib_data.accel_bias[2]);
+				//dprintf("%c %d %d %d\n", calib_data.is_calibrated ? 'C' : 'N',
+				//						calib_data.accel_bias[0], calib_data.accel_bias[1], calib_data.accel_bias[2]);
 				
 				break;
 			}
@@ -174,6 +186,9 @@ void main(void)
 	{
 		usbPoll();	// handles USB events
 		dbgPoll();	// send chars from the UART TX buffer
+		
+		//if (dbgEmpty())
+		//	dump_drift();
 		
 		// check the timer
 		CCL3 = 1;	// capture CCH3 and check for overflow

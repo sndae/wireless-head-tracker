@@ -37,7 +37,7 @@ typedef struct
 {
 	uint8_t		report_id;		// == AXIS_CONFIG_REPORT_ID
 
-	uint8_t		autocenter;		// 0 to 3
+	uint8_t		autocenter;		// 0 to 3 for autocenter values
 	uint8_t		is_linear;
 
 	// axis factors
@@ -64,6 +64,8 @@ enum head_tracker_commands_t
 	// these are send from the PC to the dongle
 	CMD_RECENTER			= 3,
 	CMD_SAVE_DRIFT			= 4,
+	CMD_INC_DRIFT_COMP		= 5,
+	CMD_DEC_DRIFT_COMP		= 6,
 };
 
 // direction: PC -> dongle
@@ -113,6 +115,22 @@ typedef struct
 	uint16_t	temperature;
 
 } FeatRep_Status;
+
+// *****************************************************************
+// *****************************************************************
+// *****************************************************************
+
+#define STATUS_REPORT_ID				5
+
+// direction: dongle -> PC
+typedef struct
+{
+	uint8_t		report_id;		// STATUS_REPORT_ID
+
+	uint8_t		flags;			// 0x01 - increase drift comp by 0.1
+								// 0x02 - decrease drift comp by 0.1
+
+} FeatRep_ManualDrift;
 
 #ifdef _MSC_VER
 # pragma pack(pop)

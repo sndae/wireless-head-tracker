@@ -194,6 +194,18 @@ void WHTDialog::OnCommand(int ctrl_id)
 		repReset.report_id = COMMAND_REPORT_ID;
 		repReset.command = CMD_RECENTER;
 		device.SetFeatureReport(repReset);
+	} else if (ctrl_id == IDC_BTN_PLUS  ||  ctrl_id == IDC_BTN_MINUS) {
+		FeatRep_Command repReset;
+		repReset.report_id = COMMAND_REPORT_ID;
+		repReset.command = (ctrl_id == IDC_BTN_PLUS ? CMD_INC_DRIFT_COMP : CMD_DEC_DRIFT_COMP);
+		device.SetFeatureReport(repReset);
+
+		// read the new drift compensation value back
+		FeatRep_DongleSettings repSettings;
+		repSettings.report_id = DONGLE_SETTINGS_REPORT_ID;
+		device.GetFeatureReport(repSettings);
+
+		SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(repSettings.x_drift_comp));
 	}
 }
 
@@ -384,6 +396,8 @@ void WHTDialog::ChangeConnectedStateUI(bool is_connected)
 	EnableWindow(GetCtrl(IDC_BTN_READ_CALIBRATION), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_BTN_CALIBRATE), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_BTN_SEND_TO_DONGLE), is_connected ? TRUE : FALSE);
+	EnableWindow(GetCtrl(IDC_BTN_MINUS), is_connected ? TRUE : FALSE);
+	EnableWindow(GetCtrl(IDC_BTN_PLUS), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_BTN_RESET_DRIFT_COMP), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_BTN_SAVE_DRIFT_COMP), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_CMB_AXIS_RESPONSE), is_connected ? TRUE : FALSE);

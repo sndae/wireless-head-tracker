@@ -45,14 +45,14 @@ __xdata FeatRep_DongleSettings default_settings =
 {
 	0,		// report_id		is_empty
 	
-	1,		// autocenter
+	2,		// autocenter
 	0,		// is_linear
 
 	12.0,	// exp_fact_x
 	12.0,	// exp_fact_y
 	12.0,	// exp_fact_z
 	
-	0.0,	// x_drift_comp
+	-2,	// x_drift_comp
 };
 
 void flash_page_erase(uint8_t pn)
