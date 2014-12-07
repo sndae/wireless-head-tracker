@@ -1,17 +1,21 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
-#include <math.h>
+//#include <math.h>
 
 #include <compiler_mcs51.h>
 
+#include "nrfdbg.h"
+
 #include "rf_protocol.h"
 #include "proc_packet.h"
-#include "math_cordic.h"
+//#include "math_cordic.h"
 #include "reports.h"
 #include "dongle_settings.h"
 #include "mdu.h"
+#include "mymath.h"
 
 // process_packet function processes the data from the sensor MPU-6050 attached to the user's head,
 // and calculates xyz coordinates from the received quaternions.
@@ -33,6 +37,20 @@ bool calibrated = false;
 int16_t sampleCount = 0;
 uint8_t pckt_cnt = 0;
 bool pc_recenter = false;
+
+/*
+#define DRIFT_TABLE_SIZE	30
+
+typedef struct
+{
+	int16_t		cnt;
+	float		drift;
+} new_drift_data_t;
+
+#define MIN_TEMPERATURE		250
+
+new_drift_data_t drift_all[DRIFT_TABLE_SIZE];
+*/
 
 void save_x_drift_comp(void)
 {
@@ -81,23 +99,53 @@ int32_t constrain_16bit(int32_t val)
 	return val;
 }
 
+/*
+int8_t dcnt = 0;
+#define DUMP_CHUNK	2
+
+void dump_drift(void)
+{
+	int8_t c;
+	int8_t found = 0;
+	
+	for (c = 0; c < DRIFT_TABLE_SIZE  &&  found < DUMP_CHUNK; ++c)
+	{
+		if (drift_all[dcnt].cnt)
+		{
+			dprintf("%d %d %f  \n", (dcnt << 1) + MIN_TEMPERATURE, drift_all[dcnt].cnt, drift_all[dcnt].drift);
+			found++;
+		}
+		
+		dcnt++;
+		if (dcnt == DRIFT_TABLE_SIZE)
+		{
+			dcnt = 0;
+			//dprintf("\x1b[2J");		// clear screen
+			dprintf("\x1b[H");		// cursor home
+			//dputs("---");
+		}
+	}
+}
+*/
+
 bool process_packet(mpu_packet_t* pckt)
 {
 	float newZ, newY, newX;
 	float dzlimit;
 	int32_t iX, iY, iZ;
 
-	int16_t qw, qx, qy, qz;
-	int32_t qww, qxx, qyy, qzz;
+	float qw, qx, qy, qz;
+	float qww, qxx, qyy, qzz;
 	
 	const FeatRep_DongleSettings __xdata * pSettings = get_settings();
-	
+
 	// calculate Yaw/Pitch/Roll
 	qw = pckt->quat[0];
 	qx = pckt->quat[1];
 	qy = pckt->quat[2];
 	qz = pckt->quat[3];
 
+	/*
 	// the CORDIC trig functions return angles in units already adjusted to the 16
 	// bit integer range, so there's no need to scale the results by 10430.06
 		
@@ -109,9 +157,25 @@ bool process_packet(mpu_packet_t* pckt)
 	newZ =  iatan2_cord(2 * (mul_16x16(qy, qz) + mul_16x16(qw, qx)), qww - qxx - qyy + qzz);
 	newY = -iasin_cord(-2 * (mul_16x16(qx, qz) - mul_16x16(qw, qy)));
 	newX = -iatan2_cord(2 * (mul_16x16(qx, qy) + mul_16x16(qw, qz)), qww + qxx - qyy - qzz);
+	*/
 
+	qww = qw * qw;
+	qxx = qx * qx;
+	qyy = qy * qy;
+	qzz = qz * qz;
+
+	newZ =  atan2(2 * (qy*qz + qw*qx), qww - qxx - qyy + qzz);
+	newY = -asin(-2 * (qx*qz - qw*qy));
+	newX = -atan2(2 * (qx*qy + qw*qz), qww + qxx - qyy - qzz);
+
+	newX *= 10430.06;
+	newY *= 10430.06;
+	newZ *= 10430.06;
+	
 	if (!calibrated)
 	{
+		//memset(drift_all, 0, sizeof(drift_all));	// reset our drift
+	
 		if (sampleCount < recalibrateSamples)
 		{
 			// accumulate samples
@@ -170,12 +234,12 @@ bool process_packet(mpu_packet_t* pckt)
 		iX = newX * pSettings->fact_x;
 		iY = newY * pSettings->fact_y;
 		iZ = newZ * pSettings->fact_z;
-		dzlimit = 30.0 * pSettings->fact_x * pSettings->autocenter;
+		dzlimit = 35.0 * pSettings->fact_x * pSettings->autocenter;
 	} else {
-		iX = (0.000122076 * newX * newX * pSettings->fact_x) * (newX / fabsf(newX));
-		iY = (0.000122076 * newY * newY * pSettings->fact_y) * (newY / fabsf(newY));
-		iZ = (0.000122076 * newZ * newZ * pSettings->fact_z) * (newZ / fabsf(newZ));
-		dzlimit = 33.0 * pSettings->fact_x * pSettings->autocenter;
+		iX = (0.000122076 * newX * newX * pSettings->fact_x) * (newX / fabs(newX));
+		iY = (0.000122076 * newY * newY * pSettings->fact_y) * (newY / fabs(newY));
+		iZ = (0.000122076 * newZ * newZ * pSettings->fact_z) * (newZ / fabs(newZ));
+		dzlimit = 39.0 * pSettings->fact_x * pSettings->autocenter;
 	}
 
 	// clamp after scaling to keep values within 16 bit range
@@ -194,22 +258,35 @@ bool process_packet(mpu_packet_t* pckt)
 		// if we're looking ahead, give or take
 		//  and not moving
 		//  and pitch is levelish then start to count
-		if (fabsf(newX) < dzlimit  &&  fabsf(newX - lX) < 1.4  &&  labs(iY) < 1000)
+		if (fabs(newX) < dzlimit  &&  fabs(newX - lX) < 3  &&  labs(iZ) < 1000)
 		{
+			//dprintf("I ");
 			ticksInZone++;
 			dzX += iX;
 		} else {
+			//dprintf("O ");
 			ticksInZone = 0;
 			dzX = 0.0;
 		}
+		
+		/*
+		dprintf("%f ", fabsf(newX));
+		dprintf("%f ", dzlimit);
+		dprintf("%f ", fabsf(newX - lX));
+		dprintf("%ld ", labs(iY));
+		dprintf("%d\n", ticksInZone);
+		*/
+		
 		lX = newX;
 
 		// if we stayed looking ahead-ish long enough then adjust yaw offset
-		if (ticksInZone >= 10)
+		if (ticksInZone >= 20)
 		{
+			//dprintf("*");
+
 			// NB this currently causes a small but visible jump in the
 			// view. Useful for debugging!
-			cx += dzX * 0.1;
+			cx += dzX * 0.05;
 			ticksInZone = 0;
 			dzX = 0.0;
 		}
@@ -230,7 +307,28 @@ bool process_packet(mpu_packet_t* pckt)
 		driftSamples++;
 
 		if (driftSamples > 0)
+		{
 			dX += newX - lastX;
+			
+			/*
+			float dX_loc = newX - lastX;
+			int8_t ndx;
+			dX += dX_loc;
+
+			ndx = pckt->temperature - MIN_TEMPERATURE;
+			if (ndx >= 0)
+			{
+				ndx >>= 1;	// drop resolution
+
+				if (ndx < DRIFT_TABLE_SIZE)
+				{
+					drift_all[ndx].cnt++;
+					drift_all[ndx].drift += dX_loc;
+				}
+			}
+			*/
+		}
+
 		lastX = newX;
 	}
 

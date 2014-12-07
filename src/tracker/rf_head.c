@@ -122,38 +122,3 @@ void rf_head_get_observe(uint8_t* arc, uint8_t* plos)
 	if (plos)
 		*plos = nRF_data[1] >> 4;
 }
-
-bool rf_head_process_ack_payloads(uint8_t* msg_buff_free, uint8_t* msg_buff_capacity)
-{
-	bool ret_val = false;
-	uint8_t buff[3];
-
-	// set defaults
-	if (msg_buff_free)		*msg_buff_free = 0;
-	if (msg_buff_capacity)	*msg_buff_capacity = 0;
-	
-	while (rf_head_read_ack_payload(buff, sizeof buff))
-	{
-	/*
-		if (buff[0] == MT_LED_STATUS)
-		{
-			//set_leds(buff[1], 25);
-
-		} else if (buff[0] == MT_TEXT_BUFF_FREE) {
-			
-			// make a proper message pointer
-			rf_msg_text_buff_state_t* msg_free_buff = (rf_msg_text_buff_state_t*) buff;
-			
-			ret_val = true;
-			
-			if (msg_buff_free)
-				*msg_buff_free = msg_free_buff->bytes_free;
-				
-			if (msg_buff_capacity)
-				*msg_buff_capacity = msg_free_buff->bytes_capacity;
-		}
-		*/
-	}
-	
-	return ret_val;
-}

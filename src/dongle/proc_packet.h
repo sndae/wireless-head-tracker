@@ -10,6 +10,8 @@ float get_curr_x_drift_comp(void);
 // recenter initiated from the PC
 void recenter(void);
 
+void dump_drift(void);
+
 extern int16_t driftSamples;
 extern float dX;
 

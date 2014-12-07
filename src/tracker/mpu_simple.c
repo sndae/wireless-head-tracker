@@ -510,9 +510,9 @@ void mpu_calibrate_bias(void)
 		else if (pckt.accel[1] <= -1)
 			new_settings.accel_bias[1] += accel_step;
 
-		if (pckt.accel[2] > 16384)
+		if (pckt.accel[2] > 0x4000)
 			new_settings.accel_bias[2] -= accel_step;
-		else if (pckt.accel[2] < 16384)
+		else if (pckt.accel[2] < 0x4000)
 			new_settings.accel_bias[2] += accel_step;
 
 		// gyro
