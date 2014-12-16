@@ -38,7 +38,6 @@ int16_t sampleCount = 0;
 uint8_t pckt_cnt = 0;
 bool pc_recenter = false;
 
-/*
 #define DRIFT_TABLE_SIZE	30
 
 typedef struct
@@ -47,10 +46,9 @@ typedef struct
 	float		drift;
 } new_drift_data_t;
 
-#define MIN_TEMPERATURE		250
+#define MIN_TEMPERATURE		240
 
 new_drift_data_t drift_all[DRIFT_TABLE_SIZE];
-*/
 
 void save_x_drift_comp(void)
 {
@@ -99,7 +97,6 @@ int32_t constrain_16bit(int32_t val)
 	return val;
 }
 
-/*
 int8_t dcnt = 0;
 #define DUMP_CHUNK	2
 
@@ -126,6 +123,22 @@ void dump_drift(void)
 		}
 	}
 }
+
+/*
+temp	cnt	drift
+266	2580	-1887.9
+268	3281	-2027.5
+270	2324	-1367.2
+272	2416	-1514.1
+274	2364	-1398.8
+276	1948	-845.28
+278	1976	-837.09
+280	2568	-1023.6
+282	3303	-1044.8
+284	1532	-694.56
+286	1992	-1019.1
+288	1672	-966.12
+290	140	-86.398
 */
 
 bool process_packet(mpu_packet_t* pckt)
@@ -174,7 +187,7 @@ bool process_packet(mpu_packet_t* pckt)
 	
 	if (!calibrated)
 	{
-		//memset(drift_all, 0, sizeof(drift_all));	// reset our drift
+		memset(drift_all, 0, sizeof(drift_all));	// reset our drift
 	
 		if (sampleCount < recalibrateSamples)
 		{
@@ -308,17 +321,14 @@ bool process_packet(mpu_packet_t* pckt)
 
 		if (driftSamples > 0)
 		{
-			dX += newX - lastX;
-			
-			/*
-			float dX_loc = newX - lastX;
 			int8_t ndx;
+			float dX_loc = newX - lastX;
 			dX += dX_loc;
 
 			ndx = pckt->temperature - MIN_TEMPERATURE;
 			if (ndx >= 0)
 			{
-				ndx >>= 1;	// drop resolution
+				ndx >>= 1;	// drop temperature resolution
 
 				if (ndx < DRIFT_TABLE_SIZE)
 				{
@@ -326,7 +336,6 @@ bool process_packet(mpu_packet_t* pckt)
 					drift_all[ndx].drift += dX_loc;
 				}
 			}
-			*/
 		}
 
 		lastX = newX;

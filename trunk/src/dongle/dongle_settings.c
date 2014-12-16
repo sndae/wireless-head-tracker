@@ -52,7 +52,7 @@ __xdata FeatRep_DongleSettings default_settings =
 	12.0,	// exp_fact_y
 	12.0,	// exp_fact_z
 	
-	-2,	// x_drift_comp
+	-0.8,	// x_drift_comp
 };
 
 void flash_page_erase(uint8_t pn)
