@@ -187,8 +187,8 @@ void main(void)
 		usbPoll();	// handles USB events
 		dbgPoll();	// send chars from the UART TX buffer
 		
-		if (dbgEmpty())
-			dump_drift();
+		//if (dbgEmpty())
+		//	dump_drift();
 		
 		// check the timer
 		CCL3 = 1;	// capture CCH3 and check for overflow

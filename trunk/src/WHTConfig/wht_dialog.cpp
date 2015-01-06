@@ -72,7 +72,7 @@ WHTDialog::WHTDialog(HWND hDlg)
 	//SetComboSelection(IDC_CMB_AUTOCENTER, 0);
 
 	// disable the controls
-	ChangeConnectedStateUI(false);
+	//ChangeConnectedStateUI(false);
 
 	// setup the status bar
 	InitStatusbar();
@@ -93,7 +93,7 @@ BOOL WHTDialog::OnMessage(int message, WPARAM wParam, LPARAM lParam)
 		{
 		case WM_COMMAND:
 
-			OnCommand(LOWORD(wParam));
+			OnCommand(LOWORD(wParam), HIWORD(wParam));
 			return FALSE;
 
 		case WM_TIMER:
@@ -137,7 +137,7 @@ BOOL WHTDialog::OnMessage(int message, WPARAM wParam, LPARAM lParam)
 	return FALSE;
 }
 
-void WHTDialog::OnCommand(int ctrl_id)
+void WHTDialog::OnCommand(int ctrl_id, int notification)
 {
 	if (ctrl_id == IDC_BTN_CALIBRATE)
 	{
@@ -206,6 +206,13 @@ void WHTDialog::OnCommand(int ctrl_id)
 		device.GetFeatureReport(repSettings);
 
 		SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(repSettings.x_drift_comp));
+
+	} else if (ctrl_id == IDC_EDT_FACT_X  ||  ctrl_id == IDC_EDT_FACT_Y  ||  ctrl_id == IDC_EDT_FACT_Z) {
+
+		// if text has changed
+		if (notification == EN_CHANGE)
+		{
+		}
 	}
 }
 

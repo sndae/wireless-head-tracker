@@ -8,12 +8,13 @@
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
+	// load hid.dll and the necessary functions from it
 	if (!InitHID())
 		return -1;
 
 	CoInitialize(0);
 
-	InitCommonControls();	// for the progress bar
+	InitCommonControls();	// we need common controls for the status bar
 
 	DialogBoxParam(hInstance, MAKEINTRESOURCE(IDD_MAIN_DIALOG), 0, (DLGPROC) WHTDialog::MyDlgProc, 0);
 

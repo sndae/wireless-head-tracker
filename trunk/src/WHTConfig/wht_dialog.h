@@ -69,7 +69,7 @@ private:
 	void RemoveTrayIcon();
 
 	BOOL OnMessage(int message, WPARAM wParam, LPARAM lParam);
-	void OnCommand(int ctrl_id);
+	void OnCommand(int ctrl_id, int notification);
 	void OnTimer();
 	void OnTrayNotify(LPARAM lParam);
 	void OnMinimize();
