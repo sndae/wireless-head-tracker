@@ -6,7 +6,9 @@
 #include "wht_device.h"
 #include "wht_dialog.h"
 
-#define WM_TRAYNOTIFY		(WM_APP+1)
+#ifdef MINIMIZE_TO_TRAY
+# define WM_TRAYNOTIFY		(WM_APP+1)
+#endif
 
 #define WIDEN2(x)		L ## x
 #define WIDEN(x)		WIDEN2(x)
@@ -40,7 +42,9 @@ BOOL CALLBACK WHTDialog::MyDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
 }
 
 WHTDialog::WHTDialog(HWND hDlg)
-	: hDialog(hDlg)
+:	hDialog(hDlg),
+	isConfigChanged(false),
+	ignoreConfigChanges(false)
 {
 	// first save the dialog pointer to user data
 	SetWindowLong(hDialog, GWL_USERDATA, reinterpret_cast<LONG>(this));
@@ -71,8 +75,8 @@ WHTDialog::WHTDialog(HWND hDlg)
 	AddComboString(IDC_CMB_AUTOCENTER, L"Heavy");
 	//SetComboSelection(IDC_CMB_AUTOCENTER, 0);
 
-	// disable the controls
-	//ChangeConnectedStateUI(false);
+	// disable the controls since we're not connected to the dongle yet
+	ChangeConnectedStateUI();
 
 	// setup the status bar
 	InitStatusbar();
@@ -101,6 +105,8 @@ BOOL WHTDialog::OnMessage(int message, WPARAM wParam, LPARAM lParam)
 			OnTimer();
 			return TRUE;
 
+#ifdef MINIMIZE_TO_TRAY
+
 		case WM_SYSCOMMAND:
 
 			if (wParam == SC_MINIMIZE)
@@ -117,6 +123,8 @@ BOOL WHTDialog::OnMessage(int message, WPARAM wParam, LPARAM lParam)
 			OnTrayNotify(lParam);
 			return TRUE;
 
+#endif
+
 		case WM_CLOSE:
 
 			EndDialog(hDialog, 0);
@@ -125,11 +133,9 @@ BOOL WHTDialog::OnMessage(int message, WPARAM wParam, LPARAM lParam)
 
 	} catch (std::wstring& e) {
 
-		// close the HID device
-		device.Close();
-
-		// change the UI
-		ChangeConnectedStateUI(false);
+		device.Close();				// close the HID device
+		isConfigChanged = false;	// we're haven't changed anything since we're close
+		ChangeConnectedStateUI();	// disable controls change the UI
 
 		MessageBox(hDialog, e.c_str(), L"Exception", MB_OK | MB_ICONERROR);
 	}
@@ -152,7 +158,8 @@ void WHTDialog::OnCommand(int ctrl_id, int notification)
 		if (device.IsOpen())
 		{
 			device.Close();
-			ChangeConnectedStateUI(false);
+			isConfigChanged = false;
+			ChangeConnectedStateUI();
 		} else {
 			if (!device.Open())
 			{
@@ -160,7 +167,7 @@ void WHTDialog::OnCommand(int ctrl_id, int notification)
 			} else {
 				ReadConfigFromDevice();
 				ReadCalibrationData();
-				ChangeConnectedStateUI(true);
+				ChangeConnectedStateUI();
 			}
 		}
 
@@ -209,9 +216,20 @@ void WHTDialog::OnCommand(int ctrl_id, int notification)
 
 	} else if (ctrl_id == IDC_EDT_FACT_X  ||  ctrl_id == IDC_EDT_FACT_Y  ||  ctrl_id == IDC_EDT_FACT_Z) {
 
-		// if text has changed
-		if (notification == EN_CHANGE)
+		// if the text in the exit boxes has changed
+		if (notification == EN_CHANGE  &&  	!ignoreConfigChanges)
 		{
+			isConfigChanged = true;
+			ChangeConnectedStateUI();
+		}
+
+	} else if (ctrl_id == IDC_CMB_AXIS_RESPONSE  ||  ctrl_id == IDC_CMB_AUTOCENTER) {
+
+		// if the selection of the combo box has changed
+		if (notification == CBN_SELCHANGE  &&  	!ignoreConfigChanges)
+		{
+			isConfigChanged = true;
+			ChangeConnectedStateUI();
 		}
 	}
 }
@@ -265,33 +283,12 @@ void WHTDialog::OnTimer()
 	}
 }
 
+#ifdef MINIMIZE_TO_TRAY
+
 void WHTDialog::OnMinimize()
 {
 	CreateTrayIcon();
 	Hide();
-}
-
-void WHTDialog::OnTrayNotify(LPARAM lParam)
-{
-	if (lParam == WM_LBUTTONDOWN)
-	{
-		Show();
-		RemoveTrayIcon();
-	//} else if (lParam == WM_RBUTTONDOWN) {
-	}
-}
-
-void WHTDialog::InitStatusbar()
-{
-	// make the status bar parts
-	const int NUM_PARTS = 4;
-	int parts[NUM_PARTS];
-	parts[0] = 110;
-	parts[1] = 230;
-	parts[2] = 350;
-	parts[3] = -1;
-
-	SendMessage(GetCtrl(IDC_STATUS_BAR), SB_SETPARTS, NUM_PARTS, (LPARAM) parts);
 }
 
 void WHTDialog::CreateTrayIcon()
@@ -310,6 +307,16 @@ void WHTDialog::CreateTrayIcon()
 	Shell_NotifyIcon(NIM_ADD, &nid);
 }
 
+void WHTDialog::OnTrayNotify(LPARAM lParam)
+{
+	if (lParam == WM_LBUTTONDOWN)
+	{
+		Show();
+		RemoveTrayIcon();
+	//} else if (lParam == WM_RBUTTONDOWN) {
+	}
+}
+
 void WHTDialog::RemoveTrayIcon()
 {
 	NOTIFYICONDATA nid;
@@ -324,6 +331,21 @@ void WHTDialog::RemoveTrayIcon()
 	nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
  
 	Shell_NotifyIcon(NIM_DELETE, &nid);
+}
+
+#endif
+
+void WHTDialog::InitStatusbar()
+{
+	// make the status bar parts
+	const int NUM_PARTS = 4;
+	int parts[NUM_PARTS];
+	parts[0] = 110;
+	parts[1] = 230;
+	parts[2] = 350;
+	parts[3] = -1;
+
+	SendMessage(GetCtrl(IDC_STATUS_BAR), SB_SETPARTS, NUM_PARTS, (LPARAM) parts);
 }
 
 float WHTDialog::GetCtrlTextFloat(int ctrl_id)
@@ -341,14 +363,20 @@ void WHTDialog::ReadConfigFromDevice()
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	device.GetFeatureReport(rep);
 
+	SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(rep.x_drift_comp));
+
+	ignoreConfigChanges = true;
+
 	SetComboSelection(IDC_CMB_AXIS_RESPONSE, rep.is_linear ? 1 : 0);
 	SetComboSelection(IDC_CMB_AUTOCENTER, rep.autocenter);
-
-	SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(rep.x_drift_comp));
 
 	SetCtrlText(IDC_EDT_FACT_X, flt2str(rep.fact_x));
 	SetCtrlText(IDC_EDT_FACT_Y, flt2str(rep.fact_y));
 	SetCtrlText(IDC_EDT_FACT_Z, flt2str(rep.fact_z));
+
+	isConfigChanged = false;
+
+	ignoreConfigChanges = false;
 }
 
 void WHTDialog::ReadCalibrationData()
@@ -396,13 +424,17 @@ void WHTDialog::SendConfigToDevice()
 	device.SetFeatureReport(rep);
 }
 
-void WHTDialog::ChangeConnectedStateUI(bool is_connected)
+void WHTDialog::ChangeConnectedStateUI()
 {
+	bool is_connected = device.IsOpen();
+
 	SetCtrlText(IDC_BTN_CONNECT, is_connected ? L"Disconnect" : L"Connect");
 
 	EnableWindow(GetCtrl(IDC_BTN_READ_CALIBRATION), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_BTN_CALIBRATE), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_BTN_SEND_TO_DONGLE), is_connected ? TRUE : FALSE);
+
+	EnableWindow(GetCtrl(IDC_BTN_SEND_TO_DONGLE), is_connected ? isConfigChanged : FALSE);
+
 	EnableWindow(GetCtrl(IDC_BTN_MINUS), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_BTN_PLUS), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_BTN_RESET_DRIFT_COMP), is_connected ? TRUE : FALSE);

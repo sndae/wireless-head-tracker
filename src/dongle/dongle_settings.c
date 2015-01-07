@@ -52,7 +52,7 @@ __xdata FeatRep_DongleSettings default_settings =
 	12.0,	// exp_fact_y
 	12.0,	// exp_fact_z
 	
-	-0.8,	// x_drift_comp
+	1.1,	// x_drift_comp
 };
 
 void flash_page_erase(uint8_t pn)
@@ -65,7 +65,7 @@ void flash_page_erase(uint8_t pn)
 
     FCR = pn;			// Write the page address to FCR to start the page erase operation
 
-    while(RDYN == 1)	// Wait for the erase operation to finish
+    while (RDYN == 1)	// Wait for the erase operation to finish
         ;
 
     WEN = 0;
