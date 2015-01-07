@@ -1,5 +1,8 @@
 #pragma once
 
+// undefine to enable minimize to tray
+//#define MINIMIZE_TO_TRAY
+
 class WHTDialog
 {
 private:
@@ -7,6 +10,9 @@ private:
 	HICON		hIconSmall;
 	HICON		hIconBig;
 	WHTDevice	device;
+
+	bool		isConfigChanged;
+	bool		ignoreConfigChanges;
 
 	void ReadConfigFromDevice();
 	void ReadCalibrationData();
@@ -65,16 +71,12 @@ private:
 		return IsDlgButtonChecked(hDialog, ctrl_id) == BST_CHECKED;
 	}
 
+#ifdef MINIMIZE_TO_TRAY
+
 	void CreateTrayIcon();
 	void RemoveTrayIcon();
-
-	BOOL OnMessage(int message, WPARAM wParam, LPARAM lParam);
-	void OnCommand(int ctrl_id, int notification);
-	void OnTimer();
 	void OnTrayNotify(LPARAM lParam);
 	void OnMinimize();
-
-	void ChangeConnectedStateUI(bool is_connected);
 
 	void Hide()
 	{
@@ -85,6 +87,14 @@ private:
 	{
 		ShowWindow(hDialog, SW_SHOW);
 	}
+
+#endif
+
+	BOOL OnMessage(int message, WPARAM wParam, LPARAM lParam);
+	void OnCommand(int ctrl_id, int notification);
+	void OnTimer();
+
+	void ChangeConnectedStateUI();
 
 public:
 	explicit WHTDialog(HWND hDlg);
