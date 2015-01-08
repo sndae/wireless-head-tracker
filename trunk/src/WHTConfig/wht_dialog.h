@@ -13,6 +13,7 @@ private:
 
 	bool		isConfigChanged;
 	bool		ignoreConfigChanges;
+	int			readCalibrationCnt;
 
 	void ReadConfigFromDevice();
 	void ReadCalibrationData();
