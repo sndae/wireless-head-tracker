@@ -25,6 +25,7 @@
 // ED Tracker can be found here: http://edtracker.org.uk/
 
 #define APPLY_DRIFT_COMP_PACKETS	5
+#define RECENTER_TICK_COUNT			15
 
 int32_t driftSamples = -2;
 float lastX = 0, dX = 0, dY, dZ;
@@ -295,7 +296,7 @@ bool process_packet(mpu_packet_t* pckt)
 		lX = newX;
 
 		// if we stayed looking ahead-ish long enough then adjust yaw offset
-		if (ticksInZone >= 20)
+		if (ticksInZone >= RECENTER_TICK_COUNT)
 		{
 			//dprintf("*");
 

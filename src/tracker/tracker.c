@@ -21,6 +21,8 @@
 
 void hw_init()
 {
+	uint8_t c;
+	
 	P0DIR = 0xf0;		// P0.0 P0.1 P0.2 are the LEDs and they are outputs
                         // P0.3 is the UART TX - output
 						// P0.5 is the push button - input
@@ -28,9 +30,26 @@ void hw_init()
 
 	P0CON = 0x55;		// turn on the pullup for the recenter button
 	
-	LED_RED		= 0;	// LEDs are off
+	// cycle the LEDs
+	LED_RED		= 0;
 	LED_YELLOW	= 0;
 	LED_GREEN	= 0;
+	
+	for (c = 0; c < 3; ++c)
+	{
+		LED_RED		= 1;
+		delay_ms(40);
+		LED_RED		= 0;
+		LED_YELLOW	= 1;
+		delay_ms(40);
+		LED_YELLOW	= 0;
+		LED_GREEN	= 1;
+		delay_ms(40);
+		LED_GREEN	= 0;
+		LED_YELLOW	= 1;
+		delay_ms(40);
+		LED_YELLOW	= 0;
+	}
 	
 	dbgInit();
 	i2c_init();

@@ -44,7 +44,8 @@ BOOL CALLBACK WHTDialog::MyDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARA
 WHTDialog::WHTDialog(HWND hDlg)
 :	hDialog(hDlg),
 	isConfigChanged(false),
-	ignoreConfigChanges(false)
+	ignoreConfigChanges(false),
+	readCalibrationCnt(0)
 {
 	// first save the dialog pointer to user data
 	SetWindowLong(hDialog, GWL_USERDATA, reinterpret_cast<LONG>(this));
@@ -151,6 +152,17 @@ void WHTDialog::OnCommand(int ctrl_id, int notification)
 		rep.report_id = COMMAND_REPORT_ID;
 		rep.command = CMD_CALIBRATE;
 		device.SetFeatureReport(rep);
+
+		// clear the calibration fields
+		SetCtrlText(IDC_LBL_CALIB_STATUS, L"Calibrating...");
+		ClearCtrlText(IDC_LBL_GYRO_BIAS_X);
+		ClearCtrlText(IDC_LBL_GYRO_BIAS_Y);
+		ClearCtrlText(IDC_LBL_GYRO_BIAS_Z);
+		ClearCtrlText(IDC_LBL_ACCEL_BIAS_X);
+		ClearCtrlText(IDC_LBL_ACCEL_BIAS_Y);
+		ClearCtrlText(IDC_LBL_ACCEL_BIAS_Z);
+
+		readCalibrationCnt = 15;
 
 	} else if (ctrl_id == IDC_BTN_SEND_TO_DONGLE) {
 		SendConfigToDevice();
@@ -270,6 +282,21 @@ void WHTDialog::OnTimer()
 
 		swprintf_s(buff, BUFF_SIZE, L"Temperature: %2.1f°C", repStatus.temperature / 10.0);
 		SetStatusbarText(STATBAR_TEMPERATURE, buff);
+
+		// read the calibration if needed
+		if (readCalibrationCnt)
+		{
+			if (readCalibrationCnt == 1)
+			{
+				if (repStatus.num_packets > 0)
+				{
+					ReadCalibrationData();
+					readCalibrationCnt = 0;
+				}
+			} else {
+				--readCalibrationCnt;
+			}
+		}
 
 	} else {
 
