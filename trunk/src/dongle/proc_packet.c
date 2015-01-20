@@ -55,12 +55,12 @@ void save_x_drift_comp(void)
 {
 	// get the current settings
 	FeatRep_DongleSettings __xdata new_settings;
-	memcpy(&new_settings, get_settings(), sizeof(FeatRep_DongleSettings));
+	memcpy(&new_settings, get_dongle_settings(), sizeof(FeatRep_DongleSettings));
 	
 	// set the new value
 	new_settings.x_drift_comp += get_curr_x_drift_comp();
 	
-	save_settings(&new_settings);
+	save_dongle_settings(&new_settings);
 }
 
 float get_curr_x_drift_comp(void)
@@ -153,18 +153,19 @@ bool process_packet(mpu_packet_t* pckt)
 	float qw, qx, qy, qz;
 	float qww, qxx, qyy, qzz;
 	
-	const FeatRep_DongleSettings __xdata * pSettings = get_settings();
+	const FeatRep_DongleSettings __xdata * pSettings = get_dongle_settings();
 
 	// calculate Yaw/Pitch/Roll
-	qw = pckt->quat[0];
-	qx = pckt->quat[1];
-	qy = pckt->quat[2];
-	qz = pckt->quat[3];
 
 	/*
 	// the CORDIC trig functions return angles in units already adjusted to the 16
 	// bit integer range, so there's no need to scale the results by 10430.06
-		
+
+	qw = pckt->quat[0];
+	qx = pckt->quat[1];
+	qy = pckt->quat[2];
+	qz = pckt->quat[3];
+	
 	qww = mul_16x16(qw, qw);
 	qxx = mul_16x16(qx, qx);
 	qyy = mul_16x16(qy, qy);
@@ -174,6 +175,11 @@ bool process_packet(mpu_packet_t* pckt)
 	newY = -iasin_cord(-2 * (mul_16x16(qx, qz) - mul_16x16(qw, qy)));
 	newX = -iatan2_cord(2 * (mul_16x16(qx, qy) + mul_16x16(qw, qz)), qww + qxx - qyy - qzz);
 	*/
+
+	qw = pckt->quat[0] / 16384.0;
+	qx = pckt->quat[1] / 16384.0;
+	qy = pckt->quat[2] / 16384.0;
+	qz = pckt->quat[3] / 16384.0;
 
 	qww = qw * qw;
 	qxx = qx * qx;
@@ -187,7 +193,7 @@ bool process_packet(mpu_packet_t* pckt)
 	newX *= 10430.06;
 	newY *= 10430.06;
 	newZ *= 10430.06;
-	
+
 	if (!calibrated)
 	{
 		//memset(drift_all, 0, sizeof(drift_all));	// reset our drift
@@ -263,10 +269,13 @@ bool process_packet(mpu_packet_t* pckt)
 	iY = constrain_16bit(iY);
 	iZ = constrain_16bit(iZ);
 
-	// set the values in the USB report
+	// set the values in the USB report (do it to it)
 	usb_joystick_report.x = iX;
 	usb_joystick_report.y = iY;
 	usb_joystick_report.z = iZ;
+	
+	//if (dbgEmpty())
+	//	dprintf("x=%d y=%d z=%d\n", usb_joystick_report.x, usb_joystick_report.y, usb_joystick_report.z);
 
 	// autocentering
 	if (pSettings->autocenter)
@@ -322,7 +331,7 @@ bool process_packet(mpu_packet_t* pckt)
 
 		if (++driftSamples > 0)
 		{
-			int8_t ndx;
+			//int8_t ndx;
 			float dX_loc = newX - lastX;
 			dX += dX_loc;
 

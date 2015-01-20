@@ -8,6 +8,7 @@
 #include "reports.h"
 
 #include "../tracker/rf_protocol.h"
+#include "../tracker/settings.h"
 #include "rf_dngl.h"
 #include "nrfutils.h"
 
@@ -20,7 +21,7 @@
 #include "dongle_settings.h"
 
 #define NUM_COUNTER_PACKETS	10
-uint8_t total_packets[NUM_COUNTER_PACKETS];		// holds the last ~1 second of packets
+uint8_t total_packets[NUM_COUNTER_PACKETS];		// holds the total count of the last ~1 second of packets
 
 uint16_t battery_voltage, temperature;
 
@@ -29,22 +30,22 @@ void on_set_report(void)
 {
 	if (out0buf[0] == DONGLE_SETTINGS_REPORT_ID)
 	{
-		const FeatRep_DongleSettings __xdata * pSettings = get_settings();
+		const FeatRep_DongleSettings __xdata * pSettings = get_dongle_settings();
 
 		FeatRep_DongleSettings new_settings;
 		memcpy(&new_settings, out0buf, sizeof(FeatRep_DongleSettings));
 		new_settings.x_drift_comp = pSettings->x_drift_comp;
 		
 		// save the data structure we've just received
-		save_settings(&new_settings);
+		save_dongle_settings(&new_settings);
 
 	} else if (out0buf[0] == COMMAND_REPORT_ID) {
 
 		uint8_t command = out0buf[1];
 	
-		if (command == CMD_CALIBRATE)
+		if (command == CMD_CALIBRATE  ||  command >= CMD_RF_PWR_WEAKEST && command <= CMD_RF_PWR_HIGHEST)
 		{
-			// tell the head tracker to recalibrate
+			// tell the head tracker to execute command
 			rf_dngl_queue_ack_payload(&command, 1);
 		} else if (command == CMD_RECENTER) {
 			recenter();
@@ -52,7 +53,7 @@ void on_set_report(void)
 			save_x_drift_comp();
 		} else if (command == CMD_INC_DRIFT_COMP  ||  command == CMD_DEC_DRIFT_COMP) {
 		
-			const FeatRep_DongleSettings __xdata * pSettings = get_settings();
+			const FeatRep_DongleSettings __xdata * pSettings = get_dongle_settings();
 
 			FeatRep_DongleSettings new_settings;
 			memcpy(&new_settings, pSettings, sizeof(FeatRep_DongleSettings));
@@ -62,7 +63,7 @@ void on_set_report(void)
 				new_settings.x_drift_comp -= 0.1;
 			
 			// save the data structure we've just received
-			save_settings(&new_settings);
+			save_dongle_settings(&new_settings);
 		}
 	}
 }
@@ -81,39 +82,40 @@ void on_get_report(void)
 	} else if (usbReqHidGetSetReport.reportID == DONGLE_SETTINGS_REPORT_ID) {
 
 		// copy the data into the buffer
-		memcpy(in0buf, get_settings(), sizeof(FeatRep_DongleSettings));
+		memcpy(in0buf, get_dongle_settings(), sizeof(FeatRep_DongleSettings));
 		in0buf[0] = DONGLE_SETTINGS_REPORT_ID;
 
 		// send the data on it's way
 		in0bc = sizeof(FeatRep_DongleSettings);
 
-	} else if (usbReqHidGetSetReport.reportID == CALIBRATION_DATA_REPORT_ID) {
+	} else if (usbReqHidGetSetReport.reportID == TRACKER_SETTINGS_REPORT_ID) {
 
 		// tell the head tracker to send us the calibration data
-		uint8_t ack_payload = CMD_SEND_CALIB_DATA;
+		uint8_t ack_payload = CMD_READ_TRACKER_SETTINGS;
 		uint8_t pckt_cnt, bytes_rcvd;
-		calib_data_t calib_data;
-		FeatRep_CalibrationData __xdata * pReport = (FeatRep_CalibrationData __xdata *) in0buf;
+		tracker_settings_t tracker_settings;
+		FeatRep_TrackerSettings __xdata * pReport = (FeatRep_TrackerSettings __xdata *) in0buf;
 		
 		rf_dngl_queue_ack_payload(&ack_payload, 1);
 
-		pReport->report_id = CALIBRATION_DATA_REPORT_ID;
+		pReport->report_id = CMD_READ_TRACKER_SETTINGS;
 		pReport->has_tracker_responded = 0;
 		
 		// now wait for that data
 		for (pckt_cnt = 0; pckt_cnt < 5; ++pckt_cnt)
 		{
-			bytes_rcvd = rf_dngl_recv(&calib_data, sizeof(calib_data));
-			if (bytes_rcvd == sizeof(calib_data))
+			bytes_rcvd = rf_dngl_recv(&tracker_settings, sizeof(tracker_settings));
+			if (bytes_rcvd == sizeof(tracker_settings))
 			{
 				pReport->has_tracker_responded = 1;
-				pReport->is_calibrated = calib_data.is_calibrated;
-				pReport->gyro_bias[0] = calib_data.gyro_bias[0];
-				pReport->gyro_bias[1] = calib_data.gyro_bias[1];
-				pReport->gyro_bias[2] = calib_data.gyro_bias[2];
-				pReport->accel_bias[0] = calib_data.accel_bias[0];
-				pReport->accel_bias[1] = calib_data.accel_bias[1];
-				pReport->accel_bias[2] = calib_data.accel_bias[2];
+				pReport->is_calibrated = tracker_settings.is_calibrated;
+				pReport->gyro_bias[0] = tracker_settings.gyro_bias[0];
+				pReport->gyro_bias[1] = tracker_settings.gyro_bias[1];
+				pReport->gyro_bias[2] = tracker_settings.gyro_bias[2];
+				pReport->accel_bias[0] = tracker_settings.accel_bias[0];
+				pReport->accel_bias[1] = tracker_settings.accel_bias[1];
+				pReport->accel_bias[2] = tracker_settings.accel_bias[2];
+				pReport->rf_power = tracker_settings.rf_power;
 
 				//dprintf("%c %d %d %d\n", calib_data.is_calibrated ? 'C' : 'N',
 				//						calib_data.accel_bias[0], calib_data.accel_bias[1], calib_data.accel_bias[2]);
@@ -125,7 +127,7 @@ void on_get_report(void)
 		}
 
 		// send the data
-		in0bc = sizeof(FeatRep_CalibrationData);
+		in0bc = sizeof(FeatRep_TrackerSettings);
 		
 	} else if (usbReqHidGetSetReport.reportID == STATUS_REPORT_ID) {
 	
@@ -186,9 +188,6 @@ void main(void)
 	{
 		usbPoll();	// handles USB events
 		dbgPoll();	// send chars from the UART TX buffer
-		
-		//if (dbgEmpty())
-		//	dump_drift();
 		
 		// check the timer
 		CCL3 = 1;	// capture CCH3 and check for overflow

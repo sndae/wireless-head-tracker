@@ -16,7 +16,7 @@ private:
 	int			readCalibrationCnt;
 
 	void ReadConfigFromDevice();
-	void ReadCalibrationData();
+	void ReadTrackerSettings();
 	void SendConfigToDevice();
 
 	HWND GetCtrl(int ctrl_id)

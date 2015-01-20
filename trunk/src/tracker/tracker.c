@@ -7,6 +7,7 @@
 #include <compiler_mcs51.h>
 
 #include <reg24le1.h>
+#include <nrf24l.h>
 #include <nrfutils.h>
 #include <nrfdbg.h>
 
@@ -161,7 +162,6 @@ int main(void)
 	
 	bool read_result;
 	mpu_packet_t pckt;
-	calib_data_t calib;
 
 	hw_init();
 	
@@ -192,7 +192,8 @@ int main(void)
 		// However, I have not succeeded in the making the wakeup work reliably.
 		while (MPU_IRQ)
 			dbgPoll();
-		while (!MPU_IRQ);
+		while (!MPU_IRQ)
+			;
 
 		do {
 			// read all the packets in the MPU fifo
@@ -231,25 +232,18 @@ int main(void)
 					if (ack == CMD_CALIBRATE)
 					{
 						mpu_calibrate_bias();
-					} else if (ack == CMD_SEND_CALIB_DATA) {
+						
+					} else if (ack == CMD_READ_TRACKER_SETTINGS) {
 					
-						const settings_t __xdata * pSettings = get_settings();
+						rf_head_send_message(get_tracker_settings(), sizeof(tracker_settings_t));
 
-						memset(&calib, 0, sizeof(calib));
+					} else if (ack >= CMD_RF_PWR_WEAKEST  &&  ack <= CMD_RF_PWR_HIGHEST) {
+					
+						tracker_settings_t new_settings;
+						memcpy(&new_settings, get_tracker_settings(), sizeof(tracker_settings_t));
+						new_settings.rf_power = ack;
 						
-						calib.is_calibrated = (pSettings != 0);
-						if (calib.is_calibrated)
-						{
-							calib.gyro_bias[0] = pSettings->gyro_bias[0];
-							calib.gyro_bias[1] = pSettings->gyro_bias[1];
-							calib.gyro_bias[2] = pSettings->gyro_bias[2];
-							
-							calib.accel_bias[0] = pSettings->accel_bias[0];
-							calib.accel_bias[1] = pSettings->accel_bias[1];
-							calib.accel_bias[2] = pSettings->accel_bias[2];
-						}
-						
-						rf_head_send_message(&calib, sizeof(calib));
+						save_tracker_settings(&new_settings);
 					}
 				}
 			}

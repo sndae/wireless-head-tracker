@@ -58,14 +58,20 @@ typedef struct
 enum head_tracker_commands_t
 {
 	// the first two are sent to the head tracker over radio
-	CMD_CALIBRATE			= 1,
-	CMD_SEND_CALIB_DATA		= 2,
+	CMD_CALIBRATE				= 1,
+	CMD_READ_TRACKER_SETTINGS	= 2,
 	
 	// these are send from the PC to the dongle
-	CMD_RECENTER			= 3,
-	CMD_SAVE_DRIFT			= 4,
-	CMD_INC_DRIFT_COMP		= 5,
-	CMD_DEC_DRIFT_COMP		= 6,
+	CMD_RECENTER				= 3,
+	CMD_SAVE_DRIFT				= 4,
+	CMD_INC_DRIFT_COMP			= 5,
+	CMD_DEC_DRIFT_COMP			= 6,
+	
+	// these are sent from the config program, through the dongle to the tracker
+	CMD_RF_PWR_WEAKEST			= 7,
+	CMD_RF_PWR_WEAKER			= 8,
+	CMD_RF_PWR_HIGHER			= 9,
+	CMD_RF_PWR_HIGHEST			= 10,
 };
 
 // direction: PC -> dongle
@@ -79,12 +85,12 @@ typedef struct
 // *****************************************************************
 // *****************************************************************
 
-#define CALIBRATION_DATA_REPORT_ID		4
+#define TRACKER_SETTINGS_REPORT_ID		4
 
 // direction: dongle -> PC
 typedef struct
 {
-	uint8_t		report_id;		// CALIBRATE_REPORT_ID
+	uint8_t		report_id;		// TRACKER_SETTINGS_REPORT_ID
 
 	uint8_t		has_tracker_responded;
 	
@@ -92,7 +98,12 @@ typedef struct
 
 	int16_t		gyro_bias[3];
 	int16_t		accel_bias[3];
-} FeatRep_CalibrationData;
+	
+	uint8_t		rf_power;		// CMD_RF_PWR_WEAKEST
+								// CMD_RF_PWR_WEAKER
+								// CMD_RF_PWR_HIGHER
+								// CMD_RF_PWR_HIGHEST
+} FeatRep_TrackerSettings;
 
 // *****************************************************************
 // *****************************************************************
