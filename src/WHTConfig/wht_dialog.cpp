@@ -76,6 +76,11 @@ WHTDialog::WHTDialog(HWND hDlg)
 	AddComboString(IDC_CMB_AUTOCENTER, L"Heavy");
 	//SetComboSelection(IDC_CMB_AUTOCENTER, 0);
 
+	AddComboString(IDC_CMB_RF_POWER, L"Weakest");
+	AddComboString(IDC_CMB_RF_POWER, L"Weaker");
+	AddComboString(IDC_CMB_RF_POWER, L"Higher");
+	AddComboString(IDC_CMB_RF_POWER, L"Highest");
+
 	// disable the controls since we're not connected to the dongle yet
 	ChangeConnectedStateUI();
 
@@ -178,14 +183,14 @@ void WHTDialog::OnCommand(int ctrl_id, int notification)
 				MessageBox(hDialog, L"Wireless head tracker dongle not found.", L"Error", MB_OK | MB_ICONERROR);
 			} else {
 				ReadConfigFromDevice();
-				ReadCalibrationData();
+				ReadTrackerSettings();
 				ChangeConnectedStateUI();
 			}
 		}
 
 	} else if (ctrl_id == IDC_BTN_READ_CALIBRATION) {
 
-		ReadCalibrationData();
+		ReadTrackerSettings();
 
 	} else if (ctrl_id == IDC_BTN_RESET_DRIFT_COMP) {
 		
@@ -243,6 +248,13 @@ void WHTDialog::OnCommand(int ctrl_id, int notification)
 			isConfigChanged = true;
 			ChangeConnectedStateUI();
 		}
+
+	} else if (ctrl_id == IDC_BTN_SAVE_RF_POWER) {
+		
+		FeatRep_Command repReset;
+		repReset.report_id = COMMAND_REPORT_ID;
+		repReset.command = GetComboSelection(IDC_CMB_RF_POWER) + 7;
+		device.SetFeatureReport(repReset);
 	}
 }
 
@@ -290,7 +302,7 @@ void WHTDialog::OnTimer()
 			{
 				if (repStatus.num_packets > 0)
 				{
-					ReadCalibrationData();
+					ReadTrackerSettings();
 					readCalibrationCnt = 0;
 				}
 			} else {
@@ -406,7 +418,7 @@ void WHTDialog::ReadConfigFromDevice()
 	ignoreConfigChanges = false;
 }
 
-void WHTDialog::ReadCalibrationData()
+void WHTDialog::ReadTrackerSettings()
 {
 	ClearCtrlText(IDC_LBL_CALIB_STATUS);
 	ClearCtrlText(IDC_LBL_GYRO_BIAS_X);
@@ -416,8 +428,8 @@ void WHTDialog::ReadCalibrationData()
 	ClearCtrlText(IDC_LBL_ACCEL_BIAS_Y);
 	ClearCtrlText(IDC_LBL_ACCEL_BIAS_Z);
 
-	FeatRep_CalibrationData rep;
-	rep.report_id = CALIBRATION_DATA_REPORT_ID;
+	FeatRep_TrackerSettings rep;
+	rep.report_id = TRACKER_SETTINGS_REPORT_ID;
 	device.GetFeatureReport(rep);
 
 	if (rep.has_tracker_responded == 0)
@@ -433,6 +445,18 @@ void WHTDialog::ReadCalibrationData()
 		SetCtrlText(IDC_LBL_ACCEL_BIAS_X, int2str(rep.accel_bias[0]));
 		SetCtrlText(IDC_LBL_ACCEL_BIAS_Y, int2str(rep.accel_bias[1]));
 		SetCtrlText(IDC_LBL_ACCEL_BIAS_Z, int2str(rep.accel_bias[2]));
+
+		size_t sel;
+		if (rep.rf_power == CMD_RF_PWR_WEAKEST)
+			sel = 0;
+		else if (rep.rf_power == CMD_RF_PWR_WEAKER)
+			sel = 1;
+		else if (rep.rf_power == CMD_RF_PWR_HIGHER)
+			sel = 2;
+		else if (rep.rf_power == CMD_RF_PWR_HIGHEST)
+			sel = 3;
+
+		SetComboSelection(IDC_CMB_RF_POWER, sel);
 	}
 }
 
@@ -471,4 +495,6 @@ void WHTDialog::ChangeConnectedStateUI()
 	EnableWindow(GetCtrl(IDC_EDT_FACT_X), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_EDT_FACT_Y), is_connected ? TRUE : FALSE);
 	EnableWindow(GetCtrl(IDC_EDT_FACT_Z), is_connected ? TRUE : FALSE);
+	EnableWindow(GetCtrl(IDC_CMB_RF_POWER), is_connected ? TRUE : FALSE);
+	EnableWindow(GetCtrl(IDC_BTN_SAVE_RF_POWER), is_connected ? TRUE : FALSE);
 }

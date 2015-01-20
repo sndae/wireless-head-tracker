@@ -9,10 +9,12 @@
 #include "nRF24L.h"
 #include "tracker.h"
 #include "rf_protocol.h"
+#include "../dongle/reports.h"
 #include "rf_head.h"
 #include "nrfutils.h"
 #include "nrfdbg.h"
 #include "sleeping.h"
+#include "settings.h"
 
 // we want to count the lost packets
 // uint32_t plos_total, arc_total, rf_packets_total;
@@ -49,14 +51,22 @@ void rf_head_init(void)
 bool rf_head_send_message(const void* buff, const uint8_t num_bytes)
 {
 	bool is_sent;
-	uint8_t status;
+	uint8_t status, setup = vRF_DR_2MBPS;
 
 	// wait for XOSC16M to start
 	while ((CLKLFCTRL & 0x08) == 0)
 		;
 
-	nRF_WriteReg(RF_SETUP, vRF_DR_2MBPS			// data rate 
-							| vRF_PWR_0DBM);	// output power
+	// read the power from the settings and add the data rate to it
+	switch (get_tracker_settings()->rf_power)
+	{
+	case CMD_RF_PWR_WEAKEST:	setup = vRF_DR_2MBPS | vRF_PWR_M18DBM;		break;
+	case CMD_RF_PWR_WEAKER:		setup = vRF_DR_2MBPS | vRF_PWR_M12DBM;		break;
+	case CMD_RF_PWR_HIGHER:		setup = vRF_DR_2MBPS | vRF_PWR_M6DBM;		break;
+	case CMD_RF_PWR_HIGHEST:	setup = vRF_DR_2MBPS | vRF_PWR_0DBM;		break;
+	}
+		
+	nRF_WriteReg(RF_SETUP, setup);
 
 	nRF_FlushTX();
 	nRF_WriteReg(CONFIG, vEN_CRC | vCRCO | vPWR_UP);	// power up

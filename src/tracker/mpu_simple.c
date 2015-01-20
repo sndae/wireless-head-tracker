@@ -371,9 +371,9 @@ bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more)
 
 void load_biases(void)
 {
-	const settings_t* pSettings = get_settings();
+	const tracker_settings_t* pSettings = get_tracker_settings();
 
-	if (pSettings)
+	if (pSettings  &&  pSettings->is_calibrated)
 	{
 		dprintf("%s\ngyro %d %d %d\naccel %d %d %d\n",
 						"loading",
@@ -460,15 +460,19 @@ void mpu_calibrate_bias(void)
 	uint8_t scnt;
 	int8_t accel_step = 10;
 	mpu_packet_t pckt;
-	settings_t new_settings;
+	tracker_settings_t new_settings;
 
+	LED_RED = 0;
+	LED_GREEN = 0;
 	LED_YELLOW = 1;
 	
 	dputs("**************** calibrating");
 	
 	mpu_init(false);
-	
+
+	// init the new settings struct
 	memset(&new_settings, 0, sizeof(new_settings));
+	new_settings.rf_power = get_tracker_settings()->rf_power;
 	
 	// read the current accel bias
 	mpu_read_accel_bias(new_settings.accel_bias);
@@ -537,7 +541,8 @@ void mpu_calibrate_bias(void)
 	}
 
 	// now save our settings
-	save_settings(&new_settings);
+	new_settings.is_calibrated = 1;
+	save_tracker_settings(&new_settings);
 	
 	dprintf("new\ngyro %6d %6d %6d\naccel %6d %6d %6d\n",
 					new_settings.gyro_bias[0], new_settings.gyro_bias[1], new_settings.gyro_bias[2],

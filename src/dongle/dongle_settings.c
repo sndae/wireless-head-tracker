@@ -112,7 +112,7 @@ int8_t get_ndx_of_current_settings(void)
 	return cnt;
 }
 
-const FeatRep_DongleSettings __xdata * get_settings(void)
+const FeatRep_DongleSettings __xdata * get_dongle_settings(void)
 {
 	const FeatRep_DongleSettings __xdata * pStart = DATA0_ADDR;
 	int8_t ndx;
@@ -122,14 +122,14 @@ const FeatRep_DongleSettings __xdata * get_settings(void)
 	// no settings yet, so make a default one
 	if (ndx == -1)
 	{
-		save_settings(&default_settings);
+		save_dongle_settings(&default_settings);
 		ndx = 0;
 	}
 		
 	return pStart + ndx;
 }
 
-void save_settings(const FeatRep_DongleSettings __xdata * pNewSettings)
+void save_dongle_settings(const FeatRep_DongleSettings __xdata * pNewSettings)
 {
 	// get the next empty slot
 	FeatRep_DongleSettings save_img;
