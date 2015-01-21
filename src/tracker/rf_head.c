@@ -14,7 +14,7 @@
 #include "nrfutils.h"
 #include "nrfdbg.h"
 #include "sleeping.h"
-#include "settings.h"
+#include "tracker_settings.h"
 
 // we want to count the lost packets
 // uint32_t plos_total, arc_total, rf_packets_total;

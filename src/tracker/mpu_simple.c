@@ -11,7 +11,7 @@
 #include "mpu_regs.h"
 #include "mpu_dmp_firmware.h"
 #include "rf_protocol.h"
-#include "settings.h"
+#include "tracker_settings.h"
 #include "nrfdbg.h"
 
 // This is a simplified version of the Invensense eMPL library.

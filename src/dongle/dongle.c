@@ -8,7 +8,7 @@
 #include "reports.h"
 
 #include "../tracker/rf_protocol.h"
-#include "../tracker/settings.h"
+#include "../tracker/tracker_settings.h"
 #include "rf_dngl.h"
 #include "nrfutils.h"
 
