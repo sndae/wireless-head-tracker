@@ -6,7 +6,7 @@
 #include <compiler_mcs51.h>
 
 #include "../dongle/reports.h"
-#include "settings.h"
+#include "tracker_settings.h"
 #include "reg24le1.h"
 #include "nrfdbg.h"
 

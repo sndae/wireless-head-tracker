@@ -17,7 +17,7 @@
 #include "mpu_simple.h"
 #include "sleeping.h"
 #include "rf_head.h"
-#include "settings.h"
+#include "tracker_settings.h"
 #include "tracker.h"
 
 void hw_init()
