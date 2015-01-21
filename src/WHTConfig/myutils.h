@@ -18,4 +18,3 @@ inline void debug(const int i)
 {
 	debug(int2str(i));
 }
-

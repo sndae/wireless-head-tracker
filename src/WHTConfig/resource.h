@@ -14,7 +14,6 @@
 #define IDC_LBL_ACCEL_BIAS_X                    1008
 #define IDC_LBL_ACCEL_BIAS_Y                    1009
 #define IDC_LBL_ACCEL_BIAS_Z                    1010
-#define IDC_BTN_READ_CALIBRATION                1011
 #define IDC_BTN_CALIBRATE                       1012
 #define IDC_LBL_APPLIED_DRIFT_COMP              1013
 #define IDC_LBL_NEW_DRIFT_COMP                  1014
@@ -32,8 +31,8 @@
 #define IDC_CMB_RF_POWER                        1028
 #define IDC_BTN_SAVE_RF_POWER                   1029
 #define IDC_CMB_AXIS_RESPONSE                   1030
-#define IDC_BTN_SEND_TO_DONGLE                  1031
-#define IDC_STATIC                      -1
+#define IDC_BTN_SAVE_AXES_SETUP                 1031
+#define IDC_STATIC                              -1
 
 // Next default values for new objects
 // 

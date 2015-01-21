@@ -12,7 +12,10 @@ private:
 	WHTDevice	device;
 
 	bool		isConfigChanged;
-	bool		ignoreConfigChanges;
+	bool		autoConnect;
+	bool		isPowerChanged;
+	bool		ignoreNotifications;
+	bool		isTrackerFound;
 	int			readCalibrationCnt;
 
 	void ReadConfigFromDevice();
@@ -95,6 +98,7 @@ private:
 	void OnCommand(int ctrl_id, int notification);
 	void OnTimer();
 
+	bool ConnectDongle();
 	void ChangeConnectedStateUI();
 
 public:

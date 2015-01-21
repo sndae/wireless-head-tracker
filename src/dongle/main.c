@@ -43,7 +43,7 @@ void on_set_report(void)
 
 		uint8_t command = out0buf[1];
 	
-		if (command == CMD_CALIBRATE  ||  command >= CMD_RF_PWR_WEAKEST && command <= CMD_RF_PWR_HIGHEST)
+		if (command == CMD_CALIBRATE  ||  command >= CMD_RF_PWR_LOWEST && command <= CMD_RF_PWR_HIGHEST)
 		{
 			// tell the head tracker to execute command
 			rf_dngl_queue_ack_payload(&command, 1);

@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-//#include <math.h>
 
 #include <compiler_mcs51.h>
 
@@ -11,11 +10,11 @@
 
 #include "rf_protocol.h"
 #include "proc_packet.h"
-//#include "math_cordic.h"
-#include "reports.h"
-#include "dongle_settings.h"
+#include "math_cordic.h"
 #include "mdu.h"
 #include "mymath.h"
+#include "reports.h"
+#include "dongle_settings.h"
 
 // process_packet function processes the data from the sensor MPU-6050 attached to the user's head,
 // and calculates xyz coordinates from the received quaternions.
@@ -150,17 +149,18 @@ bool process_packet(mpu_packet_t* pckt)
 	float dzlimit;
 	int32_t iX, iY, iZ;
 
-	float qw, qx, qy, qz;
-	float qww, qxx, qyy, qzz;
-	
 	const FeatRep_DongleSettings __xdata * pSettings = get_dongle_settings();
 
 	// calculate Yaw/Pitch/Roll
 
-	/*
+#ifdef CALC_CORDIC
+
 	// the CORDIC trig functions return angles in units already adjusted to the 16
 	// bit integer range, so there's no need to scale the results by 10430.06
 
+	int16_t qw, qx, qy, qz;
+	int32_t qww, qxx, qyy, qzz;
+	
 	qw = pckt->quat[0];
 	qx = pckt->quat[1];
 	qy = pckt->quat[2];
@@ -174,7 +174,15 @@ bool process_packet(mpu_packet_t* pckt)
 	newZ =  iatan2_cord(2 * (mul_16x16(qy, qz) + mul_16x16(qw, qx)), qww - qxx - qyy + qzz);
 	newY = -iasin_cord(-2 * (mul_16x16(qx, qz) - mul_16x16(qw, qy)));
 	newX = -iatan2_cord(2 * (mul_16x16(qx, qy) + mul_16x16(qw, qz)), qww + qxx - qyy - qzz);
-	*/
+	
+	newX /= 1.8;		// scale
+	newY /= 1.8;
+	newZ /= 1.8;
+	
+#else
+
+	float qw, qx, qy, qz;
+	float qww, qxx, qyy, qzz;
 
 	qw = pckt->quat[0] / 16384.0;
 	qx = pckt->quat[1] / 16384.0;
@@ -194,6 +202,8 @@ bool process_packet(mpu_packet_t* pckt)
 	newY *= 10430.06;
 	newZ *= 10430.06;
 
+#endif	// CALC_CORDIC
+	
 	if (!calibrated)
 	{
 		//memset(drift_all, 0, sizeof(drift_all));	// reset our drift

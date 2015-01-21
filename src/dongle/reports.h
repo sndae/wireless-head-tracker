@@ -68,8 +68,8 @@ enum head_tracker_commands_t
 	CMD_DEC_DRIFT_COMP			= 6,
 	
 	// these are sent from the config program, through the dongle to the tracker
-	CMD_RF_PWR_WEAKEST			= 7,
-	CMD_RF_PWR_WEAKER			= 8,
+	CMD_RF_PWR_LOWEST			= 7,
+	CMD_RF_PWR_LOWER			= 8,
 	CMD_RF_PWR_HIGHER			= 9,
 	CMD_RF_PWR_HIGHEST			= 10,
 };
@@ -99,8 +99,8 @@ typedef struct
 	int16_t		gyro_bias[3];
 	int16_t		accel_bias[3];
 	
-	uint8_t		rf_power;		// CMD_RF_PWR_WEAKEST
-								// CMD_RF_PWR_WEAKER
+	uint8_t		rf_power;		// CMD_RF_PWR_LOWEST
+								// CMD_RF_PWR_LOWER
 								// CMD_RF_PWR_HIGHER
 								// CMD_RF_PWR_HIGHEST
 } FeatRep_TrackerSettings;

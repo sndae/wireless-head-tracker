@@ -105,7 +105,7 @@ __xdata tracker_settings_t default_settings =
 	{0, 0, 0},		// gyro_bias
 	{0, 0, 0},		// accel_bias
 
-	CMD_RF_PWR_WEAKEST,	// rf_power		// vRF_PWR_M18DBM
+	CMD_RF_PWR_LOWEST,	// rf_power		// vRF_PWR_M18DBM
 										// vRF_PWR_M12DBM
 										// vRF_PWR_M6DBM
 										// vRF_PWR_0DBM
