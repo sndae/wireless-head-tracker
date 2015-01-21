@@ -60,8 +60,8 @@ bool rf_head_send_message(const void* buff, const uint8_t num_bytes)
 	// read the power from the settings and add the data rate to it
 	switch (get_tracker_settings()->rf_power)
 	{
-	case CMD_RF_PWR_WEAKEST:	setup = vRF_DR_2MBPS | vRF_PWR_M18DBM;		break;
-	case CMD_RF_PWR_WEAKER:		setup = vRF_DR_2MBPS | vRF_PWR_M12DBM;		break;
+	case CMD_RF_PWR_LOWEST:		setup = vRF_DR_2MBPS | vRF_PWR_M18DBM;		break;
+	case CMD_RF_PWR_LOWER:		setup = vRF_DR_2MBPS | vRF_PWR_M12DBM;		break;
 	case CMD_RF_PWR_HIGHER:		setup = vRF_DR_2MBPS | vRF_PWR_M6DBM;		break;
 	case CMD_RF_PWR_HIGHEST:	setup = vRF_DR_2MBPS | vRF_PWR_0DBM;		break;
 	}

@@ -237,7 +237,7 @@ int main(void)
 					
 						rf_head_send_message(get_tracker_settings(), sizeof(tracker_settings_t));
 
-					} else if (ack >= CMD_RF_PWR_WEAKEST  &&  ack <= CMD_RF_PWR_HIGHEST) {
+					} else if (ack >= CMD_RF_PWR_LOWEST  &&  ack <= CMD_RF_PWR_HIGHEST) {
 					
 						tracker_settings_t new_settings;
 						memcpy(&new_settings, get_tracker_settings(), sizeof(tracker_settings_t));
