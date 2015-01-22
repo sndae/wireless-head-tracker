@@ -4,7 +4,7 @@
 
 #ifdef CALC_CORDIC
 
-#define CORDIC_NUM_BITS 	16
+#define CORDIC_NUM_BITS 	14
 #define ASIN_GAIN			0x10000000
 
 // These are CORDIC implementations of the atan2 and asin functions.
@@ -14,22 +14,20 @@
 
 int16_t __code atanTable[CORDIC_NUM_BITS] =
 {
-14746,		// 0		== atan(1) * (0x8000 * 1.8 / PI)
-8705,       // 1		== atan(0.5) * (0x8000 * 1.8 / PI)
-4599,       // 2		== atan(0.25) * (0x8000 * 1.8 / PI)
-2335,       // 3		== atan(0.125) * (0x8000 * 1.8 / PI)
-1172,       // 4		== ...
-587,        // 5
-293,        // 6
-147,        // 7
-73,         // 8
-37,         // 9
-18,         // 10
-9,          // 11
-5,          // 12
-2,          // 13
-1,			// 14
-1			// 15
+8192,	// 0		== atan(1) * (0x8000 / PI)
+4836,   // 1		== atan(0.5) * (0x8000 / PI)
+2555,   // 2		== atan(0.25) * (0x8000 / PI)
+1297,   // 3		== atan(0.125) * (0x8000 / PI)
+651,    // 4		== ...
+326,    // 5
+163,    // 6
+81,     // 7
+41,     // 8
+20,     // 9
+10,     // 10
+5,      // 11
+3,      // 12
+1,      // 13
 };     
 
 // We are doing the double iteration variant of the CORDIC algorithm
