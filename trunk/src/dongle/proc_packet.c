@@ -31,7 +31,7 @@ float lastX = 0, dX = 0, dY, dZ;
 float lX = 0.0;
 float dzX = 0.0;
 uint8_t ticksInZone = 0;
-uint8_t recalibrateSamples = 200;
+uint8_t recalibrateSamples = 120;
 float cx, cy, cz = 0.0;
 bool calibrated = false;
 int16_t sampleCount = 0;
@@ -175,10 +175,6 @@ bool process_packet(mpu_packet_t* pckt)
 	newY = -iasin_cord(-2 * (mul_16x16(qx, qz) - mul_16x16(qw, qy)));
 	newX = -iatan2_cord(2 * (mul_16x16(qx, qy) + mul_16x16(qw, qz)), qww + qxx - qyy - qzz);
 	
-	newX /= 1.8;		// scale
-	newY /= 1.8;
-	newZ /= 1.8;
-	
 #else
 
 	float qw, qx, qy, qz;
@@ -204,6 +200,9 @@ bool process_packet(mpu_packet_t* pckt)
 
 #endif	// CALC_CORDIC
 	
+	//if (dbgEmpty())
+	//	dprintf("%d %d %d %d\n", pckt->quat[0], pckt->quat[1], pckt->quat[2], pckt->quat[3]);
+	
 	if (!calibrated)
 	{
 		//memset(drift_all, 0, sizeof(drift_all));	// reset our drift
@@ -224,7 +223,7 @@ bool process_packet(mpu_packet_t* pckt)
 
 			dX = dY = dZ = 0.0;
 			driftSamples = -2;
-			recalibrateSamples = 100;	// reduce calibrate next time around
+			recalibrateSamples = 60;	// reduce calibrate next time around
 		}
 
 		return false;
@@ -295,30 +294,18 @@ bool process_packet(mpu_packet_t* pckt)
 		//  and pitch is levelish then start to count
 		if (fabs(newX) < dzlimit  &&  fabs(newX - lX) < 3  &&  labs(iZ) < 1000)
 		{
-			//dprintf("I ");
 			ticksInZone++;
 			dzX += iX;
 		} else {
-			//dprintf("O ");
 			ticksInZone = 0;
 			dzX = 0.0;
 		}
-		
-		/*
-		dprintf("%f ", fabsf(newX));
-		dprintf("%f ", dzlimit);
-		dprintf("%f ", fabsf(newX - lX));
-		dprintf("%ld ", labs(iY));
-		dprintf("%d\n", ticksInZone);
-		*/
 		
 		lX = newX;
 
 		// if we stayed looking ahead-ish long enough then adjust yaw offset
 		if (ticksInZone >= RECENTER_TICK_COUNT)
 		{
-			//dprintf("*");
-
 			// NB this currently causes a small but visible jump in the
 			// view. Useful for debugging!
 			cx += dzX * 0.05;
