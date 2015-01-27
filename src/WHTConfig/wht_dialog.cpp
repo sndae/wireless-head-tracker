@@ -175,6 +175,8 @@ void WHTDialog::OnCommand(int ctrl_id, int notification)
 	} else if (ctrl_id == IDC_BTN_SAVE_AXES_SETUP) {
 		
 		SendConfigToDevice();
+		isConfigChanged = false;
+		ChangeConnectedStateUI();
 
 	} else if (ctrl_id == IDC_BTN_CONNECT) {
 
