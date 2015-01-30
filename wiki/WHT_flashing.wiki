@@ -22,12 +22,12 @@ https://docs.google.com/uc?authuser=0&id=0B5QsMM8GX6NEZUJTOGxTNkJ0R28&export=dow
 
 Unzip this file into a new folder. The ZIP contains the following files:
 
-nrfburn.exe - the software which communicates with the programmer
-flash_dongle.bat - the windows batch file which calls nrfburn.exe with the required arguments to flash the dongle
-flash_tracker.bat - the windows batch file which calls nrfburn.exe with the required arguments to flash the tracker
-tracker.hex - the tracker flash image
-whtdngl.hex - the dongle flash image
-WHTConfig.exe - the WHT configuration program
+ * nrfburn.exe - the software which communicates with the programmer
+ * flash_dongle.bat - the windows batch file which calls nrfburn.exe with the required arguments to flash the dongle
+ * flash_tracker.bat - the windows batch file which calls nrfburn.exe with the required arguments to flash the tracker
+ * tracker.hex - the tracker flash image
+ * whtdngl.hex - the dongle flash image
+ * WHTConfig.exe - the WHT configuration program (not used in this guide)
 
 === Tracker flashing details ===
 
