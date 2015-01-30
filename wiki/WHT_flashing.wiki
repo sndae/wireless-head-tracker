@@ -1,0 +1,63 @@
+#summary This article describes the process of flashing the firmware on the Wireless Head Tracker.
+
+= Wireless Head Tracker flashing instructions =
+
+=== Flashing background information ===
+
+The WHT consists of two separate devices: the first device is the tracker which contains the movement sensor (MPU-6050 or MPU-9150) and a microcontroller (fancy word for low power computer) with an 2.4GHz radio transmitter and receiver. The second device is a dongle with USB connector, another microcontroller and a 2.4GHz radio. This USB dongle receives the movement sensor information from the tracker, then processes it and sends it over USB to the PC.
+
+As I've mentioned, the microcontrollers on these two devices are essentially small computers and they contain a little bit of flash memory (16KB each). This flash memory stores the software these small computers are running. For some strange reasons, software running on microcontrollers is often called firmware but in essence it is not much different from software running on your PC or smartphone. And just like any software, the firmware on the tracker and the dongle can be upgraded to fix bugs or add new features. This upgrade process is called called firmware flashing.
+
+In order to flash the two devices, you need to have another device called a flash programmer. It connects to the PC though a USB cable, and to the tracker through a cable or dongle through a direct connection. The programmers receives commands and data from the PC, then sends these commands to the microcontroller on the tracker or dongle which overwrites their flash memory.
+
+The flash programmer does not need drivers, but you will need to wait a few minutes after plugging in the programmer for the first time for Windows to figure that out.
+
+During the flashing process, the tracker and the dongle need to be powered and they receive this power from the programmer. It is very important to remember that the tracker and dongle require different voltages to run correctly. The dongle needs 5V and the tracker needs 3.3V. The output voltage level of the programmer is selected with a jumper. Powering the tracker with 5V will probably damage it beyond repair, so be careful and follow the instruction below to the letter.
+
+=== The necessary software ===
+
+The PC software needed to communicate with the flash programmer, the flash images for the dongle and tracker and the WHT configuration program are all contained in the WHT software package which you can download from this link:
+
+https://docs.google.com/uc?authuser=0&id=0B5QsMM8GX6NEZUJTOGxTNkJ0R28&export=download
+
+Unzip this file into a new folder. The ZIP contains the following files:
+
+nrfburn.exe - the software which communicates with the programmer
+flash_dongle.bat - the windows batch file which calls nrfburn.exe with the required arguments to flash the dongle
+flash_tracker.bat - the windows batch file which calls nrfburn.exe with the required arguments to flash the tracker
+tracker.hex - the tracker flash image
+whtdngl.hex - the dongle flash image
+WHTConfig.exe - the WHT configuration program
+
+=== Tracker flashing details ===
+
+ # Make sure you have downloaded and unzipped the WHT software package
+ # Remove the battery from the tracker
+ # Remove the flash programmer from USB
+ # Remove the tracker or the dongle from the programmer if either is connected to it
+ # Put the jumper labelled TGT_PWR to the 3.3V position like shown on the picture below...
+ # Connect the flat end of the programming cable to the pin header on the flash programmer labelled "LU1+ SPARKFUN". Make sure you match the label on the programmer cable with the labels on the flash programmer pin header. See picture:
+ # Connect the other end of the programming cable to the tracker.
+ # Just in case, double check that the TGT_PWR jumper is in the 3.3V position
+ # Plug the programmer with the tracker attached into USB. If this is the first time you plugged in the programmer into your PCs USB port, wait a minute or two for Windows to recognize the programmer. You will get a "This device is now ready" message from Windows.
+ # Go to the folder where you unpacked the WHT software package and run the flash_tracker batch file. The flashing process should take about 6 seconds.
+ # If the flashing is successful you will see this message in the window: (image)
+ # Remove the programming cable from the programmer and the tracker.
+ # Put the battery back into the tracker
+ # You're done!
+
+=== Dongle flashing details ===
+
+ # Make sure you have downloaded and unzipped the WHT software package
+ # Remove the flash programmer from USB
+ # Remove the tracker or the dongle from the programmer if either is connected to it
+ # Put the jumper labelled TGT_PWR to the 5V position like shown on the picture below...
+ # Plug the dongle directly into the programmer's row of pins labelled "LU1+ generic". Make sure that every pin in the programmer is connected to every slot in the dongle. See picture:...
+ # Just in case, double check that the TGT_PWR jumper is in the 5V position
+ # Plug the programmer with the dongle attached into USB. If this is the first time you plugged in the programmer into your PCs USB port, wait a minute or two for Windows to recognize the programmer. You will get a "This device is now ready" message from Windows when it's ready.
+ # Go to the folder where you unpacked the WHT software package and run the flash_dongle batch file. The flashing process should take about 6 seconds.
+ # If the flashing is successful you will see this message in the window: (image)
+ # Remove the USB dongle from the programmer.
+ # You're done!
+
+After the dongle and tracker have been flashed you will need to recalibrate and reconfigure the devices with the WHTConfig.exe program. Go here for calibration instructions.
