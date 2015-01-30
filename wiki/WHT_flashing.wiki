@@ -56,7 +56,7 @@ Unzip this file into a new folder. The ZIP contains the following files:
  # Just in case, double check that the TGT_PWR jumper is in the 5V position
  # Plug the programmer with the dongle attached into USB. If this is the first time you plugged in the programmer into your PCs USB port, wait a minute or two for Windows to recognize the programmer. You will get a "This device is now ready" message from Windows when it's ready.
  # Go to the folder where you unpacked the WHT software package and run the flash_dongle batch file. The flashing process should take about 6 seconds.
- # If the flashing is successful you will see this message in the window: (image)
+ # If the flashing is successful you will see this message in the window: http://wireless-head-tracker.googlecode.com/svn/wiki/images/dongle_flashing_success.png
  # Remove the USB dongle from the programmer.
  # You're done!
 
