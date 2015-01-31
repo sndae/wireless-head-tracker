@@ -10,8 +10,8 @@ Download it and unpack it into a new folder.
 
  # Plug the USB dongle into your PC and turn on the tracker.
  # Start the WHTConfig.exe program. You should see this http://wireless-head-tracker.googlecode.com/svn/wiki/images/wht_config.png
- # Make sure the "RF packets" field in the status bar of the window is above 80%. This is a measure of quality of the radio connection. If it's lower than 80% brin the tracker closer to the dongle.
- # Place the tracker on a flat surface, then press the Calibrate button in the WHTConfig program
+ # Make sure the "RF packets" field in the status bar of the window is above 80%. This is a measure of quality of the radio connection. If it's lower than 80% bring the tracker closer to the dongle.
+ # Place the tracker on a flat surface, then press the _Calibrate_ button in the WHTConfig program
  # A yellow light should light up on the tracker. Wait for it to go off.
  # The calibration is complete.
  
