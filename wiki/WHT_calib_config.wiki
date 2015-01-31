@@ -1,0 +1,14 @@
+#summary This is a guide for the WHT calibration and configuration
+
+Wireless Head Tracker calibration and configuration
+
+The calibration and configuration of the WHT can be performed with the WHTConfig.exe program. The program is included in the WHT softwate package and you can get it here: https://docs.google.com/uc?authuser=0&id=0B5QsMM8GX6NEZUJTOGxTNkJ0R28&export=download
+
+Download it and unpack it into a new folder.
+
+Basic calibration
+
+ # Plug the USB dongle into your PC and turn on the tracker.
+ # Start the WHTConfig.exe program. You should see this http://wireless-head-tracker.googlecode.com/svn/wiki/images/wht_config.png
+ # Make sure the tracker is relativelly close 
+ # If the the value if the Tracker settings/Status field is Not calibrated, press the Calibrate button.
