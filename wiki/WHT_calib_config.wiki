@@ -6,7 +6,7 @@ The calibration and configuration of the WHT can be performed with the WHTConfig
 
 Download it and unpack it into a new folder.
 
-= Basic calibration =
+=== Basic calibration ===
 
  # Plug the USB dongle into your PC and turn on the tracker.
  # Start the WHTConfig.exe program. You should see this http://wireless-head-tracker.googlecode.com/svn/wiki/images/wht_config.png
@@ -15,7 +15,7 @@ Download it and unpack it into a new folder.
  # A yellow light should light up on the tracker. Wait for it to go off.
  # The calibration is complete.
  
-= Yaw drift compensation =
+=== Yaw drift compensation ===
 
  # Place the tracker on a flat surface
  # Press the Reset button on the WHTConfig program
