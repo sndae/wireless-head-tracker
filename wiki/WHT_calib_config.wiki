@@ -17,8 +17,20 @@ Download it and unpack it into a new folder.
  
 === Yaw drift compensation ===
 
+Rough compensation calculation:
+
  # Place the tracker on a flat surface
  # Press the Reset button on the WHTConfig program
  # Let the tracker rest for about 15 minutes. Do not move the tracker.
  # Press the Save button on the WHTConfig program
  # Yaw drift is now compensated
+ 
+Fine tuning:
+
+ # In WHTConfig select Auto-center _Off_ and press _Save axes setup_
+ # Put the tracker on your head and start playing.
+ # During play do not press the reset button on the tracker or the Reset button in WHTConfig
+ # If you notice the yaw heading (left/right) has drifted significantly into either direction, go to WHTConfig and press Save
+ # Repeat the last step until you can not notice a drift for 10-15 minutes of use.
+ # In WHTConfig select Auto-center _Medium_
+ # The tracker should not drift any more after this
