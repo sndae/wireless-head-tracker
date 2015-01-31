@@ -2,7 +2,7 @@
 
 = Wireless Head Tracker calibration and configuration =
 
-The calibration and configuration of the WHT can be performed with the WHTConfig.exe program. The program is included in the WHT softwate package and you can get it here: https://docs.google.com/uc?authuser=0&id=0B5QsMM8GX6NEZUJTOGxTNkJ0R28&export=download
+The calibration and configuration of the WHT can be performed with the WHTConfig.exe program. The program is included in the WHT softwate package and you can get it here: https://docs.google.com/uc?authuser=0&id=0B5QsMM8GX6NETG1fSEotRzFsQXc&export=download
 
 Download it and unpack it into a new folder.
 
