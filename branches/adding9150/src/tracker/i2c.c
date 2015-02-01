@@ -24,8 +24,9 @@
 
 #include "i2c.h"
 
-#define MPU_ADDR_READ			0xD1
-#define MPU_ADDR_WRITE			0xD0
+#define ADDR_READ(a)			(((a) << 1) | 1)
+#define ADDR_WRITE(a)			((a) << 1)
+
 
 #define I2C_SDA			P13
 #define I2C_SCL			P12
@@ -165,14 +166,14 @@ void i2c_init(void)
 	i2c_stop();
 }
 
-bool i2c_write(uint8_t reg_addr, uint8_t data_len, const uint8_t* data_ptr)
+bool i2c_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t data_len, const uint8_t* data_ptr)
 {
 	bool ret_val = false;
 	
 	i2c_start();
 	
 	// send the address and the register
-	if (i2c_write_byte(MPU_ADDR_WRITE)  &&  i2c_write_byte(reg_addr))
+	if (i2c_write_byte(ADDR_WRITE(dev_addr))  &&  i2c_write_byte(reg_addr))
 	{
 		// read the required number of bytes
 		while (data_len--)
@@ -190,19 +191,19 @@ bool i2c_write(uint8_t reg_addr, uint8_t data_len, const uint8_t* data_ptr)
 	return ret_val;
 }
 
-bool i2c_read(uint8_t reg_addr, uint8_t data_len, uint8_t *data_ptr)
+bool i2c_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t data_len, uint8_t *data_ptr)
 {
 	bool ret_val = false;
 	
 	i2c_start();
 	
 	// setup a read
-	if (i2c_write_byte(MPU_ADDR_WRITE)  &&  i2c_write_byte(reg_addr))
+	if (i2c_write_byte(ADDR_WRITE(dev_addr))  &&  i2c_write_byte(reg_addr))
 	{
 		i2c_start();		// repeated start
 
 		// now start reading
-		if (i2c_write_byte(MPU_ADDR_READ))
+		if (i2c_write_byte(ADDR_READ(dev_addr)))
 		{
 			while (data_len--)
 				*data_ptr++ = i2c_read_byte(data_len == 0);

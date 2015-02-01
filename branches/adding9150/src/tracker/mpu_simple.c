@@ -23,19 +23,33 @@
 // eMPL library on an Arduino with the configuration I needed. Then I just 'replayed'
 // these I2C sequences in this library. This way I sacrifice flexibility for flash and RAM space.
 
+uint8_t compass_addr = 0;
+int16_t mag_sens_adj[3];
+
 bool mpu_write_byte(uint8_t reg_addr, uint8_t val)
 {
-	return i2c_write(reg_addr, 1, &val);
+	return i2c_write(MPU_ADDR, reg_addr, 1, &val);
 }
 
-/*
-uint8_t mpu_read_byte(uint8_t reg_addr, uint8_t* val)
+bool mpu_read_byte(uint8_t reg_addr, uint8_t* val)
 {
-	uint8_t result;
-	result = i2c_read(reg_addr, 1, val);
-	return result ? 0 : 0xff;
+	return i2c_read(MPU_ADDR, reg_addr, 1, val);
 }
-*/
+
+bool compass_write_byte(uint8_t reg_addr, uint8_t val)
+{
+	return i2c_write(compass_addr, reg_addr, 1, &val);
+}
+
+bool compass_read_byte(uint8_t reg_addr, uint8_t* val)
+{
+	return i2c_read(compass_addr, reg_addr, 1, val);
+}
+
+bool compass_read_array(uint8_t reg_addr, uint8_t cnt, uint8_t* val)
+{
+	return i2c_read(compass_addr, reg_addr, cnt, val);
+}
 
 bool mpu_write_mem(uint16_t mem_addr, uint16_t length, const uint8_t* data2write)
 {
@@ -44,10 +58,10 @@ bool mpu_write_mem(uint16_t mem_addr, uint16_t length, const uint8_t* data2write
     tmp[0] = (uint8_t)(mem_addr >> 8);
     tmp[1] = (uint8_t)(mem_addr & 0xFF);
 
-    if (!i2c_write(BANK_SEL, 2, tmp))
+    if (!i2c_write(MPU_ADDR, BANK_SEL, 2, tmp))
         return false;
 		
-    if (!i2c_write(MEM_R_W, length, data2write))
+    if (!i2c_write(MPU_ADDR, MEM_R_W, length, data2write))
         return false;
 
     return true;
@@ -60,10 +74,10 @@ bool mpu_read_mem(uint16_t mem_addr, uint16_t length, uint8_t* data2read)
     tmp[0] = (uint8_t)(mem_addr >> 8);
     tmp[1] = (uint8_t)(mem_addr & 0xFF);
 
-    if (!i2c_write(BANK_SEL, 2, tmp))
+    if (!i2c_write(MPU_ADDR, BANK_SEL, 2, tmp))
         return false;
 
-    if (!i2c_read(MEM_R_W, length, data2read))
+    if (!i2c_read(MPU_ADDR, MEM_R_W, length, data2read))
         return false;
 
     return true;
@@ -107,7 +121,7 @@ bool dmp_load_firmware(void)
     // Set program start address. 
     tmp[0] = START_ADDR >> 8;
     tmp[1] = START_ADDR & 0xFF;
-    if (!i2c_write(PRGM_START_H, 2, tmp))
+    if (!i2c_write(MPU_ADDR, PRGM_START_H, 2, tmp))
 	{
 		dputs("PRGM_START_H failed");
         return false;
@@ -149,7 +163,7 @@ void mpu_set_gyro_bias(const int16_t* gyro_bias)
 	{
 		d[0] = (gyro_bias[i] >> 8) & 0xff;
 		d[1] = (gyro_bias[i]) & 0xff;
-		i2c_write(0x13 + 2 * i, 2, d);
+		i2c_write(MPU_ADDR, 0x13 + 2 * i, 2, d);
 	}
 }
 
@@ -159,7 +173,7 @@ void mpu_read_accel_bias(int16_t* accel_bias)
 
 	for (i = 0; i < 3; i++)
 	{
-		i2c_read(0x06 + i * 2, 2, d);
+		i2c_read(MPU_ADDR, 0x06 + i * 2, 2, d);
 		accel_bias[i] = (d[0] << 8) | d[1];
 	}
 }
@@ -183,7 +197,7 @@ void mpu_set_accel_bias(const int16_t* accel_bias)
 		data[0] = (accel_bias[i] >> 8) & 0xff;
 		data[1] = accel_bias[i] & 0xff;
 		
-		i2c_write(0x06 + i * 2, 2, data);
+		i2c_write(MPU_ADDR, 0x06 + i * 2, 2, data);
 	}
 }
 
@@ -323,7 +337,7 @@ bool mpu_read_fifo_stream(uint16_t length, uint8_t* buffer, uint8_t* more)
 	uint16_t fifo_count;
 
 	// read number of bytes in the FIFO
-	if (!i2c_read(FIFO_COUNT_H, 2, tmp))
+	if (!i2c_read(MPU_ADDR, FIFO_COUNT_H, 2, tmp))
 		return false;
 
 	fifo_count = (tmp[0] << 8) | tmp[1];
@@ -338,7 +352,7 @@ bool mpu_read_fifo_stream(uint16_t length, uint8_t* buffer, uint8_t* more)
 	if (fifo_count % length)
 		return false;
 
-	if (!i2c_read(FIFO_R_W, length, buffer))
+	if (!i2c_read(MPU_ADDR, FIFO_R_W, length, buffer))
 		return false;
 
 	*more = (fifo_count != length);
@@ -375,15 +389,8 @@ void load_biases(void)
 
 	if (pSettings  &&  pSettings->is_calibrated)
 	{
-		dprintf("%s\ngyro %d %d %d\naccel %d %d %d\n",
-						"loading",
-						pSettings->gyro_bias[0], pSettings->gyro_bias[1], pSettings->gyro_bias[2],
-						pSettings->accel_bias[0], pSettings->accel_bias[1], pSettings->accel_bias[2]);
-						
 		mpu_set_gyro_bias(pSettings->gyro_bias);
 		mpu_set_accel_bias(pSettings->accel_bias);
-	} else {
-		dputs("no settings saved");
 	}
 }
 
@@ -419,16 +426,99 @@ void dmp_init(bool send_cal_gyro)
 
 #define FIFO_HZ		200
 
+void mpu_set_bypass(bool bypass)
+{
+	uint8_t byte;
+	
+	if (bypass)
+	{
+		mpu_read_byte(USER_CTRL, &byte);
+		byte &= ~BIT_AUX_IF_EN;
+		mpu_write_byte(USER_CTRL, byte);
+		
+		delay_ms(3);
+
+		mpu_write_byte(INT_PIN_CFG, BIT_BYPASS_EN | BIT_ACTL);
+	} else {
+        // Enable I2C master mode if compass is being used.
+		mpu_read_byte(USER_CTRL, &byte);
+		byte |= BIT_AUX_IF_EN;		// if (st.chip_cfg.sensors & INV_XYZ_COMPASS)
+		mpu_write_byte(USER_CTRL, byte);
+	
+		delay_ms(3);
+		
+		mpu_write_byte(INT_PIN_CFG, BIT_ACTL);
+	}
+}
+
 void mpu_init(bool send_cal_gyro)
 {
+	uint8_t	akm_addr, byte;
+	
 	mpu_write_byte(PWR_MGMT_1, 0x80);		// reset
 	delay_ms(100);
 	mpu_write_byte(PWR_MGMT_1, 0);			// wakeup
+
+	mpu_write_byte(ACCEL_CONFIG2, BIT_FIFO_SIZE_1024 | 0x8);		// 6.1
 	
-	mpu_write_byte(GYRO_CONFIG, 0x18);
-	mpu_write_byte(ACCEL_CONFIG, 0x00);
-	mpu_write_byte(SMPLRT_DIV, 1000 / FIFO_HZ - 1);
-	mpu_write_byte(CONFIG, INV_FILTER_98HZ);
+	mpu_write_byte(GYRO_CONFIG, INV_FSR_2000DPS << 3);		// == mpu_set_gyro_fsr(2000)
+	mpu_write_byte(ACCEL_CONFIG, INV_FSR_2G << 3);			// == mpu_set_accel_fsr(2)
+	mpu_write_byte(SMPLRT_DIV, 1000 / FIFO_HZ - 1);			// == mpu_set_sample_rate(FIFO_HZ)
+	mpu_write_byte(CONFIG, INV_FILTER_98HZ);				// == mpu_set_lpf(98)
+	
+#ifdef MPU9150	
+	mpu_set_bypass(1);
+	
+    for (akm_addr = 0x0C; akm_addr <= 0x0F; akm_addr++)
+	{
+		dprintf("trying compass addr %d\n", akm_addr);
+        if (i2c_read(akm_addr, AKM_REG_WHOAMI, 1, &byte)   &&   byte == AKM_WHOAMI)
+		{
+			dputs("found");
+			compass_addr = akm_addr;
+            break;
+		}
+    }
+
+	if (compass_addr)
+	{
+		uint8_t data[3];
+		
+		compass_write_byte(AKM_REG_CNTL, AKM_POWER_DOWN);
+		delay_ms(1);
+		compass_write_byte(AKM_REG_CNTL, AKM_FUSE_ROM_ACCESS);
+		
+		compass_write_byte(AKM_REG_CNTL, AKM_POWER_DOWN);
+		delay_ms(1);
+		
+		compass_read_array(AKM_REG_ASAX, 3, data);
+		mag_sens_adj[0] = data[0] + 128;
+		mag_sens_adj[1] = data[1] + 128;
+		mag_sens_adj[2] = data[2] + 128;
+		
+		compass_write_byte(AKM_REG_CNTL, AKM_POWER_DOWN);
+		delay_ms(1);
+	}
+
+	mpu_set_bypass(0);
+
+	mpu_write_byte(I2C_MST, 0x40);			// Set up master mode, master clock, and ES bit.
+    mpu_write_byte(S0_ADDR, BIT_I2C_READ | compass_addr);			// Slave 0 reads from AKM data registers.
+	mpu_write_byte(S0_REG, AKM_REG_ST1);			// Compass reads start at this register.
+	mpu_write_byte(S0_CTRL, BIT_SLAVE_EN | 8);			// Enable slave 0, 8-byte reads.
+
+	mpu_write_byte(S1_ADDR, compass_addr);				// Slave 1 changes AKM measurement mode.
+	mpu_write_byte(S1_REG, AKM_REG_CNTL);				// AKM measurement mode register.
+	mpu_write_byte(S1_CTRL, BIT_SLAVE_EN | 1);			// Enable slave 1, 1-byte writes.
+	mpu_write_byte(S1_DO, AKM_SINGLE_MEASUREMENT);		// Set slave 1 data.
+
+	mpu_write_byte(I2C_DELAY_CTRL, AKM_SINGLE_MEASUREMENT);			// Trigger slave 0 and slave 1 actions at each sample.
+	mpu_write_byte(YG_OFFS_TC, BIT_I2C_MST_VDDIO);			// For the MPU9150, the auxiliary I2C bus needs to be set to VDD.
+	
+	// compass sample rate
+	
+#endif
+	
 	//mpu_write_byte(CONFIG, 0x03);
 	//mpu_write_byte(INT_ENABLE, 0x00);
 	mpu_write_byte(USER_CTRL, 0x20);
@@ -563,7 +653,7 @@ void mpu_get_temperature(int16_t* result)
     uint8_t tmp[2];
     int16_t raw;
 
-    i2c_read(TEMP_OUT_H, 2, tmp);
+    i2c_read(MPU_ADDR, TEMP_OUT_H, 2, tmp);
 
     raw = (tmp[0] << 8) | tmp[1];
 
