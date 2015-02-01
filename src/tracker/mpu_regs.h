@@ -6,7 +6,9 @@
 #define CONFIG				0x1A		// 26 AKA LPF
 #define GYRO_CONFIG			0x1B		// 27
 #define ACCEL_CONFIG		0x1C		// 28
+#define ACCEL_CONFIG2		0x1D		// 29
 #define FIFO_EN				0x23		// 35
+#define I2C_MST				0x24		// 36
 #define INT_PIN_CFG			0x37		// 55
 #define INT_ENABLE			0x38		// 56
 #define INT_STATUS			0x3A		// 58
@@ -32,6 +34,58 @@
 #define FIFO_COUNT_L		0x73		// 115
 #define FIFO_R_W			0x74		// 116
 #define WHO_AM_I			0x75		// 117
+
+#ifdef MPU9150
+#define RAW_COMPASS   	0x49
+#define YG_OFFS_TC    	0x01
+#define S0_ADDR       	0x25
+#define S0_REG        	0x26
+#define S0_CTRL       	0x27
+#define S1_ADDR       	0x28
+#define S1_REG        	0x29
+#define S1_CTRL       	0x2A
+#define S4_CTRL       	0x34
+#define S0_DO         	0x63
+#define S1_DO         	0x64
+#define I2C_DELAY_CTRL	0x67
+
+#define AKM_REG_WHOAMI		0x00
+
+#define AKM_REG_ST1			0x02
+#define AKM_REG_HXL			0x03
+#define AKM_REG_ST2			0x09
+
+#define AKM_REG_CNTL		0x0A
+#define AKM_REG_ASTC		0x0C
+#define AKM_REG_ASAX		0x10
+#define AKM_REG_ASAY		0x11
+#define AKM_REG_ASAZ		0x12
+
+#define AKM_DATA_READY		0x01
+#define AKM_DATA_OVERRUN	0x02
+#define AKM_OVERFLOW		0x80
+#define AKM_DATA_ERROR		0x40
+
+#define AKM_BIT_SELF_TEST	0x40
+
+#define SUPPORTS_AK89xx_HIGH_SENS	0x00
+#define AK89xx_FSR					9830
+
+#define AKM_POWER_DOWN				(0x00 | SUPPORTS_AK89xx_HIGH_SENS)
+#define AKM_SINGLE_MEASUREMENT		(0x01 | SUPPORTS_AK89xx_HIGH_SENS)
+#define AKM_FUSE_ROM_ACCESS			(0x0F | SUPPORTS_AK89xx_HIGH_SENS)
+#define AKM_MODE_SELF_TEST			(0x08 | SUPPORTS_AK89xx_HIGH_SENS)
+
+#define AKM_WHOAMI			0x48
+#endif
+
+#define INV_X_GYRO      (0x40)
+#define INV_Y_GYRO      (0x20)
+#define INV_Z_GYRO      (0x10)
+#define INV_XYZ_GYRO    (INV_X_GYRO | INV_Y_GYRO | INV_Z_GYRO)
+#define INV_XYZ_ACCEL   (0x08)
+#define INV_XYZ_COMPASS (0x01)
+
 
 // These are not mentioned in the register map PDF,
 // but you can find them in the motion driver source.
@@ -522,5 +576,25 @@
 #define INV_FILTER_5HZ				6
 #define INV_FILTER_2100HZ_NOLPF		7
 #define NUM_FILTER					8
+
+enum gyro_fsr_e {
+    INV_FSR_250DPS = 0,
+    INV_FSR_500DPS,
+    INV_FSR_1000DPS,
+    INV_FSR_2000DPS,
+    NUM_GYRO_FSR
+};
+
+enum accel_fsr_e {
+    INV_FSR_2G = 0,
+    INV_FSR_4G,
+    INV_FSR_8G,
+    INV_FSR_16G,
+    NUM_ACCEL_FSR
+};
+
+
+#define MPU_ADDR				0x68
+
 
 #endif	// MPU_REGS_H
