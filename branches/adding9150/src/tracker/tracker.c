@@ -59,7 +59,7 @@ void hw_init()
 	
 	LED_YELLOW = 1;
 	
-	mpu_init(false);
+	mpu_init();
 	
 	dbgFlush();
 	

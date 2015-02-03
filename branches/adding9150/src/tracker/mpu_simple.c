@@ -55,6 +55,7 @@ bool mpu_write_mem(uint16_t mem_addr, uint16_t length, const uint8_t* data2write
 {
     uint8_t tmp[2];
 
+	// swap bytes
     tmp[0] = (uint8_t)(mem_addr >> 8);
     tmp[1] = (uint8_t)(mem_addr & 0xFF);
 
@@ -201,7 +202,7 @@ void mpu_set_accel_bias(const int16_t* accel_bias)
 	}
 }
 
-void dmp_enable_feature(bool send_cal_gyro)
+void dmp_enable_feature(void)
 {
 	{
 	const uint8_t __code arr[] = {0x02,0xca,0xe3,0x09};
@@ -218,7 +219,7 @@ void dmp_enable_feature(bool send_cal_gyro)
 	mpu_write_mem(CFG_27, sizeof arr, arr);
 	}
 	
-	if (send_cal_gyro)
+	/*if (send_cal_gyro)
 	{
 		{
 		const uint8_t __code arr[] = {0xB8,0xAA,0xB3,0x8D,0xB4,0x98,0x0D,0x35,0x5D};	// dmp_enable_gyro_cal(1)
@@ -229,7 +230,7 @@ void dmp_enable_feature(bool send_cal_gyro)
 		const uint8_t __code arr[] = {0xB2,0x8B,0xB6,0x9B};		// DMP_FEATURE_SEND_CAL_GYRO
 		mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
 		}
-	} else {
+	} else {*/
 		{
 		const uint8_t __code arr[] = {0xb8,0xaa,0xaa,0xaa,0xb0,0x88,0xc3,0xc5,0xc7};	// dmp_enable_gyro_cal(0)
 		mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
@@ -239,7 +240,7 @@ void dmp_enable_feature(bool send_cal_gyro)
 		const uint8_t __code arr[] = {0xB0,0x80,0xB4,0x90};		// DMP_FEATURE_SEND_RAW_GYRO
 		mpu_write_mem(CFG_GYRO_RAW_DATA, sizeof arr, arr);
 		}
-	}
+	//}
 	
 	{
 	const uint8_t __code arr[] = {0xf8};
@@ -394,7 +395,7 @@ void load_biases(void)
 	}
 }
 
-void dmp_init(bool send_cal_gyro)
+void dmp_init(void)
 {
 	if (!dmp_load_firmware())
 	{
@@ -408,7 +409,7 @@ void dmp_init(bool send_cal_gyro)
 		return;
 	}
 
-	dmp_enable_feature(send_cal_gyro);
+	dmp_enable_feature();
 	
 	mpu_write_byte(INT_ENABLE, 0x00);
 	mpu_write_byte(FIFO_EN, 0x00);
@@ -451,7 +452,7 @@ void mpu_set_bypass(bool bypass)
 	}
 }
 
-void mpu_init(bool send_cal_gyro)
+void mpu_init(void)
 {
 	uint8_t	akm_addr, byte;
 	
@@ -459,8 +460,6 @@ void mpu_init(bool send_cal_gyro)
 	delay_ms(100);
 	mpu_write_byte(PWR_MGMT_1, 0);			// wakeup
 
-	mpu_write_byte(ACCEL_CONFIG2, BIT_FIFO_SIZE_1024 | 0x8);		// 6.1
-	
 	mpu_write_byte(GYRO_CONFIG, INV_FSR_2000DPS << 3);		// == mpu_set_gyro_fsr(2000)
 	mpu_write_byte(ACCEL_CONFIG, INV_FSR_2G << 3);			// == mpu_set_accel_fsr(2)
 	mpu_write_byte(SMPLRT_DIV, 1000 / FIFO_HZ - 1);			// == mpu_set_sample_rate(FIFO_HZ)
@@ -541,7 +540,7 @@ void mpu_init(bool send_cal_gyro)
 	//mpu_write_byte(SMPLRT_DIV, 0x04);
 	//mpu_write_byte(CONFIG, INV_FILTER_20HZ);	// was 0x02
 	
-	dmp_init(send_cal_gyro);
+	dmp_init();
 }
 
 void mpu_calibrate_bias(void)
@@ -558,7 +557,7 @@ void mpu_calibrate_bias(void)
 	
 	dputs("**************** calibrating");
 	
-	mpu_init(false);
+	mpu_init();
 
 	// init the new settings struct
 	memset(&new_settings, 0, sizeof(new_settings));
@@ -640,7 +639,7 @@ void mpu_calibrate_bias(void)
 
 	dbgFlush();
 
-	mpu_init(false);
+	mpu_init();
 
 	LED_YELLOW = 0;
 }
