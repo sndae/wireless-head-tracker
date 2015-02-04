@@ -55,7 +55,8 @@ void hw_init()
 	dbgInit();
 	i2c_init();
 
-	dputs("init started");
+	dprintf("\x1b[2J\x1b[f");
+	dputs("--- init started");
 	
 	LED_YELLOW = 1;
 	
@@ -69,7 +70,7 @@ void hw_init()
 
 	LED_YELLOW = 0;
 
-	dputs("init OK");
+	dputs("init finished");
 }
 
 /*
@@ -200,6 +201,19 @@ int main(void)
 			do {
 				read_result = dmp_read_fifo(&pckt, &more);
 			} while (more);
+			
+			{
+				int16_t compass[3];
+				bool is_ok = mpu_get_compass_reg(compass);
+			
+				if (dbgEmpty())
+				{
+					if (!is_ok)
+						dputs("BAD!");
+					else
+						dprintf("%d %d %d\n", compass[0], compass[1], compass[2]);
+				}
+			}
 			
 			if (read_result)
 			{
