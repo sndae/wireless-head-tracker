@@ -17,15 +17,11 @@
 // This is a simplified version of the Invensense eMPL library.
 // It only implements features of the library that are needed for this project.
 // This way the memory requirements (Flash and RAM) have been dramatically reduced,
-// and this makes it possible to use the MPU-6050/9150 with nRF24LE1.
+// and this makes it possible to use the MPU-6050 with nRF24LE1.
 //
 // I achieved this by making a logic analyzer capture of the I2C output of the full
 // eMPL library on an Arduino with the configuration I needed. Then I just 'replayed'
 // these I2C sequences in this library. This way I sacrifice flexibility for flash and RAM space.
-//
-// The 9150 upgrades were done by compiling the MPU library on windows, and implementing
-// i2c_read/i2c_write as simple read/write into a chunk of memory and the i2c_write is really
-// a kind of a code generator that outputs function calls. Check the tools directory in src.
 
 uint8_t compass_addr = 0;
 int16_t mag_sens_adj[3];
@@ -228,18 +224,18 @@ void dmp_enable_feature(void)
 	mpu_write_mem(CFG_27, sizeof arr, arr);
 	}
 	
-	/*if (send_cal_gyro)
-	{
-		{
-		const uint8_t __code arr[] = {0xB8,0xAA,0xB3,0x8D,0xB4,0x98,0x0D,0x35,0x5D};	// dmp_enable_gyro_cal(1)
-		mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
-		}
-
-		{
-		const uint8_t __code arr[] = {0xB2,0x8B,0xB6,0x9B};		// DMP_FEATURE_SEND_CAL_GYRO
-		mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
-		}
-	} else {*/
+	//if (send_cal_gyro)
+	//{
+	//	{
+	//	const uint8_t __code arr[] = {0xB8,0xAA,0xB3,0x8D,0xB4,0x98,0x0D,0x35,0x5D};	// dmp_enable_gyro_cal(1)
+	//	mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
+	//	}
+    //
+	//	{
+	//	const uint8_t __code arr[] = {0xB2,0x8B,0xB6,0x9B};		// DMP_FEATURE_SEND_CAL_GYRO
+	//	mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
+	//	}
+	//} else {
 		{
 		const uint8_t __code arr[] = {0xb8,0xaa,0xaa,0xaa,0xb0,0x88,0xc3,0xc5,0xc7};	// dmp_enable_gyro_cal(0)
 		mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
@@ -328,7 +324,7 @@ void dmp_enable_feature(void)
 	
 	// this is dmp_set_fifo_rate()
 	{
-	const uint8_t __code arr[] = {0x00,0x03};
+	const uint8_t __code arr[] = {0x00,0x00};
 	mpu_write_mem(D_0_22, sizeof arr, arr);
 	}
 	{
@@ -399,8 +395,15 @@ void load_biases(void)
 
 	if (pSettings  &&  pSettings->is_calibrated)
 	{
+		dprintf("%s\ngyro %d %d %d\naccel %d %d %d\n",
+						"loading",
+						pSettings->gyro_bias[0], pSettings->gyro_bias[1], pSettings->gyro_bias[2],
+						pSettings->accel_bias[0], pSettings->accel_bias[1], pSettings->accel_bias[2]);
+						
 		mpu_set_gyro_bias(pSettings->gyro_bias);
 		mpu_set_accel_bias(pSettings->accel_bias);
+	} else {
+		dputs("no settings saved");
 	}
 }
 
@@ -434,107 +437,22 @@ void dmp_init(void)
 	load_biases();
 }
 
-void mpu_set_bypass(bool bypass)
-{
-	uint8_t byte;
-	
-	if (bypass)
-	{
-		mpu_read_byte(USER_CTRL, &byte);
-		byte &= ~BIT_AUX_IF_EN;
-		mpu_write_byte(USER_CTRL, byte);
-		
-		delay_ms(3);
-
-		mpu_write_byte(INT_PIN_CFG, BIT_BYPASS_EN | BIT_ACTL);
-	} else {
-        // Enable I2C master mode if compass is being used.
-		mpu_read_byte(USER_CTRL, &byte);
-		byte |= BIT_AUX_IF_EN;		// if (st.chip_cfg.sensors & INV_XYZ_COMPASS)
-		mpu_write_byte(USER_CTRL, byte);
-	
-		delay_ms(3);
-		
-		mpu_write_byte(INT_PIN_CFG, BIT_ACTL);
-	}
-}
-
-#define SAMPLE_RATE_HZ		200
+#define SAMPLE_RATE_HZ		50
 
 void mpu_init(void)
 {
-	uint8_t	akm_addr, byte;
-	
 	mpu_write_byte(PWR_MGMT_1, 0x80);		// reset
 	delay_ms(100);
 	mpu_write_byte(PWR_MGMT_1, 0);			// wakeup
-
-#ifdef MPU9150	
-	mpu_set_bypass(1);
-	
-    for (akm_addr = 0x0C; akm_addr <= 0x0F; akm_addr++)
-	{
-		dprintf("trying compass addr %d\n", akm_addr);
-        if (i2c_read(akm_addr, AKM_REG_WHOAMI, 1, &byte)   &&   byte == AKM_WHOAMI)
-		{
-			dputs("found");
-			compass_addr = akm_addr;
-            break;
-		}
-    }
-
-	if (compass_addr)
-	{
-		uint8_t data[3];
-		
-		compass_write_byte(AKM_REG_CNTL, AKM_POWER_DOWN);
-		delay_ms(1);
-		compass_write_byte(AKM_REG_CNTL, AKM_FUSE_ROM_ACCESS);
-		
-		compass_read_array(AKM_REG_ASAX, 3, data);
-		mag_sens_adj[0] = data[0] + 128;
-		mag_sens_adj[1] = data[1] + 128;
-		mag_sens_adj[2] = data[2] + 128;
-		
-		dprintf("mag_sens_adj %d %d %d\n", mag_sens_adj[0], mag_sens_adj[1], mag_sens_adj[2]);
-		
-		compass_write_byte(AKM_REG_CNTL, AKM_POWER_DOWN);
-		delay_ms(1);
-	}
-
-	mpu_set_bypass(0);
-
-	mpu_write_byte(I2C_MST, 0x40);								// Set up master mode, master clock, and ES bit.
-
-    mpu_write_byte(S0_ADDR, BIT_I2C_READ | compass_addr);		// Slave 0 reads from AKM data registers.
-	mpu_write_byte(S0_REG, AKM_REG_ST1);						// Compass reads start at this register.
-	mpu_write_byte(S0_CTRL, BIT_SLAVE_EN | 8);					// Enable slave 0, 8-byte reads.
-
-	mpu_write_byte(S1_ADDR, compass_addr);						// Slave 1 changes AKM measurement mode.
-	mpu_write_byte(S1_REG, AKM_REG_CNTL);						// AKM measurement mode register.
-	mpu_write_byte(S1_CTRL, BIT_SLAVE_EN | 1);					// Enable slave 1, 1-byte writes.
-	mpu_write_byte(S1_DO, AKM_SINGLE_MEASUREMENT);				// Set slave 1 data.
-
-	mpu_write_byte(I2C_DELAY_CTRL, AKM_SINGLE_MEASUREMENT);		// Trigger slave 0 and slave 1 actions at each sample.
-	
-	mpu_write_byte(YG_OFFS_TC, BIT_I2C_MST_VDDIO);				// For the MPU9150, the auxiliary I2C bus needs to be set to VDD.
-	
-	// compass sample rate
-	
-#endif
 	
 	mpu_write_byte(GYRO_CONFIG, INV_FSR_2000DPS << 3);		// == mpu_set_gyro_fsr(2000)
 	mpu_write_byte(ACCEL_CONFIG, INV_FSR_2G << 3);			// == mpu_set_accel_fsr(2)
 	mpu_write_byte(SMPLRT_DIV, 1000 / SAMPLE_RATE_HZ - 1);	// == mpu_set_sample_rate(SAMPLE_RATE_HZ)
-	mpu_write_byte(CONFIG, INV_FILTER_98HZ);				// == mpu_set_lpf(98)
-	mpu_write_byte(S4_CTRL, 0x04);							// == mpu_set_compass_sample_rate(200)
-
-	/*
-	//mpu_write_byte(CONFIG, 0x03);
-	//mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(USER_CTRL, 0x20);	// I2C_MST_EN
-	mpu_write_byte(INT_PIN_CFG, 0x80);
-	mpu_write_byte(PWR_MGMT_1, 0x40);
+	mpu_write_byte(CONFIG, INV_FILTER_20HZ);				// == mpu_set_lpf(20)
+	
+	mpu_write_byte(USER_CTRL, 0x20);
+	mpu_write_byte(INT_PIN_CFG, 0x80);		// active low
+	mpu_write_byte(PWR_MGMT_1, 0x40);		// sleep
 	mpu_write_byte(PWR_MGMT_2, 0x3F);
 	delay_ms(50);
 	mpu_write_byte(PWR_MGMT_1, 0x01);
@@ -551,25 +469,6 @@ void mpu_init(void)
 	mpu_write_byte(FIFO_EN, 0x78);
 	//mpu_write_byte(SMPLRT_DIV, 0x04);
 	//mpu_write_byte(CONFIG, INV_FILTER_20HZ);	// was 0x02
-	*/
-	
-// mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL | INV_XYZ_COMPASS);
-delay_ms(50);
-// mpu_set_gyro_fsr(2000);
-// mpu_set_accel_fsr(2);
-// mpu_configure_fifo(INV_XYZ_GYRO | INV_XYZ_ACCEL);
-mpu_write_byte(INT_ENABLE, 0x01);
-mpu_write_byte(INT_ENABLE, 0x00);
-mpu_write_byte(FIFO_EN, 0x00);
-mpu_write_byte(USER_CTRL, 0x00);	// 
-mpu_write_byte(USER_CTRL, 0x04);	// FIFO_RESET
-mpu_write_byte(USER_CTRL, 0x60);	// FIFO_EN,I2C_MST_EN
-delay_ms(50);
-mpu_write_byte(INT_ENABLE, 0x01);
-mpu_write_byte(FIFO_EN, 0x78);
-// mpu_set_sample_rate(50);
-mpu_write_byte(SMPLRT_DIV, 0x13);
-mpu_write_byte(S4_CTRL, 0x04);	
 	
 	dmp_init();
 }
@@ -689,44 +588,4 @@ void mpu_get_temperature(int16_t* result)
 
 	// result in milli Celsius
     *result = (int16_t)((350 + ((raw + TEMP_OFFSET) / TEMP_SENS)));
-}
-
-bool mpu_get_compass_reg(int16_t* data)
-{
-	uint8_t tmp[8];
-
-	memset(tmp, 0, sizeof(tmp));
-	
-	if (!mpu_read_array(RAW_COMPASS, 8, tmp))
-	{
-		dputs("1");
-		return false;
-	}
-	
-	// AK8975 doesn't have the overrun error bit
-	if ((tmp[0] & AKM_DATA_READY) == 0)
-	{
-		dputs("2");
-		return false;
-	}
-
-	if ((tmp[7] & AKM_OVERFLOW) || (tmp[7] & AKM_DATA_ERROR))
-	{
-		dputs("3");
-		return false;
-	}
-
-	data[0] = (tmp[2] << 8) | tmp[1];
-	data[1] = (tmp[4] << 8) | tmp[3];
-	data[2] = (tmp[6] << 8) | tmp[5];
-
-	/*if (dbgEmpty())
-		dprintf("compass %d %d %d\n", data[0], data[1], data[2]);
-		*/
-	
-	data[0] = ((int32_t)data[0] * mag_sens_adj[0]) >> 8;
-	data[1] = ((int32_t)data[1] * mag_sens_adj[1]) >> 8;
-	data[2] = ((int32_t)data[2] * mag_sens_adj[2]) >> 8;
-
-	return true;
 }

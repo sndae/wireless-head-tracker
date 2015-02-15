@@ -2,7 +2,7 @@
 #define MPU_REGS_H
 
 // MPU-6050 registers excluding the I2C master and external sensors
-#define SMPLRT_DIV			0x19		// 25
+#define SMPLRT_DIV			0x19		// 25 AKA rate_div
 #define CONFIG				0x1A		// 26 AKA LPF
 #define GYRO_CONFIG			0x1B		// 27
 #define ACCEL_CONFIG		0x1C		// 28
@@ -36,18 +36,18 @@
 #define WHO_AM_I			0x75		// 117
 
 #ifdef MPU9150
-#define RAW_COMPASS   	0x49
-#define YG_OFFS_TC    	0x01
-#define S0_ADDR       	0x25
-#define S0_REG        	0x26
-#define S0_CTRL       	0x27
-#define S1_ADDR       	0x28
-#define S1_REG        	0x29
-#define S1_CTRL       	0x2A
-#define S4_CTRL       	0x34
-#define S0_DO         	0x63
-#define S1_DO         	0x64
-#define I2C_DELAY_CTRL	0x67
+#define RAW_COMPASS			0x49
+#define YG_OFFS_TC			0x01
+#define S0_ADDR				0x25
+#define S0_REG				0x26
+#define S0_CTRL				0x27
+#define S1_ADDR				0x28
+#define S1_REG				0x29
+#define S1_CTRL				0x2A
+#define S4_CTRL				0x34
+#define S0_DO				0x63
+#define S1_DO				0x64
+#define I2C_MST_DELAY_CTRL	0x67
 
 #define AKM_REG_WHOAMI		0x00
 
@@ -79,12 +79,12 @@
 #define AKM_WHOAMI			0x48
 #endif
 
-#define INV_X_GYRO      (0x40)
-#define INV_Y_GYRO      (0x20)
-#define INV_Z_GYRO      (0x10)
-#define INV_XYZ_GYRO    (INV_X_GYRO | INV_Y_GYRO | INV_Z_GYRO)
-#define INV_XYZ_ACCEL   (0x08)
-#define INV_XYZ_COMPASS (0x01)
+#define INV_X_GYRO		0x40
+#define INV_Y_GYRO		0x20
+#define INV_Z_GYRO		0x10
+#define INV_XYZ_GYRO	(INV_X_GYRO | INV_Y_GYRO | INV_Z_GYRO)
+#define INV_XYZ_ACCEL	0x08
+#define INV_XYZ_COMPASS	0x01
 
 
 // These are not mentioned in the register map PDF,
@@ -574,8 +574,8 @@
 #define INV_FILTER_20HZ				4
 #define INV_FILTER_10HZ				5
 #define INV_FILTER_5HZ				6
-#define INV_FILTER_2100HZ_NOLPF		7
-#define NUM_FILTER					8
+//#define INV_FILTER_2100HZ_NOLPF		7	// reserved
+//#define NUM_FILTER					8
 
 enum gyro_fsr_e {
     INV_FSR_250DPS = 0,
