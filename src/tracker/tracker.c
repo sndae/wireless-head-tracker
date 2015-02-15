@@ -31,6 +31,8 @@ void hw_init()
 
 	P0CON = 0x55;		// turn on the pullup for the recenter button
 	
+	//P1DIR = 0x00;
+	
 	// cycle the LEDs
 	LED_RED		= 0;
 	LED_YELLOW	= 0;
@@ -55,8 +57,7 @@ void hw_init()
 	dbgInit();
 	i2c_init();
 
-	dprintf("\x1b[2J\x1b[f");
-	dputs("--- init started");
+	dputs("init started");
 	
 	LED_YELLOW = 1;
 	
@@ -70,7 +71,7 @@ void hw_init()
 
 	LED_YELLOW = 0;
 
-	dputs("init finished");
+	dputs("init OK");
 }
 
 /*
@@ -201,19 +202,6 @@ int main(void)
 			do {
 				read_result = dmp_read_fifo(&pckt, &more);
 			} while (more);
-			
-			{
-				int16_t compass[3];
-				bool is_ok = mpu_get_compass_reg(compass);
-			
-				if (dbgEmpty())
-				{
-					if (!is_ok)
-						dputs("BAD!");
-					else
-						dprintf("%d %d %d\n", compass[0], compass[1], compass[2]);
-				}
-			}
 			
 			if (read_result)
 			{
