@@ -164,8 +164,8 @@ void reset_fifo(void)
 	mpu_write_byte(USER_CTRL, BIT_FIFO_RST);	// reset the fifo
 	mpu_write_byte(USER_CTRL, BIT_FIFO_EN);		// enable the fifo
 	delay_ms(50);
-	mpu_write_byte(INT_ENABLE, 0x01);	// fifo enable
-	mpu_write_byte(FIFO_EN, 0x78);		// enable gyro and accel FIFO
+	mpu_write_byte(INT_ENABLE, 0x01);			// fifo enable
+	mpu_write_byte(FIFO_EN, 0x78);				// enable gyro and accel into FIFO
 }
 
 void mpu_set_gyro_bias(const int16_t* gyro_bias)
