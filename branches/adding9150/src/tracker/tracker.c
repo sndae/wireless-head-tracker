@@ -30,8 +30,70 @@ void hw_init()
 						// P0.6 is the MPU interrupt pin - input
 
 	P0CON = 0x55;		// turn on the pullup for the recenter button
+
+	P1DIR = 0x00;
 	
-	//P1DIR = 0x00;
+	while (1)
+	{
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+		P12 = 0;
+		P12 = 1;
+	}
 	
 	// cycle the LEDs
 	LED_RED		= 0;
@@ -196,7 +258,7 @@ int main(void)
 			dbgPoll();
 		while (!MPU_IRQ)
 			;
-
+			
 		do {
 			// read all the packets in the MPU fifo
 			do {

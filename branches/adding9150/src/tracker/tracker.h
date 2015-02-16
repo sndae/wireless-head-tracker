@@ -6,6 +6,7 @@
 #define LED_YELLOW	P01
 #define LED_GREEN	P02
 
+// the MPU IRQ line and the recenter button
 #define MPU_IRQ			P06
 #define RECENTER_BTN	P05
 
