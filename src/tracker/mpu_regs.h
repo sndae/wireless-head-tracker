@@ -28,12 +28,12 @@
 #define GYOR_ZOUT_L			0x48		// 72
 #define SIGNAL_PATH_RESET	0x68		// 104
 #define USER_CTRL			0x6A		// 106
-#define PWR_MGMT_1			0x6B		// 107
+#define PWR_MGMT_1			0x6B		// 107		reset value == 0x40
 #define PWR_MGMT_2			0x6C		// 108
 #define FIFO_COUNT_H		0x72		// 114
 #define FIFO_COUNT_L		0x73		// 115
 #define FIFO_R_W			0x74		// 116
-#define WHO_AM_I			0x75		// 117
+#define WHO_AM_I			0x75		// 117		reset value == 0x68
 
 #ifdef MPU9150
 #define RAW_COMPASS			0x49
@@ -525,47 +525,47 @@
 #define DMP_BLPFNMZH    508
 #define DMP_BLPFNMZL    510
 
-#define BIT_I2C_MST_VDDIO   (0x80)
-#define BIT_FIFO_EN         (0x40)
-#define BIT_DMP_EN          (0x80)
-#define BIT_FIFO_RST        (0x04)
-#define BIT_DMP_RST         (0x08)
-#define BIT_FIFO_OVERFLOW   (0x10)
-#define BIT_DATA_RDY_EN     (0x01)
-#define BIT_DMP_INT_EN      (0x02)
-#define BIT_MOT_INT_EN      (0x40)
-#define BITS_FSR            (0x18)
-#define BITS_LPF            (0x07)
-#define BITS_HPF            (0x07)
-#define BITS_CLK            (0x07)
-#define BIT_FIFO_SIZE_1024  (0x40)
-#define BIT_FIFO_SIZE_2048  (0x80)
-#define BIT_FIFO_SIZE_4096  (0xC0)
-#define BIT_RESET           (0x80)
-#define BIT_SLEEP           (0x40)
-#define BIT_S0_DELAY_EN     (0x01)
-#define BIT_S2_DELAY_EN     (0x04)
-#define BITS_SLAVE_LENGTH   (0x0F)
-#define BIT_SLAVE_BYTE_SW   (0x40)
-#define BIT_SLAVE_GROUP     (0x10)
-#define BIT_SLAVE_EN        (0x80)
-#define BIT_I2C_READ        (0x80)
-#define BITS_I2C_MASTER_DLY (0x1F)
-#define BIT_AUX_IF_EN       (0x20)
-#define BIT_ACTL            (0x80)
-#define BIT_LATCH_EN        (0x20)
-#define BIT_ANY_RD_CLR      (0x10)
-#define BIT_BYPASS_EN       (0x02)
-#define BITS_WOM_EN         (0xC0)
-#define BIT_LPA_CYCLE       (0x20)
-#define BIT_STBY_XA         (0x20)
-#define BIT_STBY_YA         (0x10)
-#define BIT_STBY_ZA         (0x08)
-#define BIT_STBY_XG         (0x04)
-#define BIT_STBY_YG         (0x02)
-#define BIT_STBY_ZG         (0x01)
-#define BIT_STBY_XYZA       (BIT_STBY_XA | BIT_STBY_YA | BIT_STBY_ZA)
-#define BIT_STBY_XYZG       (BIT_STBY_XG | BIT_STBY_YG | BIT_STBY_ZG)
+#define BIT_I2C_MST_VDDIO	0x80
+#define BIT_FIFO_EN			0x40
+#define BIT_DMP_EN			0x80
+#define BIT_FIFO_RST		0x04
+#define BIT_DMP_RST			0x08
+#define BIT_FIFO_OVERFLOW	0x10
+#define BIT_DATA_RDY_EN		0x01
+#define BIT_DMP_INT_EN		0x02
+#define BIT_MOT_INT_EN		0x40
+#define BITS_FSR			0x18
+#define BITS_LPF			0x07
+#define BITS_HPF			0x07
+#define BITS_CLK			0x07
+#define BIT_FIFO_SIZE_1024	0x40
+#define BIT_FIFO_SIZE_2048	0x80
+#define BIT_FIFO_SIZE_4096	0xC0
+#define BIT_RESET			0x80
+#define BIT_SLEEP			0x40
+#define BIT_S0_DELAY_EN		0x01
+#define BIT_S2_DELAY_EN		0x04
+#define BITS_SLAVE_LENGTH	0x0F
+#define BIT_SLAVE_BYTE_SW	0x40
+#define BIT_SLAVE_GROUP		0x10
+#define BIT_SLAVE_EN		0x80
+#define BIT_I2C_READ		0x80
+#define BITS_I2C_MASTER_DLY	0x1F
+#define BIT_AUX_IF_EN		0x20
+#define BIT_ACTL			0x80
+#define BIT_LATCH_EN		0x20
+#define BIT_ANY_RD_CLR		0x10
+#define BIT_BYPASS_EN		0x02
+#define BITS_WOM_EN			0xC0
+#define BIT_LPA_CYCLE		0x20
+#define BIT_STBY_XA			0x20
+#define BIT_STBY_YA			0x10
+#define BIT_STBY_ZA			0x08
+#define BIT_STBY_XG			0x04
+#define BIT_STBY_YG			0x02
+#define BIT_STBY_ZG			0x01
+#define BIT_STBY_XYZA		(BIT_STBY_XA | BIT_STBY_YA | BIT_STBY_ZA)
+#define BIT_STBY_XYZG		(BIT_STBY_XG | BIT_STBY_YG | BIT_STBY_ZG)
 
 #define INV_FILTER_256HZ_NOLPF2		0
 #define INV_FILTER_188HZ			1
@@ -595,6 +595,7 @@ enum accel_fsr_e {
 
 
 #define MPU_ADDR				0x68
+#define COMPASS_ADDR			0x0c
 
 
 #endif	// MPU_REGS_H

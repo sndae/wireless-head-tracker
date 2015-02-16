@@ -41,6 +41,11 @@ bool mpu_read_array(uint8_t reg_addr, uint8_t bytes, uint8_t* val)
 	return i2c_read(MPU_ADDR, reg_addr, bytes, val);
 }
 
+bool mpu_write_array(uint8_t reg_addr, uint8_t bytes, const uint8_t* val)
+{
+	return i2c_write(MPU_ADDR, reg_addr, bytes, val);
+}
+
 bool compass_write_byte(uint8_t reg_addr, uint8_t val)
 {
 	return i2c_write(compass_addr, reg_addr, 1, &val);
@@ -64,10 +69,10 @@ bool mpu_write_mem(uint16_t mem_addr, uint16_t length, const uint8_t* data2write
     tmp[0] = (uint8_t)(mem_addr >> 8);
     tmp[1] = (uint8_t)(mem_addr & 0xFF);
 
-    if (!i2c_write(MPU_ADDR, BANK_SEL, 2, tmp))
+    if (!mpu_write_array(BANK_SEL, 2, tmp))
         return false;
 		
-    if (!i2c_write(MPU_ADDR, MEM_R_W, length, data2write))
+    if (!mpu_write_array(MEM_R_W, length, data2write))
         return false;
 
     return true;
@@ -80,14 +85,16 @@ bool mpu_read_mem(uint16_t mem_addr, uint16_t length, uint8_t* data2read)
     tmp[0] = (uint8_t)(mem_addr >> 8);
     tmp[1] = (uint8_t)(mem_addr & 0xFF);
 
-    if (!i2c_write(MPU_ADDR, BANK_SEL, 2, tmp))
+    if (!mpu_write_array(BANK_SEL, 2, tmp))
         return false;
 
-    if (!i2c_read(MPU_ADDR, MEM_R_W, length, data2read))
+    if (!mpu_read_array(MEM_R_W, length, data2read))
         return false;
 
     return true;
 }
+
+// **************************************************************************************
 
 bool dmp_load_firmware(void)
 {
@@ -127,7 +134,7 @@ bool dmp_load_firmware(void)
     // Set program start address. 
     tmp[0] = START_ADDR >> 8;
     tmp[1] = START_ADDR & 0xFF;
-    if (!i2c_write(MPU_ADDR, PRGM_START_H, 2, tmp))
+    if (!mpu_write_array(PRGM_START_H, 2, tmp))
 	{
 		dputs("PRGM_START_H failed");
         return false;
@@ -153,9 +160,9 @@ void reset_fifo(void)
 {
 	mpu_write_byte(INT_ENABLE, 0x00);
 	mpu_write_byte(FIFO_EN, 0x00);
-	mpu_write_byte(USER_CTRL, 0x00);
-	mpu_write_byte(USER_CTRL, 0x04);
-	mpu_write_byte(USER_CTRL, 0x40);
+	mpu_write_byte(USER_CTRL, 0x00);			// I2C_MST_EN = 0
+	mpu_write_byte(USER_CTRL, BIT_FIFO_RST);	// reset the fifo
+	mpu_write_byte(USER_CTRL, BIT_FIFO_EN);		// enable the fifo
 	delay_ms(50);
 	mpu_write_byte(INT_ENABLE, 0x01);	// fifo enable
 	mpu_write_byte(FIFO_EN, 0x78);		// enable gyro and accel FIFO
@@ -169,7 +176,7 @@ void mpu_set_gyro_bias(const int16_t* gyro_bias)
 	{
 		d[0] = (gyro_bias[i] >> 8) & 0xff;
 		d[1] = (gyro_bias[i]) & 0xff;
-		i2c_write(MPU_ADDR, 0x13 + 2 * i, 2, d);
+		mpu_write_array(0x13 + 2 * i, 2, d);
 	}
 }
 
@@ -179,7 +186,7 @@ void mpu_read_accel_bias(int16_t* accel_bias)
 
 	for (i = 0; i < 3; i++)
 	{
-		i2c_read(MPU_ADDR, 0x06 + i * 2, 2, d);
+		mpu_read_array(0x06 + i * 2, 2, d);
 		accel_bias[i] = (d[0] << 8) | d[1];
 	}
 }
@@ -203,7 +210,7 @@ void mpu_set_accel_bias(const int16_t* accel_bias)
 		data[0] = (accel_bias[i] >> 8) & 0xff;
 		data[1] = accel_bias[i] & 0xff;
 		
-		i2c_write(MPU_ADDR, 0x06 + i * 2, 2, data);
+		mpu_write_array(0x06 + i * 2, 2, data);
 	}
 }
 
@@ -213,100 +220,32 @@ void dmp_enable_feature(void)
 	const uint8_t __code arr[] = {0x02,0xca,0xe3,0x09};
 	mpu_write_mem(D_0_104, sizeof arr, arr);
 	}
+
 	{
 	const uint8_t __code arr[] = {0xa3,0xc0,0xc8,0xc2,0xc4,0xcc,0xc6,0xa3,0xa3,0xa3};
 	mpu_write_mem(CFG_15, sizeof arr, arr);
 	}
+
 	{
-	// Changing 0x20 to 0xD8 disables tap, but also messes up the fifo rates. I have no idea why.
-	// So, I keep tap enabled, read it, but I don't use it.
-	const uint8_t __code arr[] = {0x20};
+	const uint8_t __code arr[] = {0xd8};
 	mpu_write_mem(CFG_27, sizeof arr, arr);
 	}
 	
-	//if (send_cal_gyro)
-	//{
-	//	{
-	//	const uint8_t __code arr[] = {0xB8,0xAA,0xB3,0x8D,0xB4,0x98,0x0D,0x35,0x5D};	// dmp_enable_gyro_cal(1)
-	//	mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
-	//	}
-    //
-	//	{
-	//	const uint8_t __code arr[] = {0xB2,0x8B,0xB6,0x9B};		// DMP_FEATURE_SEND_CAL_GYRO
-	//	mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
-	//	}
-	//} else {
-		{
-		const uint8_t __code arr[] = {0xb8,0xaa,0xaa,0xaa,0xb0,0x88,0xc3,0xc5,0xc7};	// dmp_enable_gyro_cal(0)
-		mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
-		}
+	{
+	const uint8_t __code arr[] = {0xb8,0xaa,0xaa,0xaa,0xb0,0x88,0xc3,0xc5,0xc7};	// dmp_enable_gyro_cal(0)
+	mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
+	}
 
-		{
-		const uint8_t __code arr[] = {0xB0,0x80,0xB4,0x90};		// DMP_FEATURE_SEND_RAW_GYRO
-		mpu_write_mem(CFG_GYRO_RAW_DATA, sizeof arr, arr);
-		}
-	//}
+	{
+	const uint8_t __code arr[] = {0xB0,0x80,0xB4,0x90};		// DMP_FEATURE_SEND_RAW_GYRO
+	mpu_write_mem(CFG_GYRO_RAW_DATA, sizeof arr, arr);
+	}
 	
 	{
 	const uint8_t __code arr[] = {0xf8};
 	mpu_write_mem(CFG_20, sizeof arr, arr);
 	}
-	
-	// this configures tap which we don't need
-	/*{
-	const uint8_t __code arr[] = {0x50,0x00};
-	mpu_write_mem(DMP_TAP_THX, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x3c,0x00};
-	mpu_write_mem(D_1_36, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x50,0x00};
-	mpu_write_mem(DMP_TAP_THY, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x3c,0x00};
-	mpu_write_mem(D_1_40, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x50,0x00};
-	mpu_write_mem(DMP_TAP_THZ, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x3c,0x00};
-	mpu_write_mem(D_1_44, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x3f};
-	mpu_write_mem(D_1_72, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x00};
-	mpu_write_mem(D_1_79, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x00,0x14};
-	mpu_write_mem(DMP_TAPW_MIN, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x00,0x64};
-	mpu_write_mem(D_1_218, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x00,0x8e,0xf9,0x90};
-	mpu_write_mem(D_1_92, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x00,0x08};
-	mpu_write_mem(D_1_90, sizeof arr, arr);
-	}
-	{
-	const uint8_t __code arr[] = {0x00,0x02};
-	mpu_write_mem(D_1_88, sizeof arr, arr);
-	}
-	*/
-	
+
 	{
 	const uint8_t __code arr[] = {0xd8};
 	mpu_write_mem(CFG_ANDROID_ORIENT_INT, sizeof arr, arr);
@@ -320,8 +259,6 @@ void dmp_enable_feature(void)
 	mpu_write_mem(CFG_8, sizeof arr, arr);
 	}
 
-	reset_fifo();
-	
 	// this is dmp_set_fifo_rate()
 	{
 	const uint8_t __code arr[] = {0x00,0x00};
@@ -335,18 +272,21 @@ void dmp_enable_feature(void)
 	reset_fifo();
 }
 
-#define PACKET_LENGTH	32
+#define PACKET_LENGTH	28
 
-bool mpu_read_fifo_stream(uint16_t length, uint8_t* buffer, uint8_t* more)
+bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 {
 	uint8_t tmp[2];
 	uint16_t fifo_count;
 
 	// read number of bytes in the FIFO
-	if (!i2c_read(MPU_ADDR, FIFO_COUNT_H, 2, tmp))
+	if (!mpu_read_array(FIFO_COUNT_H, 2, tmp))
 		return false;
 
+	// mind the endianness
 	fifo_count = (tmp[0] << 8) | tmp[1];
+	
+	dprintf("%d\n", fifo_count);
 	
 	if (fifo_count == 0)
 	{
@@ -355,13 +295,13 @@ bool mpu_read_fifo_stream(uint16_t length, uint8_t* buffer, uint8_t* more)
 	}
 
 	// bytes in the fifo must be a multiple of packet length
-	if (fifo_count % length)
+	if (fifo_count % PACKET_LENGTH)
 		return false;
 
-	if (!i2c_read(MPU_ADDR, FIFO_R_W, length, buffer))
+	if (!mpu_read_array(FIFO_R_W, PACKET_LENGTH, buffer))
 		return false;
 
-	*more = (fifo_count != length);
+	*more = (fifo_count != PACKET_LENGTH);
 	
 	return true;
 }
@@ -371,7 +311,7 @@ bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more)
     uint8_t fifo_data[PACKET_LENGTH];
     uint8_t i;
 
-	if (!mpu_read_fifo_stream(PACKET_LENGTH, fifo_data, more))
+	if (!mpu_read_fifo_stream(fifo_data, more))
 		return false;
 
 	// We're truncating the lower 16 bits of the quaternions.
@@ -407,8 +347,22 @@ void load_biases(void)
 	}
 }
 
-void dmp_init(void)
+#define SAMPLE_RATE_HZ		50
+
+void mpu_init(void)
 {
+	mpu_write_byte(PWR_MGMT_1, BIT_RESET);	// reset, MPU is in sleep mode after reset
+	delay_ms(100);
+	mpu_write_byte(PWR_MGMT_1, 0x00);		// wakeup, CLKSEL = 1; PLL with X axis gyroscope reference
+	//mpu_write_byte(PWR_MGMT_2, 0x00);		// standby off on all sensors (default value already 0)
+	
+	mpu_write_byte(GYRO_CONFIG, INV_FSR_2000DPS << 3);		// == mpu_set_gyro_fsr(2000)
+	mpu_write_byte(ACCEL_CONFIG, INV_FSR_2G << 3);			// == mpu_set_accel_fsr(2)
+	mpu_write_byte(SMPLRT_DIV, 1000 / SAMPLE_RATE_HZ - 1);	// == mpu_set_sample_rate(SAMPLE_RATE_HZ)
+	mpu_write_byte(CONFIG, INV_FILTER_20HZ);				// == mpu_set_lpf(20)
+	
+	mpu_write_byte(INT_PIN_CFG, 0x80);		// pin interrupt is active low
+
 	if (!dmp_load_firmware())
 	{
 		dputs("dmp_load_firmware FAILED!!!");
@@ -422,11 +376,7 @@ void dmp_init(void)
 	}
 
 	dmp_enable_feature();
-	
-	mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(FIFO_EN, 0x00);
-	mpu_write_byte(INT_ENABLE, 0x02);
-	mpu_write_byte(INT_ENABLE, 0x00);
+
 	mpu_write_byte(FIFO_EN, 0x00);
 	mpu_write_byte(USER_CTRL, 0x00);
 	mpu_write_byte(USER_CTRL, 0x0C);
@@ -435,42 +385,6 @@ void dmp_init(void)
 	mpu_write_byte(INT_ENABLE, 0x02);
 
 	load_biases();
-}
-
-#define SAMPLE_RATE_HZ		50
-
-void mpu_init(void)
-{
-	mpu_write_byte(PWR_MGMT_1, 0x80);		// reset
-	delay_ms(100);
-	mpu_write_byte(PWR_MGMT_1, 0);			// wakeup
-	
-	mpu_write_byte(GYRO_CONFIG, INV_FSR_2000DPS << 3);		// == mpu_set_gyro_fsr(2000)
-	mpu_write_byte(ACCEL_CONFIG, INV_FSR_2G << 3);			// == mpu_set_accel_fsr(2)
-	mpu_write_byte(SMPLRT_DIV, 1000 / SAMPLE_RATE_HZ - 1);	// == mpu_set_sample_rate(SAMPLE_RATE_HZ)
-	mpu_write_byte(CONFIG, INV_FILTER_20HZ);				// == mpu_set_lpf(20)
-	
-	mpu_write_byte(USER_CTRL, 0x20);
-	mpu_write_byte(INT_PIN_CFG, 0x80);		// active low
-	mpu_write_byte(PWR_MGMT_1, 0x40);		// sleep
-	mpu_write_byte(PWR_MGMT_2, 0x3F);
-	delay_ms(50);
-	mpu_write_byte(PWR_MGMT_1, 0x01);
-	mpu_write_byte(PWR_MGMT_2, 0x00);
-	delay_ms(50);
-	//mpu_write_byte(INT_ENABLE, 0x01);
-	//mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(FIFO_EN, 0x00);		// disables all FIFO outputs
-	mpu_write_byte(USER_CTRL, 0x00);
-	mpu_write_byte(USER_CTRL, 0x04);	// reset FIFO
-	mpu_write_byte(USER_CTRL, 0x40);	// enable FIFO
-	delay_ms(50);
-	//mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(FIFO_EN, 0x78);
-	//mpu_write_byte(SMPLRT_DIV, 0x04);
-	//mpu_write_byte(CONFIG, INV_FILTER_20HZ);	// was 0x02
-	
-	dmp_init();
 }
 
 void mpu_calibrate_bias(void)
@@ -582,7 +496,7 @@ void mpu_get_temperature(int16_t* result)
     uint8_t tmp[2];
     int16_t raw;
 
-    i2c_read(MPU_ADDR, TEMP_OUT_H, 2, tmp);
+    mpu_read_array(TEMP_OUT_H, 2, tmp);
 
     raw = (tmp[0] << 8) | tmp[1];
 
