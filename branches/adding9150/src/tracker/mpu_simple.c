@@ -14,14 +14,10 @@
 #include "tracker_settings.h"
 #include "nrfdbg.h"
 
-// This is a simplified version of the Invensense eMPL library.
-// It only implements features of the library that are needed for this project.
-// This way the memory requirements (Flash and RAM) have been dramatically reduced,
-// and this makes it possible to use the MPU-6050 with nRF24LE1.
-//
-// I achieved this by making a logic analyzer capture of the I2C output of the full
-// eMPL library on an Arduino with the configuration I needed. Then I just 'replayed'
-// these I2C sequences in this library. This way I sacrifice flexibility for flash and RAM space.
+// This library configures the MPU chips in DMP mode with temperature and compass data.
+// DMP outputs quaternions, gyro and acceleration data to the FIFO, we are adding temp and
+// compass with the FIFO_EN register. This was all the data we need is read from the MPU
+// in one chunk, and there's no need for separate mpu_read_temp_data() or mpu_read_compass_data()
 
 bool is_mpu9150 = false;
 int16_t mag_sens_adj[3];
@@ -158,15 +154,16 @@ bool dmp_set_orientation(void)
 
 void reset_fifo(void)
 {
-	mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(FIFO_EN, 0x00);				// disable all to fifo
-	mpu_write_byte(USER_CTRL, 0x00);			// I2C_MST_EN = 0
-	mpu_write_byte(USER_CTRL, BIT_FIFO_RST);	// reset the fifo
-	mpu_write_byte(USER_CTRL, BIT_FIFO_EN);		// enable the fifo
+	mpu_write_byte(INT_ENABLE, 0x00);				// all interrupts disabled
+	mpu_write_byte(FIFO_EN, 0x00);					// disable all to fifo
+	mpu_write_byte(USER_CTRL, 0x00);				// I2C_MST_EN = 0
+	mpu_write_byte(USER_CTRL, BIT_DMP_RESET | BIT_FIFO_RESET);		// reset the fifo
+	// enable FIFO and I2C master
+	mpu_write_byte(USER_CTRL, BIT_I2C_MST_EN | BIT_DMP_EN | BIT_FIFO_EN);
 	delay_ms(50);
-	mpu_write_byte(INT_ENABLE, 0x01);			// fifo enable
-	// enable gyro and accel into FIFO
-	mpu_write_byte(FIFO_EN, TEMP_FIFO_EN);
+	mpu_write_byte(INT_ENABLE, BIT_DATA_RDY_EN);	// fifo enable
+	// gyro, accel, temperature and compass into FIFO
+	mpu_write_byte(FIFO_EN, BIT_TEMP_FIFO_EN | BIT_SLV0_FIFO_EN);	// gyro and accel are copied into the fifo by the DMP
 }
 
 void mpu_set_gyro_bias(const int16_t* gyro_bias)
@@ -273,6 +270,31 @@ void dmp_enable_feature(void)
 	reset_fifo();
 }
 
+void mpu_set_bypass(bool bypass)
+{
+	uint8_t byte;
+
+	mpu_read_byte(USER_CTRL, &byte);
+	
+	if (bypass)
+	{
+		byte &= ~BIT_I2C_MST_EN;
+		mpu_write_byte(USER_CTRL, byte);
+		
+		delay_ms(3);
+
+		mpu_write_byte(INT_PIN_CFG, BIT_I2C_BYPASS_EN | BIT_INT_LEVEL);
+	} else {
+        // Enable I2C master mode if compass is being used.
+		byte |= BIT_I2C_MST_EN;
+		mpu_write_byte(USER_CTRL, byte);
+	
+		delay_ms(3);
+		
+		mpu_write_byte(INT_PIN_CFG, BIT_INT_LEVEL);
+	}
+}
+
 #define PACKET_LENGTH	60
 
 bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
@@ -287,8 +309,6 @@ bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 	// mind the endianness
 	fifo_count = (tmp[0] << 8) | tmp[1];
 
-	//dprintf("%d\n", fifo_count);
-	
 	if (fifo_count == 0)
 	{
 		*more = 0;
@@ -296,6 +316,8 @@ bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 	}
 
 	// bytes in the fifo must be a multiple of packet length
+	if (fifo_count % 38)
+		dprintf("!!! %d !!!\n", fifo_count);
 	//if (fifo_count % PACKET_LENGTH)
 	//	return false;
 
@@ -304,6 +326,11 @@ bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 
 	//*more = (fifo_count != PACKET_LENGTH);
 	*more = false;
+	
+	// force a compass read
+	//mpu_set_bypass(1);
+	//compass_write_byte(AKM_REG_CNTL, AKM_SINGLE_MEASUREMENT);
+	//mpu_set_bypass(0);
 	
 	return true;
 }
@@ -327,28 +354,16 @@ bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more)
 	if (is_mpu9150)
 	{
 		int16_t data[3];
-		/*
-		if (dbgEmpty())
-			dprintf("%d %d %d %d %d %d %d %d\n",	fifo_data[2],
-													fifo_data[3],
-													fifo_data[4],
-													fifo_data[5],
-													fifo_data[6],
-													fifo_data[7],
-													fifo_data[8],
-													fifo_data[9]);
-													*/
 		
-		// AK8975 doesn't have the overrun error bit
 		if ((fifo_data[2] & AKM_DATA_READY) == 0)
 		{
-			//dputs("2");
+			//dputs("!");
 			return true;
 		}
 
 		if ((fifo_data[9] & AKM_OVERFLOW) || (fifo_data[9] & AKM_DATA_ERROR))
 		{
-			//dputs("3");
+			dputs("#");
 			return true;
 		}
 
@@ -356,16 +371,17 @@ bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more)
 		data[1] = (fifo_data[6] << 8) | fifo_data[5];
 		data[2] = (fifo_data[8] << 8) | fifo_data[7];
 
-		if (dbgEmpty())
-			dprintf("compass %d %d %d\n", data[0], data[1], data[2]);
-		
 		data[0] = ((int32_t)data[0] * mag_sens_adj[0]) >> 8;
 		data[1] = ((int32_t)data[1] * mag_sens_adj[1]) >> 8;
 		data[2] = ((int32_t)data[2] * mag_sens_adj[2]) >> 8;
+
+		//if (dbgEmpty())
+			dprintf("%d %d %d\n", data[0], data[1], data[2]);
 		
 		offset = 8;
+	} else {
+		dputs("123");
 	}
-
 	
 	// We're truncating the lower 16 bits of the quaternions.
 	// Only the higher 16 bits are really used in the calculations,
@@ -400,34 +416,12 @@ void load_biases(void)
 	}
 }
 
-void mpu_set_bypass(bool bypass)
-{
-	uint8_t byte;
-	
-	if (bypass)
-	{
-		mpu_read_byte(USER_CTRL, &byte);
-		byte &= ~BIT_AUX_IF_EN;
-		mpu_write_byte(USER_CTRL, byte);
-		
-		delay_ms(3);
-
-		mpu_write_byte(INT_PIN_CFG, BIT_BYPASS_EN | BIT_ACTL);
-	} else {
-        // Enable I2C master mode if compass is being used.
-		mpu_read_byte(USER_CTRL, &byte);
-		byte |= BIT_AUX_IF_EN;		// if (st.chip_cfg.sensors & INV_XYZ_COMPASS)
-		mpu_write_byte(USER_CTRL, byte);
-	
-		delay_ms(3);
-		
-		mpu_write_byte(INT_PIN_CFG, BIT_ACTL);
-	}
-}
+#define SAMPLE_RATE_HZ		50
 
 void mpu_setup_compass(void)
 {
 	uint8_t data[3];
+	
 	mpu_set_bypass(1);
 	
 	// do we have a MPU-9150?
@@ -435,7 +429,7 @@ void mpu_setup_compass(void)
 	is_mpu9150 = (compass_read_byte(AKM_REG_WHOAMI, data)  &&  data[0] == AKM_WHOAMI);
 	if (is_mpu9150)
 	{
-		dputs("compass read ok");
+		dputs("magnetometer present");
 
 		compass_write_byte(AKM_REG_CNTL, AKM_POWER_DOWN);
 		delay_ms(1);
@@ -456,31 +450,34 @@ void mpu_setup_compass(void)
 
 	if (is_mpu9150)
 	{
-		mpu_write_byte(I2C_MST, 0x40);								// Set up master mode, master clock, and ES bit.
+		mpu_write_byte(I2C_MST_CTRL, BIT_WAIT_FOR_ES /*| 8*/);			// Set up master mode, master clock, and ES bit.
 
 		mpu_write_byte(S0_ADDR, BIT_I2C_READ | COMPASS_ADDR);		// Slave 0 reads from AKM data registers.
 		mpu_write_byte(S0_REG, AKM_REG_ST1);						// Compass reads start at this register.
-		mpu_write_byte(S0_CTRL, BIT_SLAVE_EN | 8);					// Enable slave 0, 8-byte reads.
+		mpu_write_byte(S0_CTRL, BIT_I2C_SLVx_EN | 8);				// Enable slave 0, 8-byte reads.
 
 		mpu_write_byte(S1_ADDR, COMPASS_ADDR);						// Slave 1 changes AKM measurement mode.
 		mpu_write_byte(S1_REG, AKM_REG_CNTL);						// AKM measurement mode register.
-		mpu_write_byte(S1_CTRL, BIT_SLAVE_EN | 1);					// Enable slave 1, 1-byte writes.
+		mpu_write_byte(S1_CTRL, BIT_I2C_SLVx_EN | 1);				// Enable slave 1, 1-byte writes.
+		
 		mpu_write_byte(S1_DO, AKM_SINGLE_MEASUREMENT);				// Set slave 1 data.
 
-		mpu_write_byte(I2C_MST_DELAY_CTRL, 0x03);					// Trigger slave 0 and slave 1 actions at each sample.
+		mpu_write_byte(I2C_MST_DELAY_CTRL, BIT_I2C_SLV1_DLY_EN
+										|  BIT_I2C_SLV0_DLY_EN);	// Trigger slave 0 and slave 1 actions at each sample.
 		
 		mpu_write_byte(YG_OFFS_TC, BIT_I2C_MST_VDDIO);				// For the MPU9150, the auxiliary I2C bus needs to be set to VDD.
+		
+		//mpu_write_byte(S4_CTRL, 1000 / SAMPLE_RATE_HZ - 1);			// compass sample rate
+		//mpu_write_byte(S4_CTRL, 1);			// compass sample rate
 	}
 }
 
-#define SAMPLE_RATE_HZ		50
-
 void mpu_init(void)
 {
-	mpu_write_byte(PWR_MGMT_1, BIT_RESET);	// reset, MPU is in sleep mode after reset
+	mpu_write_byte(PWR_MGMT_1, BIT_DEVICE_RESET);	// reset, MPU is in sleep mode after reset
 	delay_ms(100);
-	mpu_write_byte(PWR_MGMT_1, 0x00);		// wakeup, CLKSEL = 1; PLL with X axis gyroscope reference
-	//mpu_write_byte(PWR_MGMT_2, 0x00);		// standby off on all sensors (default value already 0)
+	mpu_write_byte(PWR_MGMT_1, 0x00);				// wakeup, CLKSEL = 1; PLL with X axis gyroscope reference
+	//mpu_write_byte(PWR_MGMT_2, 0x00);				// standby off on all sensors (default value already 0)
 	
 	mpu_write_byte(GYRO_CONFIG, INV_FSR_2000DPS << 3);		// == mpu_set_gyro_fsr(2000)
 	mpu_write_byte(ACCEL_CONFIG, INV_FSR_2G << 3);			// == mpu_set_accel_fsr(2)
@@ -505,12 +502,12 @@ void mpu_init(void)
 
 	dmp_enable_feature();
 
-	mpu_write_byte(FIFO_EN, TEMP_FIFO_EN | SLV0_FIFO_EN);		// gyro and accel are copied into the fifo by the DMP
+	mpu_write_byte(FIFO_EN, BIT_TEMP_FIFO_EN | BIT_SLV0_FIFO_EN);		// gyro and accel are copied into the fifo by the DMP
 	mpu_write_byte(USER_CTRL, 0x00);
-	mpu_write_byte(USER_CTRL, 0x0C);
+	mpu_write_byte(USER_CTRL, BIT_DMP_RESET | BIT_FIFO_RESET);
 	delay_ms(50);
-	mpu_write_byte(USER_CTRL, 0xC0);
-	mpu_write_byte(INT_ENABLE, 0x02);
+	mpu_write_byte(USER_CTRL, BIT_I2C_MST_EN | BIT_DMP_EN | BIT_FIFO_EN);
+	mpu_write_byte(INT_ENABLE, BIT_DMP_INT_EN);
 
 	load_biases();
 }

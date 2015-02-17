@@ -8,7 +8,7 @@
 #define ACCEL_CONFIG		0x1C		// 28
 #define ACCEL_CONFIG2		0x1D		// 29
 #define FIFO_EN				0x23		// 35
-#define I2C_MST				0x24		// 36
+#define I2C_MST_CTRL		0x24		// 36
 #define INT_PIN_CFG			0x37		// 55
 #define INT_ENABLE			0x38		// 56
 #define INT_STATUS			0x3A		// 58
@@ -525,39 +525,81 @@
 #define DMP_BLPFNMZH    508
 #define DMP_BLPFNMZL    510
 
+// YG_OFFS_TC
 #define BIT_I2C_MST_VDDIO	0x80
+
+// USER_CTRL
+#define BIT_DMP_EN			0x80			// undocumented
 #define BIT_FIFO_EN			0x40
-#define BIT_DMP_EN			0x80
-#define BIT_FIFO_RST		0x04
-#define BIT_DMP_RST			0x08
-#define BIT_FIFO_OVERFLOW	0x10
-#define BIT_DATA_RDY_EN		0x01
-#define BIT_DMP_INT_EN		0x02
-#define BIT_MOT_INT_EN		0x40
-#define BITS_FSR			0x18
-#define BITS_LPF			0x07
-#define BITS_HPF			0x07
-#define BITS_CLK			0x07
-#define BIT_FIFO_SIZE_1024	0x40
-#define BIT_FIFO_SIZE_2048	0x80
-#define BIT_FIFO_SIZE_4096	0xC0
-#define BIT_RESET			0x80
+#define BIT_I2C_MST_EN		0x20			// aka BIT_AUX_IF_EN
+#define BIT_I2C_IF_DIS		0x10
+#define BIT_DMP_RESET		0x08			// undocumented
+#define BIT_FIFO_RESET		0x04
+#define BIT_I2C_MST_RESET	0x02
+#define BIT_SIG_COND_RESET	0x01
+
+// INT_ENABLE
+#define BIT_MOT_INT_EN			0x40		// undocumented
+#define BIT_FIFO_OVERFLOW_EN	0x10
+#define BIT_I2C_MST_INT_EN		0x08
+#define BIT_DMP_INT_EN			0x02		// undocumented
+#define BIT_DATA_RDY_EN			0x01
+
+// PWR_MGMT_1
+#define BIT_DEVICE_RESET	0x80
 #define BIT_SLEEP			0x40
-#define BIT_S0_DELAY_EN		0x01
-#define BIT_S2_DELAY_EN		0x04
-#define BITS_SLAVE_LENGTH	0x0F
-#define BIT_SLAVE_BYTE_SW	0x40
-#define BIT_SLAVE_GROUP		0x10
-#define BIT_SLAVE_EN		0x80
+#define BIT_CYCLE			0x20
+
+// I2C_MST_DELAY_CTRL
+#define BIT_I2C_SLV0_DLY_EN		0x01
+#define BIT_I2C_SLV1_DLY_EN		0x02
+#define BIT_I2C_SLV2_DLY_EN		0x04
+#define BIT_I2C_SLV3_DLY_EN		0x08
+#define BIT_I2C_SLV4_DLY_EN		0x10
+#define BIT_DELAY_ES_SHADOW		0x80
+
+// I2C_SLVx_CTRL
+#define BIT_I2C_SLVx_EN			0x80
+#define BIT_I2C_SLVx_BYTE_SW	0x40
+#define BIT_I2C_SLVx_REG_DIS	0x20
+#define BIT_I2C_SLVx_GROUP		0x10
+#define BITS_I2C_SLVx_LENGTH	0x0F
+
+// I2C_SLVx_ADDR
+#define BIT_I2C_SLVx_RW		0x80
 #define BIT_I2C_READ		0x80
-#define BITS_I2C_MASTER_DLY	0x1F
-#define BIT_AUX_IF_EN		0x20
-#define BIT_ACTL			0x80
-#define BIT_LATCH_EN		0x20
-#define BIT_ANY_RD_CLR		0x10
-#define BIT_BYPASS_EN		0x02
+
+// I2C_SLV4_ADDR
+#define BITS_I2C_MST_DLY	0x1F
+
+// INT_PIN_CFG
+#define BIT_INT_LEVEL		0x80
+#define BIT_INT_OPEN		0x40
+#define BIT_LATCH_INT_EN	0x20
+#define BIT_INT_RD_CLEAR	0x10
+#define BIT_FSYNC_INT_LEVEL	0x08
+#define BIT_FSYNC_INT_EN	0x04
+#define BIT_I2C_BYPASS_EN	0x02
+
+// I2C_MST_CTRL
+#define BIT_MULT_MST_EN			0x80
+#define BIT_WAIT_FOR_ES			0x40
+#define BIT_SLV_3_FIFO_EN		0x20
+#define BIT_I2C_MST_P_NSR		0x10
+#define BITS_I2C_MST_CLK		0x0f
+
+// FIFO_EN
+#define BIT_TEMP_FIFO_EN		0x80
+#define BIT_XG_FIFO_EN			0x40
+#define BIT_YG_FIFO_EN			0x20
+#define BIT_ZG_FIFO_EN			0x10
+#define BITS_GYRO_FIFO_EN		(XG_FIFO_EN | YG_FIFO_EN | ZG_FIFO_EN)
+#define BIT_ACCEL_FIFO_EN		0x08
+#define BIT_SLV2_FIFO_EN		0x04
+#define BIT_SLV1_FIFO_EN		0x02
+#define BIT_SLV0_FIFO_EN		0x01
+
 #define BITS_WOM_EN			0xC0
-#define BIT_LPA_CYCLE		0x20
 #define BIT_STBY_XA			0x20
 #define BIT_STBY_YA			0x10
 #define BIT_STBY_ZA			0x08
@@ -578,30 +620,20 @@
 //#define NUM_FILTER					8
 
 enum gyro_fsr_e {
-    INV_FSR_250DPS = 0,
-    INV_FSR_500DPS,
-    INV_FSR_1000DPS,
-    INV_FSR_2000DPS,
-    NUM_GYRO_FSR
+	INV_FSR_250DPS = 0,
+	INV_FSR_500DPS,
+	INV_FSR_1000DPS,
+	INV_FSR_2000DPS,
+	NUM_GYRO_FSR
 };
 
 enum accel_fsr_e {
-    INV_FSR_2G = 0,
-    INV_FSR_4G,
-    INV_FSR_8G,
-    INV_FSR_16G,
-    NUM_ACCEL_FSR
+	INV_FSR_2G = 0,
+	INV_FSR_4G,
+	INV_FSR_8G,
+	INV_FSR_16G,
+	NUM_ACCEL_FSR
 };
-
-#define TEMP_FIFO_EN		0x80
-#define XG_FIFO_EN          0x40
-#define YG_FIFO_EN          0x20
-#define ZG_FIFO_EN          0x10
-#define GYRO_FIFO_EN        (XG_FIFO_EN | YG_FIFO_EN | ZG_FIFO_EN)
-#define ACCEL_FIFO_EN       0x08
-#define SLV2_FIFO_EN        0x04
-#define SLV1_FIFO_EN        0x02
-#define SLV0_FIFO_EN		0x01
 
 
 #define MPU_ADDR				0x68
