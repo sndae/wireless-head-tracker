@@ -23,7 +23,7 @@
 // eMPL library on an Arduino with the configuration I needed. Then I just 'replayed'
 // these I2C sequences in this library. This way I sacrifice flexibility for flash and RAM space.
 
-uint8_t compass_addr = 0;
+bool is_mpu9150 = false;
 int16_t mag_sens_adj[3];
 
 bool mpu_write_byte(uint8_t reg_addr, uint8_t val)
@@ -48,17 +48,17 @@ bool mpu_write_array(uint8_t reg_addr, uint8_t bytes, const uint8_t* val)
 
 bool compass_write_byte(uint8_t reg_addr, uint8_t val)
 {
-	return i2c_write(compass_addr, reg_addr, 1, &val);
+	return i2c_write(COMPASS_ADDR, reg_addr, 1, &val);
 }
 
 bool compass_read_byte(uint8_t reg_addr, uint8_t* val)
 {
-	return i2c_read(compass_addr, reg_addr, 1, val);
+	return i2c_read(COMPASS_ADDR, reg_addr, 1, val);
 }
 
 bool compass_read_array(uint8_t reg_addr, uint8_t cnt, uint8_t* val)
 {
-	return i2c_read(compass_addr, reg_addr, cnt, val);
+	return i2c_read(COMPASS_ADDR, reg_addr, cnt, val);
 }
 
 bool mpu_write_mem(uint16_t mem_addr, uint16_t length, const uint8_t* data2write)
@@ -159,13 +159,14 @@ bool dmp_set_orientation(void)
 void reset_fifo(void)
 {
 	mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(FIFO_EN, 0x00);
+	mpu_write_byte(FIFO_EN, 0x00);				// disable all to fifo
 	mpu_write_byte(USER_CTRL, 0x00);			// I2C_MST_EN = 0
 	mpu_write_byte(USER_CTRL, BIT_FIFO_RST);	// reset the fifo
 	mpu_write_byte(USER_CTRL, BIT_FIFO_EN);		// enable the fifo
 	delay_ms(50);
 	mpu_write_byte(INT_ENABLE, 0x01);			// fifo enable
-	mpu_write_byte(FIFO_EN, 0x78);				// enable gyro and accel into FIFO
+	// enable gyro and accel into FIFO
+	mpu_write_byte(FIFO_EN, TEMP_FIFO_EN);
 }
 
 void mpu_set_gyro_bias(const int16_t* gyro_bias)
@@ -226,7 +227,7 @@ void dmp_enable_feature(void)
 	mpu_write_mem(CFG_15, sizeof arr, arr);
 	}
 
-	{
+	{	// tap is off
 	const uint8_t __code arr[] = {0xd8};
 	mpu_write_mem(CFG_27, sizeof arr, arr);
 	}
@@ -272,7 +273,7 @@ void dmp_enable_feature(void)
 	reset_fifo();
 }
 
-#define PACKET_LENGTH	28
+#define PACKET_LENGTH	60
 
 bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 {
@@ -285,8 +286,8 @@ bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 
 	// mind the endianness
 	fifo_count = (tmp[0] << 8) | tmp[1];
-	
-	dprintf("%d\n", fifo_count);
+
+	//dprintf("%d\n", fifo_count);
 	
 	if (fifo_count == 0)
 	{
@@ -295,37 +296,89 @@ bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 	}
 
 	// bytes in the fifo must be a multiple of packet length
-	if (fifo_count % PACKET_LENGTH)
+	//if (fifo_count % PACKET_LENGTH)
+	//	return false;
+
+	if (!mpu_read_array(FIFO_R_W, fifo_count, buffer))
 		return false;
 
-	if (!mpu_read_array(FIFO_R_W, PACKET_LENGTH, buffer))
-		return false;
-
-	*more = (fifo_count != PACKET_LENGTH);
+	//*more = (fifo_count != PACKET_LENGTH);
+	*more = false;
 	
 	return true;
 }
 
+#define TEMP_OFFSET		521
+#define TEMP_SENS		34
+
 bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more)
 {
     uint8_t fifo_data[PACKET_LENGTH];
-    uint8_t i;
-
+    uint8_t i, offset = 0;
+	
+	//memset(fifo_data, 0, sizeof(fifo_data));
+	
 	if (!mpu_read_fifo_stream(fifo_data, more))
 		return false;
 
+	// result in milli Celsius
+    pckt->temperature = (int16_t)((350 + ((((fifo_data[0] << 8) | fifo_data[1]) + TEMP_OFFSET) / TEMP_SENS)));
+	
+	if (is_mpu9150)
+	{
+		int16_t data[3];
+		/*
+		if (dbgEmpty())
+			dprintf("%d %d %d %d %d %d %d %d\n",	fifo_data[2],
+													fifo_data[3],
+													fifo_data[4],
+													fifo_data[5],
+													fifo_data[6],
+													fifo_data[7],
+													fifo_data[8],
+													fifo_data[9]);
+													*/
+		
+		// AK8975 doesn't have the overrun error bit
+		if ((fifo_data[2] & AKM_DATA_READY) == 0)
+		{
+			//dputs("2");
+			return true;
+		}
+
+		if ((fifo_data[9] & AKM_OVERFLOW) || (fifo_data[9] & AKM_DATA_ERROR))
+		{
+			//dputs("3");
+			return true;
+		}
+
+		data[0] = (fifo_data[4] << 8) | fifo_data[3];
+		data[1] = (fifo_data[6] << 8) | fifo_data[5];
+		data[2] = (fifo_data[8] << 8) | fifo_data[7];
+
+		if (dbgEmpty())
+			dprintf("compass %d %d %d\n", data[0], data[1], data[2]);
+		
+		data[0] = ((int32_t)data[0] * mag_sens_adj[0]) >> 8;
+		data[1] = ((int32_t)data[1] * mag_sens_adj[1]) >> 8;
+		data[2] = ((int32_t)data[2] * mag_sens_adj[2]) >> 8;
+		
+		offset = 8;
+	}
+
+	
 	// We're truncating the lower 16 bits of the quaternions.
 	// Only the higher 16 bits are really used in the calculations,
 	// so there's no point to drag the entire 32 bit integer around.
 	for (i = 0; i < 4; i++)
-		pckt->quat[i] = (fifo_data[i * 4] << 8) | fifo_data[1 + i * 4];
+		pckt->quat[i] = (fifo_data[offset+2 + i*4] << 8) | fifo_data[offset+3 + i*4];
 
 	for (i = 0; i < 3; i++)
-		pckt->accel[i] = (fifo_data[16 + i * 2] << 8) | fifo_data[17 + i * 2];
+		pckt->accel[i] = (fifo_data[offset+18 + i*2] << 8) | fifo_data[offset+19 + i*2];
 
 	for (i = 0; i < 3; i++)
-		pckt->gyro[i] = (fifo_data[22 + i * 2] << 8) | fifo_data[23 + i * 2];
-
+		pckt->gyro[i] = (fifo_data[offset+24 + i*2] << 8) | fifo_data[offset+25 + i*2];
+	
     return true;
 }
 
@@ -347,6 +400,79 @@ void load_biases(void)
 	}
 }
 
+void mpu_set_bypass(bool bypass)
+{
+	uint8_t byte;
+	
+	if (bypass)
+	{
+		mpu_read_byte(USER_CTRL, &byte);
+		byte &= ~BIT_AUX_IF_EN;
+		mpu_write_byte(USER_CTRL, byte);
+		
+		delay_ms(3);
+
+		mpu_write_byte(INT_PIN_CFG, BIT_BYPASS_EN | BIT_ACTL);
+	} else {
+        // Enable I2C master mode if compass is being used.
+		mpu_read_byte(USER_CTRL, &byte);
+		byte |= BIT_AUX_IF_EN;		// if (st.chip_cfg.sensors & INV_XYZ_COMPASS)
+		mpu_write_byte(USER_CTRL, byte);
+	
+		delay_ms(3);
+		
+		mpu_write_byte(INT_PIN_CFG, BIT_ACTL);
+	}
+}
+
+void mpu_setup_compass(void)
+{
+	uint8_t data[3];
+	mpu_set_bypass(1);
+	
+	// do we have a MPU-9150?
+	data[0] = 0;
+	is_mpu9150 = (compass_read_byte(AKM_REG_WHOAMI, data)  &&  data[0] == AKM_WHOAMI);
+	if (is_mpu9150)
+	{
+		dputs("compass read ok");
+
+		compass_write_byte(AKM_REG_CNTL, AKM_POWER_DOWN);
+		delay_ms(1);
+		compass_write_byte(AKM_REG_CNTL, AKM_FUSE_ROM_ACCESS);
+		
+		compass_read_array(AKM_REG_ASAX, 3, data);
+		mag_sens_adj[0] = data[0] + 128;
+		mag_sens_adj[1] = data[1] + 128;
+		mag_sens_adj[2] = data[2] + 128;
+		
+		dprintf("mag_sens_adj %d %d %d\n", mag_sens_adj[0], mag_sens_adj[1], mag_sens_adj[2]);
+		
+		compass_write_byte(AKM_REG_CNTL, AKM_POWER_DOWN);
+		delay_ms(1);
+	}
+
+	mpu_set_bypass(0);
+
+	if (is_mpu9150)
+	{
+		mpu_write_byte(I2C_MST, 0x40);								// Set up master mode, master clock, and ES bit.
+
+		mpu_write_byte(S0_ADDR, BIT_I2C_READ | COMPASS_ADDR);		// Slave 0 reads from AKM data registers.
+		mpu_write_byte(S0_REG, AKM_REG_ST1);						// Compass reads start at this register.
+		mpu_write_byte(S0_CTRL, BIT_SLAVE_EN | 8);					// Enable slave 0, 8-byte reads.
+
+		mpu_write_byte(S1_ADDR, COMPASS_ADDR);						// Slave 1 changes AKM measurement mode.
+		mpu_write_byte(S1_REG, AKM_REG_CNTL);						// AKM measurement mode register.
+		mpu_write_byte(S1_CTRL, BIT_SLAVE_EN | 1);					// Enable slave 1, 1-byte writes.
+		mpu_write_byte(S1_DO, AKM_SINGLE_MEASUREMENT);				// Set slave 1 data.
+
+		mpu_write_byte(I2C_MST_DELAY_CTRL, 0x03);					// Trigger slave 0 and slave 1 actions at each sample.
+		
+		mpu_write_byte(YG_OFFS_TC, BIT_I2C_MST_VDDIO);				// For the MPU9150, the auxiliary I2C bus needs to be set to VDD.
+	}
+}
+
 #define SAMPLE_RATE_HZ		50
 
 void mpu_init(void)
@@ -363,6 +489,8 @@ void mpu_init(void)
 	
 	mpu_write_byte(INT_PIN_CFG, 0x80);		// pin interrupt is active low
 
+	mpu_setup_compass();
+	
 	if (!dmp_load_firmware())
 	{
 		dputs("dmp_load_firmware FAILED!!!");
@@ -377,7 +505,7 @@ void mpu_init(void)
 
 	dmp_enable_feature();
 
-	mpu_write_byte(FIFO_EN, 0x00);
+	mpu_write_byte(FIFO_EN, TEMP_FIFO_EN | SLV0_FIFO_EN);		// gyro and accel are copied into the fifo by the DMP
 	mpu_write_byte(USER_CTRL, 0x00);
 	mpu_write_byte(USER_CTRL, 0x0C);
 	delay_ms(50);
@@ -486,20 +614,4 @@ void mpu_calibrate_bias(void)
 	mpu_init();
 
 	LED_YELLOW = 0;
-}
-
-#define TEMP_OFFSET		521
-#define TEMP_SENS		34
-
-void mpu_get_temperature(int16_t* result)
-{
-    uint8_t tmp[2];
-    int16_t raw;
-
-    mpu_read_array(TEMP_OUT_H, 2, tmp);
-
-    raw = (tmp[0] << 8) | tmp[1];
-
-	// result in milli Celsius
-    *result = (int16_t)((350 + ((raw + TEMP_OFFSET) / TEMP_SENS)));
 }

@@ -152,7 +152,6 @@ uint16_t get_battery_voltage(void)
 #define LED_PCKT_LED_ON		2
 
 #define VOLTAGE_READ_EVERY		50
-#define TEMPERATURE_READ_EVERY	20
 
 int main(void)
 {
@@ -167,7 +166,7 @@ int main(void)
 	
 	for (;;)
 	{
-		pckt.flags = 0;		// reset the flags
+		pckt.flags = FLAG_TEMPERATURE_VALID;	// temp from the fifo
 
 		// get the battery voltage every VOLTAGE_READ_EVERY iterations
 		if (++voltage_counter == VOLTAGE_READ_EVERY)
@@ -176,15 +175,6 @@ int main(void)
 			pckt.voltage = get_battery_voltage();
 			
 			voltage_counter = 0;
-		}
-		
-		// same as with the voltage, send the temperature
-		if (++temperature_counter == TEMPERATURE_READ_EVERY)
-		{
-			pckt.flags |= FLAG_TEMPERATURE_VALID;
-			mpu_get_temperature(&pckt.temperature);
-			
-			temperature_counter = 0;
 		}
 		
 		// Waits for the interrupt from the MPU-6050.

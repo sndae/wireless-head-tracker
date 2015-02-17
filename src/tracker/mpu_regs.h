@@ -35,7 +35,7 @@
 #define FIFO_R_W			0x74		// 116
 #define WHO_AM_I			0x75		// 117		reset value == 0x68
 
-#ifdef MPU9150
+
 #define RAW_COMPASS			0x49
 #define YG_OFFS_TC			0x01
 #define S0_ADDR				0x25
@@ -77,7 +77,7 @@
 #define AKM_MODE_SELF_TEST			(0x08 | SUPPORTS_AK89xx_HIGH_SENS)
 
 #define AKM_WHOAMI			0x48
-#endif
+
 
 #define INV_X_GYRO		0x40
 #define INV_Y_GYRO		0x20
@@ -592,6 +592,16 @@ enum accel_fsr_e {
     INV_FSR_16G,
     NUM_ACCEL_FSR
 };
+
+#define TEMP_FIFO_EN		0x80
+#define XG_FIFO_EN          0x40
+#define YG_FIFO_EN          0x20
+#define ZG_FIFO_EN          0x10
+#define GYRO_FIFO_EN        (XG_FIFO_EN | YG_FIFO_EN | ZG_FIFO_EN)
+#define ACCEL_FIFO_EN       0x08
+#define SLV2_FIFO_EN        0x04
+#define SLV1_FIFO_EN        0x02
+#define SLV0_FIFO_EN		0x01
 
 
 #define MPU_ADDR				0x68
