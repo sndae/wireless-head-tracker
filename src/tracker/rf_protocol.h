@@ -26,7 +26,7 @@ typedef struct
 	int16_t		quat[4];
 	int16_t		voltage;		// in units of 100th of a Volt, so 289 means 2.89V
 	int16_t		temperature;	// in units of 10th of a Celsius, so 289 means 28.9C
-	//int16_t		compass[3];
+	int16_t		compass[3];
 } mpu_packet_t;
 
 #endif		// RF_PROTOCOL_H

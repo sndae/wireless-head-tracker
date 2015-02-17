@@ -16,8 +16,9 @@
 
 // This library configures the MPU chips in DMP mode with temperature and compass data.
 // DMP outputs quaternions, gyro and acceleration data to the FIFO, we are adding temp and
-// compass with the FIFO_EN register. This was all the data we need is read from the MPU
-// in one chunk, and there's no need for separate mpu_read_temp_data() or mpu_read_compass_data()
+// compass with the FIFO_EN register. This way all the data we need is read from the MPU
+// in one chunk, and there's no need for separate functions for reading
+// temperature or magnetometer
 
 bool is_mpu9150 = false;
 int16_t mag_sens_adj[3];
@@ -160,8 +161,8 @@ void reset_fifo(void)
 	mpu_write_byte(USER_CTRL, BIT_DMP_RESET | BIT_FIFO_RESET);		// reset the fifo
 	// enable FIFO and I2C master
 	mpu_write_byte(USER_CTRL, BIT_I2C_MST_EN | BIT_DMP_EN | BIT_FIFO_EN);
-	delay_ms(50);
-	mpu_write_byte(INT_ENABLE, BIT_DATA_RDY_EN);	// fifo enable
+	//delay_ms(50);
+	mpu_write_byte(INT_ENABLE, BIT_DATA_RDY_EN);	// fifo interrupt enable
 	// gyro, accel, temperature and compass into FIFO
 	mpu_write_byte(FIFO_EN, BIT_TEMP_FIFO_EN | BIT_SLV0_FIFO_EN);	// gyro and accel are copied into the fifo by the DMP
 }
@@ -295,7 +296,7 @@ void mpu_set_bypass(bool bypass)
 	}
 }
 
-#define PACKET_LENGTH	60
+#define PACKET_LENGTH	38
 
 bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 {
@@ -316,21 +317,16 @@ bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 	}
 
 	// bytes in the fifo must be a multiple of packet length
-	if (fifo_count % 38)
-		dprintf("!!! %d !!!\n", fifo_count);
-	//if (fifo_count % PACKET_LENGTH)
-	//	return false;
+	if (fifo_count % PACKET_LENGTH)
+	{
+		reset_fifo();
+		return false;
+	}
 
 	if (!mpu_read_array(FIFO_R_W, fifo_count, buffer))
 		return false;
 
-	//*more = (fifo_count != PACKET_LENGTH);
-	*more = false;
-	
-	// force a compass read
-	//mpu_set_bypass(1);
-	//compass_write_byte(AKM_REG_CNTL, AKM_SINGLE_MEASUREMENT);
-	//mpu_set_bypass(0);
+	*more = (fifo_count != PACKET_LENGTH);
 	
 	return true;
 }
@@ -351,36 +347,25 @@ bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more)
 	// result in milli Celsius
     pckt->temperature = (int16_t)((350 + ((((fifo_data[0] << 8) | fifo_data[1]) + TEMP_OFFSET) / TEMP_SENS)));
 	
+	// read the compass data if we are using a MPU-9150
 	if (is_mpu9150)
 	{
-		int16_t data[3];
+		// compass data is valid
+		pckt->flags |= FLAG_COMPASS_VALID;
 		
 		if ((fifo_data[2] & AKM_DATA_READY) == 0)
-		{
-			//dputs("!");
-			return true;
-		}
+			return false;
 
 		if ((fifo_data[9] & AKM_OVERFLOW) || (fifo_data[9] & AKM_DATA_ERROR))
+			return false;
+
+		for (i = 0; i < 3; i++)
 		{
-			dputs("#");
-			return true;
+			int16_t data = (fifo_data[4 + i*2] << 8) | fifo_data[3 + i*2];
+			pckt->compass[i] = ((int32_t)data * mag_sens_adj[i]) >> 8;
 		}
-
-		data[0] = (fifo_data[4] << 8) | fifo_data[3];
-		data[1] = (fifo_data[6] << 8) | fifo_data[5];
-		data[2] = (fifo_data[8] << 8) | fifo_data[7];
-
-		data[0] = ((int32_t)data[0] * mag_sens_adj[0]) >> 8;
-		data[1] = ((int32_t)data[1] * mag_sens_adj[1]) >> 8;
-		data[2] = ((int32_t)data[2] * mag_sens_adj[2]) >> 8;
-
-		//if (dbgEmpty())
-			dprintf("%d %d %d\n", data[0], data[1], data[2]);
 		
 		offset = 8;
-	} else {
-		dputs("123");
 	}
 	
 	// We're truncating the lower 16 bits of the quaternions.
@@ -450,7 +435,7 @@ void mpu_setup_compass(void)
 
 	if (is_mpu9150)
 	{
-		mpu_write_byte(I2C_MST_CTRL, BIT_WAIT_FOR_ES /*| 8*/);			// Set up master mode, master clock, and ES bit.
+		mpu_write_byte(I2C_MST_CTRL, BIT_WAIT_FOR_ES);				// Set up master mode, master clock, and ES bit.
 
 		mpu_write_byte(S0_ADDR, BIT_I2C_READ | COMPASS_ADDR);		// Slave 0 reads from AKM data registers.
 		mpu_write_byte(S0_REG, AKM_REG_ST1);						// Compass reads start at this register.
@@ -468,7 +453,6 @@ void mpu_setup_compass(void)
 		mpu_write_byte(YG_OFFS_TC, BIT_I2C_MST_VDDIO);				// For the MPU9150, the auxiliary I2C bus needs to be set to VDD.
 		
 		//mpu_write_byte(S4_CTRL, 1000 / SAMPLE_RATE_HZ - 1);			// compass sample rate
-		//mpu_write_byte(S4_CTRL, 1);			// compass sample rate
 	}
 }
 
