@@ -1,6 +1,6 @@
 TARGET    = tracker
 CFLAGS    = --model-large -I../mcu-lib -DNRF24LE1
-CFLAGS   += -DDBG_MODE=0 -DPRINTF=printf_tiny
+CFLAGS   += -DDBG_MODE=2 -DPRINTF=printf_tiny
 LFLAGS    = --code-loc 0x0000 --code-size 0x4000 --xram-loc 0x0000 --xram-size 0x400
 ASFLAGS   = -plosgff
 RELFILES  = tracker.rel i2c.rel mpu_simple.rel mpu_dmp_firmware.rel sleeping.rel tracker_settings.rel

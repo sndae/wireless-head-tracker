@@ -2,7 +2,7 @@
 #define MPU_H
 
 void mpu_init(void);
-bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more);
+bool dmp_read_fifo(mpu_packet_t* pckt);
 
 void mpu_calibrate_bias(void);
 
