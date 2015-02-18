@@ -166,7 +166,7 @@ int main(void)
 	
 	for (;;)
 	{
-		pckt.flags = FLAG_TEMPERATURE_VALID;	// temp from the fifo
+		pckt.flags = 0;
 
 		// get the battery voltage every VOLTAGE_READ_EVERY iterations
 		if (++voltage_counter == VOLTAGE_READ_EVERY)
@@ -177,7 +177,7 @@ int main(void)
 			voltage_counter = 0;
 		}
 		
-		// Waits for the interrupt from the MPU-6050.
+		// Waits for the interrupt from the MPU.
 		// Instead of polling, I should put the MCU to sleep and then have it awaken by the MPU-6050.
 		// However, I have not succeeded in the making the wakeup work reliably.
 		while (MPU_IRQ)

@@ -14,8 +14,7 @@ enum mpu_packet_flags
 {
 	FLAG_RECENTER			= 0x01,
 	FLAG_VOLTAGE_VALID		= 0x02,
-	FLAG_TEMPERATURE_VALID	= 0x04,
-	FLAG_COMPASS_VALID		= 0x08,
+	FLAG_COMPASS_VALID		= 0x04,
 };
 
 typedef struct

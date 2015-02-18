@@ -16,9 +16,8 @@
 
 // This library configures the MPU chips in DMP mode with temperature and compass data.
 // DMP outputs quaternions, gyro and acceleration data to the FIFO, we are adding temp and
-// compass with the FIFO_EN register. This way all the data we need is read from the MPU
-// in one chunk, and there's no need for separate functions for reading
-// temperature or magnetometer
+// compass with the FIFO_EN register. This was all the data we need is read from the MPU
+// in one chunk, and there's no need for separate mpu_read_temp_data() or mpu_read_compass_data()
 
 bool is_mpu9150 = false;
 int16_t mag_sens_adj[3];
@@ -161,8 +160,8 @@ void reset_fifo(void)
 	mpu_write_byte(USER_CTRL, BIT_DMP_RESET | BIT_FIFO_RESET);		// reset the fifo
 	// enable FIFO and I2C master
 	mpu_write_byte(USER_CTRL, BIT_I2C_MST_EN | BIT_DMP_EN | BIT_FIFO_EN);
-	//delay_ms(50);
-	mpu_write_byte(INT_ENABLE, BIT_DATA_RDY_EN);	// fifo interrupt enable
+	delay_ms(50);
+	mpu_write_byte(INT_ENABLE, BIT_DATA_RDY_EN);	// fifo enable
 	// gyro, accel, temperature and compass into FIFO
 	mpu_write_byte(FIFO_EN, BIT_TEMP_FIFO_EN | BIT_SLV0_FIFO_EN);	// gyro and accel are copied into the fifo by the DMP
 }
@@ -219,6 +218,134 @@ void dmp_enable_feature(void)
 	const uint8_t __code arr[] = {0x02,0xca,0xe3,0x09};
 	mpu_write_mem(D_0_104, sizeof arr, arr);
 	}
+	{
+	const uint8_t __code arr[] = {0xa3,0xc0,0xc8,0xc2,0xc4,0xcc,0xc6,0xa3,0xa3,0xa3};
+	mpu_write_mem(CFG_15, sizeof arr, arr);
+	}
+	{
+	// Changing 0x20 to 0xD8 disables tap, but also messes up the fifo rates. I have no idea why.
+	// So, I keep tap enabled, read it, but I don't use it.
+	const uint8_t __code arr[] = {0x20};
+	mpu_write_mem(CFG_27, sizeof arr, arr);
+	}
+	
+	/*
+	if (send_cal_gyro)
+	{
+		{
+		const uint8_t __code arr[] = {0xB8,0xAA,0xB3,0x8D,0xB4,0x98,0x0D,0x35,0x5D};	// dmp_enable_gyro_cal(1)
+		mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
+		}
+
+		{
+		const uint8_t __code arr[] = {0xB2,0x8B,0xB6,0x9B};		// DMP_FEATURE_SEND_CAL_GYRO
+		mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
+		}
+	} else {*/
+	
+		{
+		const uint8_t __code arr[] = {0xb8,0xaa,0xaa,0xaa,0xb0,0x88,0xc3,0xc5,0xc7};	// dmp_enable_gyro_cal(0)
+		mpu_write_mem(CFG_MOTION_BIAS, sizeof arr, arr);
+		}
+
+		{
+		const uint8_t __code arr[] = {0xB0,0x80,0xB4,0x90};		// DMP_FEATURE_SEND_RAW_GYRO
+		mpu_write_mem(CFG_GYRO_RAW_DATA, sizeof arr, arr);
+		}
+	//}
+	
+	{
+	const uint8_t __code arr[] = {0xf8};
+	mpu_write_mem(CFG_20, sizeof arr, arr);
+	}
+	
+	// this configures tap which we don't need
+	/*{
+	const uint8_t __code arr[] = {0x50,0x00};
+	mpu_write_mem(DMP_TAP_THX, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x3c,0x00};
+	mpu_write_mem(D_1_36, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x50,0x00};
+	mpu_write_mem(DMP_TAP_THY, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x3c,0x00};
+	mpu_write_mem(D_1_40, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x50,0x00};
+	mpu_write_mem(DMP_TAP_THZ, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x3c,0x00};
+	mpu_write_mem(D_1_44, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x3f};
+	mpu_write_mem(D_1_72, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x00};
+	mpu_write_mem(D_1_79, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x00,0x14};
+	mpu_write_mem(DMP_TAPW_MIN, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x00,0x64};
+	mpu_write_mem(D_1_218, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x00,0x8e,0xf9,0x90};
+	mpu_write_mem(D_1_92, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x00,0x08};
+	mpu_write_mem(D_1_90, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x00,0x02};
+	mpu_write_mem(D_1_88, sizeof arr, arr);
+	}
+	*/
+	
+	{
+	const uint8_t __code arr[] = {0xd8};
+	mpu_write_mem(CFG_ANDROID_ORIENT_INT, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x8b,0x8b,0x8b,0x8b};
+	mpu_write_mem(CFG_LP_QUAT, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0x20,0x28,0x30,0x38};
+	mpu_write_mem(CFG_8, sizeof arr, arr);
+	}
+
+	reset_fifo();
+	
+	// this is dmp_set_fifo_rate()
+	{
+	const uint8_t __code arr[] = {0x00,0x03};
+	mpu_write_mem(D_0_22, sizeof arr, arr);
+	}
+	{
+	const uint8_t __code arr[] = {0xfe,0xf2,0xab,0xc4,0xaa,0xf1,0xdf,0xdf,0xbb,0xaf,0xdf,0xdf};
+	mpu_write_mem(CFG_6, sizeof arr, arr);
+	}
+
+	reset_fifo();
+	
+	/*
+	{
+	const uint8_t __code arr[] = {0x02,0xca,0xe3,0x09};
+	mpu_write_mem(D_0_104, sizeof arr, arr);
+	}
 
 	{
 	const uint8_t __code arr[] = {0xa3,0xc0,0xc8,0xc2,0xc4,0xcc,0xc6,0xa3,0xa3,0xa3};
@@ -226,7 +353,7 @@ void dmp_enable_feature(void)
 	}
 
 	{	// tap is off
-	const uint8_t __code arr[] = {0xd8};
+	const uint8_t __code arr[] = {0x20};
 	mpu_write_mem(CFG_27, sizeof arr, arr);
 	}
 	
@@ -258,6 +385,8 @@ void dmp_enable_feature(void)
 	mpu_write_mem(CFG_8, sizeof arr, arr);
 	}
 
+	reset_fifo();
+	
 	// this is dmp_set_fifo_rate()
 	{
 	const uint8_t __code arr[] = {0x00,0x00};
@@ -269,6 +398,7 @@ void dmp_enable_feature(void)
 	}
 
 	reset_fifo();
+	*/
 }
 
 void mpu_set_bypass(bool bypass)
@@ -296,7 +426,7 @@ void mpu_set_bypass(bool bypass)
 	}
 }
 
-#define PACKET_LENGTH	38
+#define PACKET_LENGTH	60
 
 bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 {
@@ -317,16 +447,21 @@ bool mpu_read_fifo_stream(uint8_t* buffer, uint8_t* more)
 	}
 
 	// bytes in the fifo must be a multiple of packet length
-	if (fifo_count % PACKET_LENGTH)
-	{
-		reset_fifo();
-		return false;
-	}
+	if (fifo_count % 38)
+		dprintf("!!! %d !!!\n", fifo_count);
+	//if (fifo_count % PACKET_LENGTH)
+	//	return false;
 
 	if (!mpu_read_array(FIFO_R_W, fifo_count, buffer))
 		return false;
 
-	*more = (fifo_count != PACKET_LENGTH);
+	//*more = (fifo_count != PACKET_LENGTH);
+	*more = false;
+	
+	// force a compass read
+	//mpu_set_bypass(1);
+	//compass_write_byte(AKM_REG_CNTL, AKM_SINGLE_MEASUREMENT);
+	//mpu_set_bypass(0);
 	
 	return true;
 }
@@ -339,20 +474,15 @@ bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more)
     uint8_t fifo_data[PACKET_LENGTH];
     uint8_t i, offset = 0;
 	
-	//memset(fifo_data, 0, sizeof(fifo_data));
-	
 	if (!mpu_read_fifo_stream(fifo_data, more))
 		return false;
 
-	// result in milli Celsius
+	// result in tenths of Celsius
     pckt->temperature = (int16_t)((350 + ((((fifo_data[0] << 8) | fifo_data[1]) + TEMP_OFFSET) / TEMP_SENS)));
-	
-	// read the compass data if we are using a MPU-9150
+
+	// read the compass data if we are running on a MPU-9150
 	if (is_mpu9150)
 	{
-		// compass data is valid
-		pckt->flags |= FLAG_COMPASS_VALID;
-		
 		if ((fifo_data[2] & AKM_DATA_READY) == 0)
 			return false;
 
@@ -365,6 +495,12 @@ bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more)
 			pckt->compass[i] = ((int32_t)data * mag_sens_adj[i]) >> 8;
 		}
 		
+		// compass data is valid
+		pckt->flags |= FLAG_COMPASS_VALID;
+
+		//if (dbgEmpty())
+		//	dprintf("%d %d %d\n", pckt->compass[0], pckt->compass[1], pckt->compass[2]);
+		
 		offset = 8;
 	}
 	
@@ -372,13 +508,13 @@ bool dmp_read_fifo(mpu_packet_t* pckt, uint8_t* more)
 	// Only the higher 16 bits are really used in the calculations,
 	// so there's no point to drag the entire 32 bit integer around.
 	for (i = 0; i < 4; i++)
-		pckt->quat[i] = (fifo_data[offset+2 + i*4] << 8) | fifo_data[offset+3 + i*4];
+		pckt->quat[i] = (fifo_data[offset + 2 + i*4] << 8) | fifo_data[offset + 3 + i*4];
 
 	for (i = 0; i < 3; i++)
-		pckt->accel[i] = (fifo_data[offset+18 + i*2] << 8) | fifo_data[offset+19 + i*2];
+		pckt->accel[i] = (fifo_data[offset + 18 + i*2] << 8) | fifo_data[offset + 19 + i*2];
 
 	for (i = 0; i < 3; i++)
-		pckt->gyro[i] = (fifo_data[offset+24 + i*2] << 8) | fifo_data[offset+25 + i*2];
+		pckt->gyro[i] = (fifo_data[offset + 24 + i*2] << 8) | fifo_data[offset + 25 + i*2];
 	
     return true;
 }
@@ -414,7 +550,7 @@ void mpu_setup_compass(void)
 	is_mpu9150 = (compass_read_byte(AKM_REG_WHOAMI, data)  &&  data[0] == AKM_WHOAMI);
 	if (is_mpu9150)
 	{
-		dputs("magnetometer present");
+		dputs("magnetometer found");
 
 		compass_write_byte(AKM_REG_CNTL, AKM_POWER_DOWN);
 		delay_ms(1);
@@ -453,6 +589,7 @@ void mpu_setup_compass(void)
 		mpu_write_byte(YG_OFFS_TC, BIT_I2C_MST_VDDIO);				// For the MPU9150, the auxiliary I2C bus needs to be set to VDD.
 		
 		//mpu_write_byte(S4_CTRL, 1000 / SAMPLE_RATE_HZ - 1);			// compass sample rate
+		//mpu_write_byte(S4_CTRL, 1);			// compass sample rate
 	}
 }
 
@@ -466,7 +603,7 @@ void mpu_init(void)
 	mpu_write_byte(GYRO_CONFIG, INV_FSR_2000DPS << 3);		// == mpu_set_gyro_fsr(2000)
 	mpu_write_byte(ACCEL_CONFIG, INV_FSR_2G << 3);			// == mpu_set_accel_fsr(2)
 	mpu_write_byte(SMPLRT_DIV, 1000 / SAMPLE_RATE_HZ - 1);	// == mpu_set_sample_rate(SAMPLE_RATE_HZ)
-	mpu_write_byte(CONFIG, INV_FILTER_20HZ);				// == mpu_set_lpf(20)
+	mpu_write_byte(CONFIG, INV_FILTER_98HZ);				// == mpu_set_lpf(20)
 	
 	mpu_write_byte(INT_PIN_CFG, 0x80);		// pin interrupt is active low
 
