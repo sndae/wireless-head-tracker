@@ -57,52 +57,52 @@ bool compass_read_array(uint8_t reg_addr, uint8_t cnt, uint8_t* val)
 
 bool mpu_write_mem(uint16_t mem_addr, uint16_t length, const uint8_t* data2write)
 {
-    uint8_t tmp[2];
+	uint8_t tmp[2];
 
 	// swap bytes
-    tmp[0] = (uint8_t)(mem_addr >> 8);
-    tmp[1] = (uint8_t)(mem_addr & 0xFF);
+	tmp[0] = (uint8_t)(mem_addr >> 8);
+	tmp[1] = (uint8_t)(mem_addr & 0xFF);
 
-    if (!mpu_write_array(BANK_SEL, 2, tmp))
-        return false;
-		
-    if (!mpu_write_array(MEM_R_W, length, data2write))
-        return false;
+	if (!mpu_write_array(BANK_SEL, 2, tmp))
+		return false;
 
-    return true;
+	if (!mpu_write_array(MEM_R_W, length, data2write))
+		return false;
+
+	return true;
 }
 
 bool mpu_read_mem(uint16_t mem_addr, uint16_t length, uint8_t* data2read)
 {
-    uint8_t tmp[2];
+	uint8_t tmp[2];
 
-    tmp[0] = (uint8_t)(mem_addr >> 8);
-    tmp[1] = (uint8_t)(mem_addr & 0xFF);
+	tmp[0] = (uint8_t)(mem_addr >> 8);
+	tmp[1] = (uint8_t)(mem_addr & 0xFF);
 
-    if (!mpu_write_array(BANK_SEL, 2, tmp))
-        return false;
+	if (!mpu_write_array(BANK_SEL, 2, tmp))
+		return false;
 
-    if (!mpu_read_array(MEM_R_W, length, data2read))
-        return false;
+	if (!mpu_read_array(MEM_R_W, length, data2read))
+		return false;
 
-    return true;
+	return true;
 }
 
 // **************************************************************************************
 
 bool dmp_load_firmware(void)
 {
-#define LOAD_CHUNK  	16
+#define LOAD_CHUNK		16
 #define START_ADDR		0x0400
 #define MAX_RETRY		5
 
-    uint16_t ii, this_write;
+	uint16_t ii, this_write;
 	
-    uint8_t cur[LOAD_CHUNK], tmp[2];
+	uint8_t cur[LOAD_CHUNK], tmp[2];
 
 	for (ii = 0; ii < DMP_CODE_SIZE; ii += this_write)
 	{
-        this_write = DMP_CODE_SIZE - ii;
+		this_write = DMP_CODE_SIZE - ii;
 		if (this_write > LOAD_CHUNK)
 			this_write = LOAD_CHUNK;
 
@@ -118,23 +118,23 @@ bool dmp_load_firmware(void)
 			return false;
 		}
 
-        if (memcmp(dmp_memory + ii, cur, this_write))
+		if (memcmp(dmp_memory + ii, cur, this_write))
 		{
 			dputs("verify failed");
-            return false;
+			return false;
 		}
-    }
+	}
 	
-    // Set program start address. 
-    tmp[0] = START_ADDR >> 8;
-    tmp[1] = START_ADDR & 0xFF;
-    if (!mpu_write_array(PRGM_START_H, 2, tmp))
+	// Set program start address. 
+	tmp[0] = START_ADDR >> 8;
+	tmp[1] = START_ADDR & 0xFF;
+	if (!mpu_write_array(PRGM_START_H, 2, tmp))
 	{
 		dputs("PRGM_START_H failed");
-        return false;
+		return false;
 	}
 
-    return true;
+	return true;
 }
 
 bool dmp_set_orientation(void)
@@ -282,7 +282,7 @@ void mpu_set_bypass(bool bypass)
 
 		mpu_write_byte(INT_PIN_CFG, BIT_I2C_BYPASS_EN | BIT_INT_LEVEL);
 	} else {
-        // Enable I2C master mode if compass is being used.
+		// Enable I2C master mode if compass is being used.
 		byte |= BIT_I2C_MST_EN;
 		mpu_write_byte(USER_CTRL, byte);
 	
@@ -336,8 +336,8 @@ bool mpu_read_fifo_packet(uint8_t* buffer)
 
 bool dmp_read_fifo(mpu_packet_t* pckt)
 {
-    uint8_t fifo_data[FIFO_BUFFER_CAPACITY];
-    uint8_t i;
+	uint8_t fifo_data[FIFO_BUFFER_CAPACITY];
+	uint8_t i;
 
 	if (!mpu_read_fifo_packet(fifo_data))
 		return false;
@@ -355,7 +355,7 @@ bool dmp_read_fifo(mpu_packet_t* pckt)
 	for (i = 0; i < 3; i++)
 		pckt->gyro[i] = (fifo_data[22 + i*2] << 8) | fifo_data[23 + i*2];
 	
-    return true;
+	return true;
 }
 
 // temperature calculation functions
@@ -370,7 +370,7 @@ int16_t mpu_read_temperature(void)
 	mpu_read_array(TEMP_OUT_H, 2, buff);
 	
 	// result in tenths of Celsius
-    return (int16_t)(350 + ((((buff[0] << 8) | buff[1]) + TEMP_OFFSET) / TEMP_SENS));
+	return (int16_t)(350 + ((((buff[0] << 8) | buff[1]) + TEMP_OFFSET) / TEMP_SENS));
 }
 
 void mpu_read_compass(mpu_packet_t* pckt)
