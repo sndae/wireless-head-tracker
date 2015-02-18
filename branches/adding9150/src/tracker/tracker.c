@@ -192,6 +192,12 @@ int main(void)
 		{
 			pckt.flags |= (RECENTER_BTN == 0 ? FLAG_RECENTER : 0);
 			
+			// add the compass data if we have it
+			mpu_read_compass(&pckt);
+			
+			// read the temperature
+			pckt.temperature = mpu_read_temperature();
+			
 			// send the message
 			if (rf_head_send_message(&pckt, sizeof(pckt)))
 				++rf_pckt_ok;

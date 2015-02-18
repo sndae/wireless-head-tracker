@@ -14,10 +14,8 @@
 #include "tracker_settings.h"
 #include "nrfdbg.h"
 
-// This library configures the MPU chips in DMP mode with temperature and compass data.
-// DMP outputs quaternions, gyro and acceleration data to the FIFO, we are adding temp and
-// compass with the FIFO_EN register. This was all the data we need is read from the MPU
-// in one chunk, and there's no need for separate mpu_read_temp_data() or mpu_read_compass_data()
+// This library configures the MPU chips in DMP mode and it read the temperature and compass
+// data separately.
 
 bool is_mpu9150 = false;
 int16_t mag_sens_adj[3];
@@ -161,10 +159,7 @@ void reset_fifo(void)
 	// enable FIFO and I2C master
 	mpu_write_byte(USER_CTRL, BIT_I2C_MST_EN | BIT_DMP_EN | BIT_FIFO_EN);
 	delay_ms(50);
-	mpu_write_byte(INT_ENABLE, BIT_DATA_RDY_EN);	// fifo enable
-	// gyro, accel, temperature and compass into FIFO
-	// gyro and accel are copied into the FIFO by the DMP
-	mpu_write_byte(FIFO_EN, is_mpu9150 ? (BIT_TEMP_FIFO_EN | BIT_SLV0_FIFO_EN) : BIT_TEMP_FIFO_EN);
+	mpu_write_byte(INT_ENABLE, BIT_DMP_INT_EN /*| BIT_DATA_RDY_EN*/);
 }
 
 void mpu_set_gyro_bias(const int16_t* gyro_bias)
@@ -297,23 +292,19 @@ void mpu_set_bypass(bool bypass)
 	}
 }
 
-// FIFO data sizes
+// data sizes
 #define TEMP_DATA_SIZE		2
 #define COMPASS_DATA_SIZE	8
 #define QUAT_DATA_SIZE		16
 #define ACCEL_DATA_SIZE		6
 #define GYRO_DATA_SIZE		6
 
-#define MPU_6050_PACKET_SIZE	(TEMP_DATA_SIZE + QUAT_DATA_SIZE + ACCEL_DATA_SIZE + GYRO_DATA_SIZE)
-#define MPU_9150_PACKET_SIZE	(MPU_6050_PACKET_SIZE + COMPASS_DATA_SIZE)
-
-#define FIFO_BUFFER_CAPACITY	(MPU_9150_PACKET_SIZE)
+#define FIFO_BUFFER_CAPACITY	(QUAT_DATA_SIZE + ACCEL_DATA_SIZE + GYRO_DATA_SIZE)
 
 bool mpu_read_fifo_packet(uint8_t* buffer)
 {
 	uint8_t tmp[2], chunk_bytes;
 	uint16_t fifo_count;
-	const uint8_t expected_packet_size = is_mpu9150 ? MPU_9150_PACKET_SIZE : MPU_6050_PACKET_SIZE;
 
 	// read number of bytes in the FIFO
 	if (!mpu_read_array(FIFO_COUNT_H, 2, tmp))
@@ -325,12 +316,11 @@ bool mpu_read_fifo_packet(uint8_t* buffer)
 	if (fifo_count == 0)
 		return false;
 
-	// bytes in the fifo must be a multiple of packet length
-	dprintf("! %d !\n", fifo_count);
+	//dprintf("! %d !\n", fifo_count);
 
 	do {
 		// read bytes up to the number of bytes in out packet
-		chunk_bytes = (expected_packet_size < fifo_count ? expected_packet_size : fifo_count);
+		chunk_bytes = (FIFO_BUFFER_CAPACITY < fifo_count ? FIFO_BUFFER_CAPACITY : fifo_count);
 		
 		mpu_read_array(FIFO_R_W, chunk_bytes, buffer);
 		
@@ -341,63 +331,69 @@ bool mpu_read_fifo_packet(uint8_t* buffer)
 
 	// we had a success only if the size of the last packet read is equal to the
 	// expected FIFO packet size
-	return chunk_bytes == expected_packet_size;
+	return chunk_bytes == FIFO_BUFFER_CAPACITY;
+}
+
+bool dmp_read_fifo(mpu_packet_t* pckt)
+{
+    uint8_t fifo_data[FIFO_BUFFER_CAPACITY];
+    uint8_t i;
+
+	if (!mpu_read_fifo_packet(fifo_data))
+		return false;
+
+	// we're truncating the lower 16 bits of the quaternions. only the higher 16 bits are really
+	// used in the calculations, so there's no point to drag the entire 32 bit integer around.
+	for (i = 0; i < 4; i++)
+		pckt->quat[i] = (fifo_data[i*4] << 8) | fifo_data[1 + i*4];
+
+	// we don't directly use the accel and the gyro data at the moment,
+	// but this will change in the future
+	for (i = 0; i < 3; i++)
+		pckt->accel[i] = (fifo_data[16 + i*2] << 8) | fifo_data[17 + i*2];
+
+	for (i = 0; i < 3; i++)
+		pckt->gyro[i] = (fifo_data[22 + i*2] << 8) | fifo_data[23 + i*2];
+	
+    return true;
 }
 
 // temperature calculation functions
 #define TEMP_OFFSET		521
 #define TEMP_SENS		34
 
-bool dmp_read_fifo(mpu_packet_t* pckt)
+int16_t mpu_read_temperature(void)
 {
-    uint8_t fifo_data[FIFO_BUFFER_CAPACITY];
-    uint8_t i;
-	int8_t offset = 0;
-
-	if (!mpu_read_fifo_packet(fifo_data))
-		return false;
-
+	uint8_t buff[2];
+	
+	// get the raw value
+	mpu_read_array(TEMP_OUT_H, 2, buff);
+	
 	// result in tenths of Celsius
-    pckt->temperature = (int16_t)((350 + ((((fifo_data[0] << 8) | fifo_data[1]) + TEMP_OFFSET) / TEMP_SENS)));
+    return (int16_t)(350 + ((((buff[0] << 8) | buff[1]) + TEMP_OFFSET) / TEMP_SENS));
+}
 
+void mpu_read_compass(mpu_packet_t* pckt)
+{
 	// read the compass data if we are running on a MPU-9150
 	if (is_mpu9150)
 	{
-		if ((fifo_data[2] & AKM_DATA_READY) == 0)
-			return false;
-
-		if ((fifo_data[9] & AKM_OVERFLOW) || (fifo_data[9] & AKM_DATA_ERROR))
-			return false;
+		uint8_t buff[8], i;
+		
+		mpu_read_array(RAW_COMPASS, 8, buff);
+		
+		if ((buff[0] & AKM_DATA_READY) == 0  ||  (buff[7] & AKM_OVERFLOW) || (buff[7] & AKM_DATA_ERROR))
+			return;
 
 		for (i = 0; i < 3; i++)
 		{
-			int16_t data = (fifo_data[4 + i*2] << 8) | fifo_data[3 + i*2];
+			int16_t data = (buff[2 + i*2] << 8) | buff[1 + i*2];
 			pckt->compass[i] = ((int32_t)data * mag_sens_adj[i]) >> 8;
 		}
 		
 		// compass data is valid
 		pckt->flags |= FLAG_COMPASS_VALID;
-
-		//if (dbgEmpty())
-		//	dprintf("%d %d %d\n", pckt->compass[0], pckt->compass[1], pckt->compass[2]);
-		
-		offset = 8;
 	}
-	
-	// we're truncating the lower 16 bits of the quaternions. only the higher 16 bits are really
-	// used in the calculations, so there's no point to drag the entire 32 bit integer around.
-	for (i = 0; i < 4; i++)
-		pckt->quat[i] = (fifo_data[offset + 2 + i*4] << 8) | fifo_data[offset + 3 + i*4];
-
-	// we don't directly use the accel and the gyro data at the moment,
-	// but this will change in the future
-	for (i = 0; i < 3; i++)
-		pckt->accel[i] = (fifo_data[offset + 18 + i*2] << 8) | fifo_data[offset + 19 + i*2];
-
-	for (i = 0; i < 3; i++)
-		pckt->gyro[i] = (fifo_data[offset + 24 + i*2] << 8) | fifo_data[offset + 25 + i*2];
-	
-    return true;
 }
 
 void load_biases(void)
@@ -464,12 +460,12 @@ void mpu_setup_compass(void)
 		
 		mpu_write_byte(S1_DO, AKM_SINGLE_MEASUREMENT);				// Set slave 1 data.
 
-		mpu_write_byte(I2C_MST_DELAY_CTRL, BIT_I2C_SLV1_DLY_EN
-										|  BIT_I2C_SLV0_DLY_EN);	// Trigger slave 0 and slave 1 actions at each sample.
-		
+		// Trigger slave 0 and slave 1 actions at each sample.
+		mpu_write_byte(I2C_MST_DELAY_CTRL, BIT_I2C_SLV1_DLY_EN | BIT_I2C_SLV0_DLY_EN);
+
 		mpu_write_byte(YG_OFFS_TC, BIT_I2C_MST_VDDIO);				// For the MPU9150, the auxiliary I2C bus needs to be set to VDD.
 		
-		mpu_write_byte(S4_CTRL, 1000 / SAMPLE_RATE_HZ - 1);		// compass sample rate
+		mpu_write_byte(S4_CTRL, SAMPLE_RATE_HZ / 100 - 1);			// compass sample rate
 	}
 }
 
@@ -487,7 +483,7 @@ void mpu_init(void)
 	
 	mpu_write_byte(INT_PIN_CFG, 0x80);				// pin interrupt is active low
 
-	//mpu_setup_compass();
+	mpu_setup_compass();
 	
 	if (!dmp_load_firmware())
 	{
@@ -503,8 +499,8 @@ void mpu_init(void)
 
 	dmp_enable_feature();
 
-	// gyro and accel are copied into the fifo by the DMP
-	mpu_write_byte(FIFO_EN, is_mpu9150 ? (BIT_TEMP_FIFO_EN | BIT_SLV0_FIFO_EN) : BIT_TEMP_FIFO_EN);
+	// quat, gyro and accel are copied into the fifo by the DMP
+	mpu_write_byte(FIFO_EN, 0);
 	mpu_write_byte(USER_CTRL, 0x00);
 	mpu_write_byte(USER_CTRL, BIT_DMP_RESET | BIT_FIFO_RESET);
 	delay_ms(50);
@@ -513,69 +509,6 @@ void mpu_init(void)
 	
 	load_biases();
 }
-
-/*
-void mpu_init(void)
-{
-	mpu_write_byte(PWR_MGMT_1, 0x80);		// reset
-	delay_ms(100);
-	mpu_write_byte(PWR_MGMT_1, 0);			// wakeup
-
-	mpu_write_byte(GYRO_CONFIG, INV_FSR_2000DPS << 3);		// == mpu_set_gyro_fsr(2000)
-	mpu_write_byte(ACCEL_CONFIG, INV_FSR_2G << 3);			// == mpu_set_accel_fsr(2)
-	mpu_write_byte(SMPLRT_DIV, 1000 / FIFO_HZ - 1);			// == mpu_set_sample_rate(FIFO_HZ)
-	mpu_write_byte(CONFIG, INV_FILTER_98HZ);				// == mpu_set_lpf(98)
-	
-	//mpu_write_byte(CONFIG, 0x03);
-	//mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(USER_CTRL, 0x20);
-	mpu_write_byte(INT_PIN_CFG, 0x80);
-	mpu_write_byte(PWR_MGMT_1, 0x40);
-	mpu_write_byte(PWR_MGMT_2, 0x3F);
-	delay_ms(50);
-	mpu_write_byte(PWR_MGMT_1, 0x01);
-	mpu_write_byte(PWR_MGMT_2, 0x00);
-	delay_ms(50);
-	//mpu_write_byte(INT_ENABLE, 0x01);
-	//mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(FIFO_EN, 0x00);		// disables all FIFO outputs
-	mpu_write_byte(USER_CTRL, 0x00);
-	mpu_write_byte(USER_CTRL, 0x04);	// reset FIFO
-	mpu_write_byte(USER_CTRL, 0x40);	// enable FIFO
-	delay_ms(50);
-	//mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(FIFO_EN, 0x78);
-	//mpu_write_byte(SMPLRT_DIV, 0x04);
-	//mpu_write_byte(CONFIG, INV_FILTER_20HZ);	// was 0x02
-	
-	if (!dmp_load_firmware())
-	{
-		dputs("dmp_load_firmware FAILED!!!");
-		return;
-	}
-
-	if (!dmp_set_orientation())
-	{
-		dputs("dmp_set_orientation FAILED!!!");
-		return;
-	}
-
-	dmp_enable_feature();
-	
-	mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(FIFO_EN, 0x00);
-	mpu_write_byte(INT_ENABLE, 0x02);
-	mpu_write_byte(INT_ENABLE, 0x00);
-	mpu_write_byte(FIFO_EN, 0x00);
-	mpu_write_byte(USER_CTRL, 0x00);
-	mpu_write_byte(USER_CTRL, 0x0C);
-	delay_ms(50);
-	mpu_write_byte(USER_CTRL, 0xC0);
-	mpu_write_byte(INT_ENABLE, 0x02);
-
-	load_biases();
-}
-*/
 
 void mpu_calibrate_bias(void)
 {
