@@ -155,7 +155,7 @@ uint16_t get_battery_voltage(void)
 
 int main(void)
 {
-	uint8_t more, ack;
+	uint8_t ack;
 	uint8_t rf_pckt_ok = 0, rf_pckt_lost = 0;
 	uint8_t voltage_counter = 0, temperature_counter = 0;
 	
@@ -185,59 +185,54 @@ int main(void)
 		while (!MPU_IRQ)
 			;
 			
-		do {
-			// read all the packets in the MPU fifo
-			do {
-				read_result = dmp_read_fifo(&pckt, &more);
-			} while (more);
+		// read all the packets in the MPU fifo
+		read_result = dmp_read_fifo(&pckt);
+		
+		if (read_result)
+		{
+			pckt.flags |= (RECENTER_BTN == 0 ? FLAG_RECENTER : 0);
 			
-			if (read_result)
+			// send the message
+			if (rf_head_send_message(&pckt, sizeof(pckt)))
+				++rf_pckt_ok;
+			else
+				++rf_pckt_lost;
+
+			// update the LEDs
+			if (rf_pckt_lost + rf_pckt_ok == LED_PCKT_TOTAL)
 			{
-				pckt.flags |= (RECENTER_BTN == 0 ? FLAG_RECENTER : 0);
-				
-				// send the message
-				if (rf_head_send_message(&pckt, sizeof(pckt)))
-					++rf_pckt_ok;
+				if (rf_pckt_ok > rf_pckt_lost)
+					LED_GREEN = 1;
 				else
-					++rf_pckt_lost;
-
-				// update the LEDs
-				if (rf_pckt_lost + rf_pckt_ok == LED_PCKT_TOTAL)
-				{
-					if (rf_pckt_ok > rf_pckt_lost)
-						LED_GREEN = 1;
-					else
-						LED_RED = 1;
-						
-				} else if (rf_pckt_lost + rf_pckt_ok == LED_PCKT_TOTAL + LED_PCKT_LED_ON) {
-					LED_RED = 0;
-					LED_GREEN = 0;
-
-					rf_pckt_ok = rf_pckt_lost = 0;
-				}
-
-				// check for an ACK payload
-				if (rf_head_read_ack_payload(&ack, 1))
-				{
-					if (ack == CMD_CALIBRATE)
-					{
-						mpu_calibrate_bias();
-						
-					} else if (ack == CMD_READ_TRACKER_SETTINGS) {
+					LED_RED = 1;
 					
-						rf_head_send_message(get_tracker_settings(), sizeof(tracker_settings_t));
+			} else if (rf_pckt_lost + rf_pckt_ok == LED_PCKT_TOTAL + LED_PCKT_LED_ON) {
+				LED_RED = 0;
+				LED_GREEN = 0;
 
-					} else if (ack >= CMD_RF_PWR_LOWEST  &&  ack <= CMD_RF_PWR_HIGHEST) {
+				rf_pckt_ok = rf_pckt_lost = 0;
+			}
+
+			// check for an ACK payload
+			if (rf_head_read_ack_payload(&ack, 1))
+			{
+				if (ack == CMD_CALIBRATE)
+				{
+					mpu_calibrate_bias();
 					
-						tracker_settings_t new_settings;
-						memcpy(&new_settings, get_tracker_settings(), sizeof(tracker_settings_t));
-						new_settings.rf_power = ack;
-						
-						save_tracker_settings(&new_settings);
-					}
+				} else if (ack == CMD_READ_TRACKER_SETTINGS) {
+				
+					rf_head_send_message(get_tracker_settings(), sizeof(tracker_settings_t));
+
+				} else if (ack >= CMD_RF_PWR_LOWEST  &&  ack <= CMD_RF_PWR_HIGHEST) {
+				
+					tracker_settings_t new_settings;
+					memcpy(&new_settings, get_tracker_settings(), sizeof(tracker_settings_t));
+					new_settings.rf_power = ack;
+					
+					save_tracker_settings(&new_settings);
 				}
 			}
-			
-		} while (more);
+		}
 	}
 }
