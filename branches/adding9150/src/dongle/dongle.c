@@ -210,8 +210,8 @@ void main(void)
 			
 			if (packet.flags & FLAG_VOLTAGE_VALID)
 				battery_voltage = packet.voltage;
-			if (packet.flags & FLAG_TEMPERATURE_VALID)
-				temperature = packet.temperature;
+
+			temperature = packet.temperature;
 
 			curr_packets++;
 			
