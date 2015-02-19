@@ -83,7 +83,7 @@ void quat2euler(int16_t* quat, int16_t* euler)
 	qy = quat[2];
 	qz = quat[3];
 	
-	qww = mul_16x16(qw, qw);		// these are MDU optimized 16 bit integer multiplications
+	qww = mul_16x16(qw, qw);	// these are MDU optimized 16 bit integer multiplications
 	qxx = mul_16x16(qx, qx);
 	qyy = mul_16x16(qy, qy);
 	qzz = mul_16x16(qz, qz);
@@ -95,6 +95,8 @@ void quat2euler(int16_t* quat, int16_t* euler)
 
 #define SAMPLES_FOR_RECENTER	30
 
+// calculates and applies recentering offsets
+// returns false if we are in the process of calulating new offsets and the euler are not valid
 bool do_offset(int16_t* euler)
 {
 	static int32_t offset[3];
@@ -155,6 +157,7 @@ bool process_packet(mpu_packet_t* pckt)
 	if (pckt->flags & FLAG_RECENTER)
 		recenter();
 	
+	// do_offet
 	if (!do_offset(euler))
 		return false;
 		
