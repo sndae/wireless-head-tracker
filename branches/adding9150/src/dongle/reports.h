@@ -41,11 +41,10 @@ typedef struct
 	uint8_t		is_linear;
 
 	// axis factors
-	float		fact_x;
-	float		fact_y;
-	float		fact_z;
+	int16_t		fact[3];
 
-	float		x_drift_comp;
+	// drift compensation per 1024 samples
+	int16_t		drift_per_1k;
 
 } FeatRep_DongleSettings;
 
@@ -119,8 +118,8 @@ typedef struct
 	uint8_t		num_packets;	// number of packets received in the last second
 	
 	float		new_drift_comp;	// the calculated drift compensation
-	int32_t		sample_cnt;
-	float		yaw_drift;
+	uint32_t	sample_cnt;
+	int32_t		yaw_drift;
 	
 	uint16_t	battery_voltage;
 	uint16_t	temperature;
