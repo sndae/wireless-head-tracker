@@ -166,17 +166,6 @@ int main(void)
 	
 	for (;;)
 	{
-		pckt.flags = 0;
-
-		// get the battery voltage every VOLTAGE_READ_EVERY iterations
-		if (++voltage_counter == VOLTAGE_READ_EVERY)
-		{
-			pckt.flags |= FLAG_VOLTAGE_VALID;
-			pckt.voltage = get_battery_voltage();
-			
-			voltage_counter = 0;
-		}
-		
 		// Waits for the interrupt from the MPU.
 		// Instead of polling, I should put the MCU to sleep and then have it awaken by the MPU-6050.
 		// However, I have not succeeded in the making the wakeup work reliably.
@@ -184,6 +173,9 @@ int main(void)
 			dbgPoll();
 		while (!MPU_IRQ)
 			;
+
+		// reset the flags
+		pckt.flags = 0;
 			
 		// read all the packets in the MPU fifo
 		read_result = dmp_read_fifo(&pckt);
@@ -198,6 +190,15 @@ int main(void)
 			// read the temperature
 			pckt.temperature = mpu_read_temperature();
 			
+			// get the battery voltage every VOLTAGE_READ_EVERY iterations
+			if (++voltage_counter == VOLTAGE_READ_EVERY)
+			{
+				pckt.flags |= FLAG_VOLTAGE_VALID;
+				pckt.voltage = get_battery_voltage();
+				
+				voltage_counter = 0;
+			}
+
 			// send the message
 			if (rf_head_send_message(&pckt, sizeof(pckt)))
 				++rf_pckt_ok;

@@ -1,11 +1,13 @@
 #ifndef RF_PROTOCOL_H
 #define RF_PROTOCOL_H
 
+// we use the full, 5 byte address length
 #define NRF_ADDR_SIZE	5
 
 // the channel number is hard-coded for the moment
 #define CHANNEL_NUM		115
 
+// these are the addresses
 extern __code const uint8_t HeadAddr[NRF_ADDR_SIZE];
 extern __code const uint8_t DongleAddr[NRF_ADDR_SIZE];
 
