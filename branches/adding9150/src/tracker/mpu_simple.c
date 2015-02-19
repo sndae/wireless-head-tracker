@@ -377,10 +377,10 @@ void mpu_read_compass(mpu_packet_t* pckt)
 
 		for (i = 0; i < 3; i++)
 		{
-			int16_t data = (buff[2 + i*2] << 8) | buff[1 + i*2];
-			pckt->compass[i] = ((int32_t)data * mag_sens_adj[i]) >> 8;
+			int32_t data = (buff[2 + i*2] << 8) | buff[1 + i*2];
+			pckt->compass[i] = (data * mag_sens_adj[i]) >> 8;
 		}
-
+		
 		// compass data is valid
 		pckt->flags |= FLAG_COMPASS_VALID;
 	}
@@ -408,7 +408,7 @@ void mpu_load_biases(void)
 
 void mpu_setup_compass(void)
 {
-	uint8_t data[3];
+	uint8_t data[3], i;
 
 	mpu_set_bypass(1);
 
@@ -424,9 +424,10 @@ void mpu_setup_compass(void)
 		compass_write_byte(AKM_REG_CNTL, AKM_FUSE_ROM_ACCESS);
 
 		compass_read_array(AKM_REG_ASAX, 3, data);
-		mag_sens_adj[0] = data[0] + 128;
-		mag_sens_adj[1] = data[1] + 128;
-		mag_sens_adj[2] = data[2] + 128;
+
+		// calc the mag adjustments
+		for (i = 0; i < 3; i++)
+			mag_sens_adj[i] = data[i] + 128;
 
 		// dprintf("mag_sens_adj %d %d %d\n", mag_sens_adj[0], mag_sens_adj[1], mag_sens_adj[2]);
 
@@ -471,7 +472,7 @@ void mpu_init(void)
 	mpu_write_byte(GYRO_CONFIG, INV_FSR_2000DPS << 3);		// == mpu_set_gyro_fsr(2000)
 	mpu_write_byte(ACCEL_CONFIG, INV_FSR_2G << 3);			// == mpu_set_accel_fsr(2)
 	mpu_write_byte(SMPLRT_DIV, 1000 / SAMPLE_RATE_HZ - 1);	// == mpu_set_sample_rate(SAMPLE_RATE_HZ)
-	mpu_write_byte(CONFIG, INV_FILTER_98HZ);				// == mpu_set_lpf(20)
+	mpu_write_byte(CONFIG, INV_FILTER_98HZ);				// == mpu_set_lpf(98)
 
 	mpu_write_byte(INT_PIN_CFG, 0x80);				// pin interrupt is active low
 
@@ -598,7 +599,7 @@ void mpu_calibrate_bias(void)
 
 	dbgFlush();
 
-	mpu_init();
+	//mpu_init();
 
 	LED_YELLOW = 0;
 }

@@ -200,6 +200,56 @@ bool process_packet(mpu_packet_t* pckt)
 
 #endif	// CALC_CORDIC
 	
+	//{
+	//	static int32_t sum = 0;
+	//	static int16_t cnt = 0;
+    //
+	//	int16_t heading = -iatan2_cord(pckt->compass[1], pckt->compass[0]);
+    //
+	//	sum += newX - heading;
+	//	cnt++;
+    //
+	//	if (dbgEmpty()  &&  cnt == 20)
+	//	{
+	//		dprintf("%6d %6d\n", heading, x);
+	//		cnt = 0;
+	//		sum = 0;
+	//	}
+	//}
+
+	
+	//{
+	//	static int16_t cmin[3], cmax[3];
+	//	static is_first = true;
+	//	static bool change = false;
+	//	uint8_t i;
+	//	
+	//	if (is_first)
+	//	{
+	//		memcpy(cmin, pckt->compass, 6);
+	//		memcpy(cmax, pckt->compass, 6);
+	//	
+	//	} else {
+	//		
+	//		for (i = 0; i < 3; i++)
+	//		{
+	//			if (cmin[i] > pckt->compass[i])
+	//				cmin[i] = pckt->compass[i], change = true;
+    //
+	//			if (cmax[i] < pckt->compass[i])
+	//				cmax[i] = pckt->compass[i], change = true;
+	//		}
+	//	}
+    //
+	//	if (change  &&  dbgEmpty())
+	//	{
+	//		dprintf("min %4d %4d %4d   max %4d %4d %4d\n", cmin[0], cmin[1], cmin[2], cmax[0], cmax[1], cmax[2]);
+	//		change = false;
+	//	}
+    //
+	//	is_first = false;
+	//}
+	
 	//if (dbgEmpty())
 	//	dprintf("%d %d %d %d\n", pckt->quat[0], pckt->quat[1], pckt->quat[2], pckt->quat[3]);
 	
