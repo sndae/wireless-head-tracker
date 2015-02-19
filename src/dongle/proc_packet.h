@@ -12,7 +12,7 @@ void recenter(void);
 
 void dump_drift(void);
 
-extern int32_t driftSamples;
-extern float dX;
+extern int32_t sample_cnt;
+extern int32_t yaw_drift;
 
 #endif	// PROC_PACKET_H

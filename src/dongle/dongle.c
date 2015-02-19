@@ -47,6 +47,7 @@ void on_set_report(void)
 		{
 			// tell the head tracker to execute command
 			rf_dngl_queue_ack_payload(&command, 1);
+			recenter();
 		} else if (command == CMD_RECENTER) {
 			recenter();
 		} else if (command == CMD_SAVE_DRIFT) {
@@ -142,8 +143,8 @@ void on_get_report(void)
 
 		pResult->num_packets = total;
 		pResult->new_drift_comp = get_curr_x_drift_comp();
-		pResult->driftSamples = driftSamples;
-		pResult->dX = dX;
+		pResult->sample_cnt = sample_cnt > 0 ? sample_cnt : 0;
+		pResult->yaw_drift = yaw_drift;
 		
 		pResult->battery_voltage = battery_voltage;
 		pResult->temperature = temperature;

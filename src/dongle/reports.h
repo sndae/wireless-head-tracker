@@ -119,8 +119,8 @@ typedef struct
 	uint8_t		num_packets;	// number of packets received in the last second
 	
 	float		new_drift_comp;	// the calculated drift compensation
-	int32_t		driftSamples;
-	float		dX;
+	int32_t		sample_cnt;
+	float		yaw_drift;
 	
 	uint16_t	battery_voltage;
 	uint16_t	temperature;
