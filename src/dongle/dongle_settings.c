@@ -48,9 +48,7 @@ __xdata FeatRep_DongleSettings default_settings =
 	2,		// autocenter - medium
 	0,		// is_linear - exponential
 
-	12.0,	// exp_fact_x
-	12.0,	// exp_fact_y
-	12.0,	// exp_fact_z
+	{12, 12, 12},		// factors
 	
 	0.0,	// x_drift_comp
 };

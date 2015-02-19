@@ -10,8 +10,6 @@ float get_curr_x_drift_comp(void);
 // recenter initiated from the PC
 void recenter(void);
 
-void dump_drift(void);
-
 extern int32_t sample_cnt;
 extern int32_t yaw_drift;
 

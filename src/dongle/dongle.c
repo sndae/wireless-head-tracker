@@ -34,7 +34,7 @@ void on_set_report(void)
 
 		FeatRep_DongleSettings new_settings;
 		memcpy(&new_settings, out0buf, sizeof(FeatRep_DongleSettings));
-		new_settings.x_drift_comp = pSettings->x_drift_comp;
+		new_settings.drift_per_1k = pSettings->drift_per_1k;
 		
 		// save the data structure we've just received
 		save_dongle_settings(&new_settings);
@@ -59,9 +59,9 @@ void on_set_report(void)
 			FeatRep_DongleSettings new_settings;
 			memcpy(&new_settings, pSettings, sizeof(FeatRep_DongleSettings));
 			if (command == CMD_INC_DRIFT_COMP)
-				new_settings.x_drift_comp += 0.1;
+				new_settings.drift_per_1k += 102;
 			else
-				new_settings.x_drift_comp -= 0.1;
+				new_settings.drift_per_1k -= 102;
 			
 			// save the data structure we've just received
 			save_dongle_settings(&new_settings);

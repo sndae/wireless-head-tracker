@@ -38,10 +38,8 @@ private:
 		SendMessage(GetCtrl(ctrl_id), WM_SETTEXT, 0, (LPARAM) text.c_str());
 	}
 
-	void SetCtrlTextFloat(int ctrl_id, float flt)
-	{
-		SetCtrlText(ctrl_id, flt2str(flt));
-	}
+	void SetCtrlTextFloat(int ctrl_id, float flt)	{ SetCtrlText(ctrl_id, flt2str(flt)); }
+	void SetCtrlTextInt(int ctrl_id, int val)		{ SetCtrlText(ctrl_id, int2str(val)); }
 
 	void ClearCtrlText(int ctrl_id)
 	{
@@ -49,6 +47,7 @@ private:
 	}
 
 	float GetCtrlTextFloat(int ctrl_id);
+	int16_t GetCtrlTextInt(int ctrl_id);
 
 	void AddComboString(int ctrl_id, const wchar_t* str)
 	{

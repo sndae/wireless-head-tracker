@@ -214,7 +214,7 @@ void WHTDialog::OnCommand(int ctrl_id, int notification)
 		repSettings.report_id = DONGLE_SETTINGS_REPORT_ID;
 		device.GetFeatureReport(repSettings);
 
-		SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(repSettings.x_drift_comp));
+		SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(repSettings.drift_per_1k / float(1024)));
 
 		// reset the drift calculation
 		FeatRep_Command repReset;
@@ -234,7 +234,7 @@ void WHTDialog::OnCommand(int ctrl_id, int notification)
 		repSettings.report_id = DONGLE_SETTINGS_REPORT_ID;
 		device.GetFeatureReport(repSettings);
 
-		SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(repSettings.x_drift_comp));
+		SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(repSettings.drift_per_1k / float(1024)));
 
 	} else if (ctrl_id == IDC_EDT_FACT_X  ||  ctrl_id == IDC_EDT_FACT_Y  ||  ctrl_id == IDC_EDT_FACT_Z) {
 
@@ -310,7 +310,7 @@ void WHTDialog::OnTimer()
 		SetStatusbarText(STATBAR_RF_STATUS, L"RF packets: " + res + L"%");
 
 		SetCtrlText(IDC_LBL_NEW_DRIFT_COMP, flt2str(repStatus.new_drift_comp));
-		SetCtrlText(IDC_LBL_PACKETS_SUM, int2str(repStatus.driftSamples) + L" / " + flt2str(repStatus.dX));
+		SetCtrlText(IDC_LBL_PACKETS_SUM, int2str(repStatus.sample_cnt) + L" / " + int2str(repStatus.yaw_drift));
 
 		const int BUFF_SIZE = 256;
 		wchar_t buff[BUFF_SIZE];
@@ -423,6 +423,15 @@ void WHTDialog::InitStatusbar()
 	SendMessage(GetCtrl(IDC_STATUS_BAR), SB_SETPARTS, NUM_PARTS, (LPARAM) parts);
 }
 
+int16_t WHTDialog::GetCtrlTextInt(int ctrl_id)
+{
+	const int BUFF_SIZE = 256;
+	wchar_t buff[BUFF_SIZE];
+	SendMessage(GetCtrl(ctrl_id), WM_GETTEXT, BUFF_SIZE, (LPARAM) buff);
+
+	return (int16_t) _wtoi(buff);
+}
+
 float WHTDialog::GetCtrlTextFloat(int ctrl_id)
 {
 	const int BUFF_SIZE = 256;
@@ -438,16 +447,16 @@ void WHTDialog::ReadConfigFromDevice()
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	device.GetFeatureReport(rep);
 
-	SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(rep.x_drift_comp));
+	SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(rep.drift_per_1k / float(1024)));
 
 	ignoreNotifications = true;
 
 	SetComboSelection(IDC_CMB_AXIS_RESPONSE, rep.is_linear ? 1 : 0);
 	SetComboSelection(IDC_CMB_AUTOCENTER, rep.autocenter);
 
-	SetCtrlText(IDC_EDT_FACT_X, flt2str(rep.fact_x));
-	SetCtrlText(IDC_EDT_FACT_Y, flt2str(rep.fact_y));
-	SetCtrlText(IDC_EDT_FACT_Z, flt2str(rep.fact_z));
+	SetCtrlText(IDC_EDT_FACT_X, int2str(rep.fact[0]));
+	SetCtrlText(IDC_EDT_FACT_Y, int2str(rep.fact[1]));
+	SetCtrlText(IDC_EDT_FACT_Z, int2str(rep.fact[2]));
 
 	isConfigChanged = false;
 
@@ -515,9 +524,9 @@ void WHTDialog::SendConfigToDevice()
 	rep.is_linear = GetComboSelection(IDC_CMB_AXIS_RESPONSE);
 	rep.autocenter = GetComboSelection(IDC_CMB_AUTOCENTER);
 
-	rep.fact_x = GetCtrlTextFloat(IDC_EDT_FACT_X);
-	rep.fact_y = GetCtrlTextFloat(IDC_EDT_FACT_Y);
-	rep.fact_z = GetCtrlTextFloat(IDC_EDT_FACT_Z);
+	rep.fact[0] = GetCtrlTextInt(IDC_EDT_FACT_X);
+	rep.fact[1] = int16_t(GetCtrlTextInt(IDC_EDT_FACT_Y) * (float)4.0);
+	rep.fact[2] = int16_t(GetCtrlTextInt(IDC_EDT_FACT_Z) * (float)4.0);
 
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	device.SetFeatureReport(rep);
