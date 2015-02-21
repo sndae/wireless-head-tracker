@@ -81,6 +81,7 @@ bool do_center(int16_t* euler)
 	static int16_t center[3];
 	static int16_t wrap_bias[3];
 	static bool is_center_valid = false;
+	uint8_t i;
 
 	// do we need to calculate a new center
 	if (should_recenter)
@@ -102,32 +103,24 @@ bool do_center(int16_t* euler)
 
 	// accumulate the samples
 	if (!is_center_valid)
-	{
-		center[0] += euler[0] - wrap_bias[0];
-		center[1] += euler[1] - wrap_bias[1];
-		center[2] += euler[2] - wrap_bias[2];
-	}
+		for (i = 0; i < 3; ++i)
+			center[i] += euler[i] - wrap_bias[i];
 
 	// enough samples?
 	if (sample_cnt == 0)
 	{
 		// >> 3  if functionally identical to / 8, or / SAMPLES_FOR_RECENTER
 		// but it's faster :)
-		center[0] = (center[0] >> 3) + wrap_bias[0];
-		center[1] = (center[1] >> 3) + wrap_bias[1];
-		center[2] = (center[2] >> 3) + wrap_bias[2];
+		for (i = 0; i < 3; ++i)
+			center[i] = (center[i] >> 3) + wrap_bias[i];
 
 		is_center_valid = true;
 	}
 
-	// apply the offsets
+	// correct the euler angles
 	if (is_center_valid)
-	{
-		// correct the euler angles
-		euler[0] -= center[0];
-		euler[1] -= center[1];
-		euler[2] -= center[2];
-	}
+		for (i = 0; i < 3; ++i)
+			euler[i] -= center[i];
 
 	return is_center_valid;
 }
@@ -177,6 +170,7 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 
 void do_auto_center(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings)
 {
+	// TODO
 	euler, pSettings;
 }
 
