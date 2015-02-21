@@ -57,11 +57,14 @@ FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     GROUPBOX        " Head tracker axes ",IDC_STATIC,7,7,305,74
     LTEXT           "X Axis",IDC_STATIC,16,23,20,8
-    CONTROL         "X",IDC_PRG_AXIS_X,"msctls_progress32",PBS_SMOOTH | WS_BORDER,42,20,263,14
+    CONTROL         "X",IDC_PRG_AXIS_X,"msctls_progress32",PBS_SMOOTH | WS_BORDER,42,20,229,14
+    LTEXT           "", IDC_LBL_AXIS_NUM_X, 275, 23, 29, 10, SS_LEFT, WS_EX_RIGHT | WS_EX_STATICEDGE
     LTEXT           "Y Axis",IDC_STATIC,16,42,20,8
-    CONTROL         "Y",IDC_PRG_AXIS_Y,"msctls_progress32",PBS_SMOOTH | WS_BORDER,42,39,263,14
+    CONTROL         "Y",IDC_PRG_AXIS_Y,"msctls_progress32",PBS_SMOOTH | WS_BORDER,42,40,229,14
+    LTEXT           "", IDC_LBL_AXIS_NUM_Y, 275, 42, 29, 10, SS_LEFT, WS_EX_RIGHT | WS_EX_STATICEDGE
     LTEXT           "Z Axis",IDC_STATIC,16,61,20,8
-    CONTROL         "Z",IDC_PRG_AXIS_Z,"msctls_progress32",PBS_SMOOTH | WS_BORDER,42,58,263,14
+    CONTROL         "Z",IDC_PRG_AXIS_Z,"msctls_progress32",PBS_SMOOTH | WS_BORDER,42,59,229,14
+    LTEXT           "", IDC_LBL_AXIS_NUM_Z, 275, 61, 29, 10, SS_LEFT, WS_EX_RIGHT | WS_EX_STATICEDGE
     GROUPBOX        " Dongle settings ",IDC_STATIC,7,85,149,195
     LTEXT           "Axis response:",IDC_STATIC,29,101,48,8
     COMBOBOX        IDC_CMB_AXIS_RESPONSE,79,99,69,43,CBS_DROPDOWNLIST | WS_TABSTOP

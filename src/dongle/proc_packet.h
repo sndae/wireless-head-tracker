@@ -11,6 +11,6 @@ float get_curr_x_drift_comp(void);
 void recenter(void);
 
 extern int32_t sample_cnt;
-extern int32_t yaw_drift;
+extern int32_t yaw_value;
 
 #endif	// PROC_PACKET_H

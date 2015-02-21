@@ -119,7 +119,7 @@ typedef struct
 	
 	float		new_drift_comp;	// the calculated drift compensation
 	uint32_t	sample_cnt;
-	int32_t		yaw_drift;
+	int32_t		yaw_value;
 	
 	uint16_t	battery_voltage;
 	uint16_t	temperature;
