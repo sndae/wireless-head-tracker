@@ -144,7 +144,7 @@ void on_get_report(void)
 		pResult->num_packets = total;
 		pResult->new_drift_comp = get_curr_x_drift_comp();
 		pResult->sample_cnt = sample_cnt > 0 ? sample_cnt : 0;
-		pResult->yaw_drift = yaw_drift;
+		pResult->yaw_value = yaw_value;
 		
 		pResult->battery_voltage = battery_voltage;
 		pResult->temperature = temperature;

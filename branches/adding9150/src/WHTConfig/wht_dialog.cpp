@@ -296,6 +296,10 @@ void WHTDialog::OnTimer()
 		SendMessage(GetCtrl(IDC_PRG_AXIS_Y), PBM_SETPOS, (WPARAM) rep.y + 0x8000, 0);
 		SendMessage(GetCtrl(IDC_PRG_AXIS_Z), PBM_SETPOS, (WPARAM) rep.z + 0x8000, 0);
 
+		SetCtrlTextInt(IDC_LBL_AXIS_NUM_X, rep.x);
+		SetCtrlTextInt(IDC_LBL_AXIS_NUM_Y, rep.y);
+		SetCtrlTextInt(IDC_LBL_AXIS_NUM_Z, rep.z);
+
 		// get the current status
 		FeatRep_Status repStatus;
 		repStatus.report_id = STATUS_REPORT_ID;
@@ -310,7 +314,7 @@ void WHTDialog::OnTimer()
 		SetStatusbarText(STATBAR_RF_STATUS, L"RF packets: " + res + L"%");
 
 		SetCtrlText(IDC_LBL_NEW_DRIFT_COMP, flt2str(repStatus.new_drift_comp));
-		SetCtrlText(IDC_LBL_PACKETS_SUM, int2str(repStatus.sample_cnt) + L" / " + int2str(repStatus.yaw_drift));
+		SetCtrlText(IDC_LBL_PACKETS_SUM, int2str(repStatus.sample_cnt) + L" / " + int2str(repStatus.yaw_value));
 
 		const int BUFF_SIZE = 256;
 		wchar_t buff[BUFF_SIZE];

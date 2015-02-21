@@ -32,6 +32,10 @@
 #define IDC_BTN_SAVE_RF_POWER                   1029
 #define IDC_CMB_AXIS_RESPONSE                   1030
 #define IDC_BTN_SAVE_AXES_SETUP                 1031
+#define IDC_LBL_AXIS_NUM_X                      1032
+#define IDC_LBL_AXIS_NUM_Y                      1033
+#define IDC_LBL_AXIS_NUM_Z                      1034
+
 #define IDC_STATIC                              -1
 
 // Next default values for new objects
@@ -40,7 +44,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        103
 #define _APS_NEXT_COMMAND_VALUE         40003
-#define _APS_NEXT_CONTROL_VALUE         1032
+#define _APS_NEXT_CONTROL_VALUE         1035
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
