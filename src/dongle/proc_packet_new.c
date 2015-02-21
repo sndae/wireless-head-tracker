@@ -72,57 +72,64 @@ void quat2euler(int16_t* quat, int16_t* euler)
 	euler[2] =  iatan2_cord(2 * (mul_16x16(qy, qz) + mul_16x16(qw, qx)), qww - qxx - qyy + qzz);
 }
 
-#define SAMPLES_FOR_RECENTER	30
+#define SAMPLES_FOR_RECENTER	8
 
 // calculates and applies recentering offsets
 // returns false if we are in the process of calulating new offsets and the euler are not valid
-bool do_offset(int16_t* euler)
+bool do_center(int16_t* euler)
 {
-	static int32_t offset[3];
-	static bool is_offset_valid = false;
+	static int16_t center[3];
+	static int16_t wrap_bias[3];
+	static bool is_center_valid = false;
 
-	// do we need to calculate a new offset
+	// do we need to calculate a new center
 	if (should_recenter)
 	{
 		sample_cnt = -SAMPLES_FOR_RECENTER;
 		yaw_drift = 0;
 		should_recenter = false;
-		is_offset_valid = false;
+		is_center_valid = false;
 
+		// remember the current angles to make a wrap bias
+		// this fixes the problem with centering close to the -32768/32767 wrapping point
+		memcpy(wrap_bias, euler, sizeof(wrap_bias));
+		
 		// clear the sums
-		memset(offset, 0, sizeof(offset));
+		memset(center, 0, sizeof(center));
 	}
 
 	sample_cnt++;
 
 	// accumulate the samples
-	if (!is_offset_valid)
+	if (!is_center_valid)
 	{
-		offset[0] += euler[0];
-		offset[1] += euler[1];
-		offset[2] += euler[2];
+		center[0] += euler[0] - wrap_bias[0];
+		center[1] += euler[1] - wrap_bias[1];
+		center[2] += euler[2] - wrap_bias[2];
 	}
 
 	// enough samples?
 	if (sample_cnt == 0)
 	{
-		offset[0] /= SAMPLES_FOR_RECENTER;
-		offset[1] /= SAMPLES_FOR_RECENTER;
-		offset[2] /= SAMPLES_FOR_RECENTER;
+		// >> 3  if functionally identical to / 8, or / SAMPLES_FOR_RECENTER
+		// but it's faster :)
+		center[0] = (center[0] >> 3) + wrap_bias[0];
+		center[1] = (center[1] >> 3) + wrap_bias[1];
+		center[2] = (center[2] >> 3) + wrap_bias[2];
 
-		is_offset_valid = true;
+		is_center_valid = true;
 	}
 
 	// apply the offsets
-	if (is_offset_valid)
+	if (is_center_valid)
 	{
 		// correct the euler angles
-		euler[0] -= offset[0];
-		euler[1] -= offset[1];
-		euler[2] -= offset[2];
+		euler[0] -= center[0];
+		euler[1] -= center[1];
+		euler[2] -= center[2];
 	}
 
-	return is_offset_valid;
+	return is_center_valid;
 }
 
 // applies the yaw drift
@@ -173,7 +180,7 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 			euler[i] = (int16_t)new_val;
 		}
 
-		dprintf("%d %d %d\n", euler[0], euler[1], euler[2]);
+		//dprintf("%d %d %d\n", euler[0], euler[1], euler[2]);
 		
 		//dzlimit = 39.0 * pSettings->fact_x * pSettings->autocenter;
 	}
@@ -181,7 +188,10 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 
 bool process_packet(mpu_packet_t* pckt)
 {
+	// we're getting the settings pointer here and pass it on to the functions below
+	// because get_dongle_settings() isn't really a trivial function
 	const FeatRep_DongleSettings __xdata* pSettings = get_dongle_settings();
+	
 	int16_t euler[3];		// the resulting angles
 
 	quat2euler(pckt->quat, euler);	// convert quaternions to euler angles
@@ -189,8 +199,8 @@ bool process_packet(mpu_packet_t* pckt)
 	if (pckt->flags & FLAG_RECENTER)
 		recenter();
 
-	// calc and apply the centering offset
-	if (!do_offset(euler))
+	// calc and/or apply the centering offset
+	if (!do_center(euler))
 		return false;
 
 	// apply the drift compensations
