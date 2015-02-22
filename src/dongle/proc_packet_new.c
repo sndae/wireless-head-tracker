@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <math.h>
+
 #include <compiler_mcs51.h>
 
 #include "nrfdbg.h"
@@ -67,8 +69,13 @@ void quat2euler(int16_t* quat, int16_t* euler)
 	qyy = mul_16x16(qy, qy);
 	qzz = mul_16x16(qz, qz);
 
+	// x - yaw
 	euler[0] = -iatan2_cord(2 * (mul_16x16(qx, qy) + mul_16x16(qw, qz)), qww + qxx - qyy - qzz);
+	
+	// y - roll
 	euler[1] = -iasin_cord(-2 * (mul_16x16(qx, qz) - mul_16x16(qw, qy)));
+	
+	// z - pitch
 	euler[2] =  iatan2_cord(2 * (mul_16x16(qy, qz) + mul_16x16(qw, qx)), qww - qxx - qyy + qzz);
 }
 
@@ -174,6 +181,59 @@ void do_auto_center(int16_t* euler, const FeatRep_DongleSettings __xdata* pSetti
 	euler, pSettings;
 }
 
+void do_mag(int16_t* mag, int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings)
+{
+	int16_t heading;
+	
+	float Xh, Yh;
+	float sinroll, cosroll;
+	float sinpitch, cospitch;
+	
+	sinroll = sinf(euler[1] * 9.58737e-5);
+	cosroll = cosf(euler[1] * 9.58737e-5);
+	sinpitch = sinf(euler[2] * 9.58737e-5);
+	cospitch = cosf(euler[2] * 9.58737e-5);
+	
+	Xh = mag[0] * cospitch + mag[2] * sinpitch;
+	Yh = mag[0] * sinroll * sinpitch + mag[1] * cosroll - mag[2] * sinroll * sinpitch;
+	heading = iatan2_cord(Yh * 32768, Xh * 32768);
+
+	//heading = iatan2_cord(mag[1], mag[0]);
+	
+	if (dbgEmpty())
+	{
+		//dprintf("%d %d %d\n", mag[0], mag[1], mag[2]);
+		//dprintf("%d %f %f\n", heading, Xh, Yh);
+		//dprintf("%d\n", heading);
+	}
+	
+	{
+		static int32_t sum = 0;
+		static int16_t hmin = 32767, hmax = -32768;
+		static uint8_t cnt = 0;
+		
+		sum += heading;
+		if (heading < hmin)	hmin = heading;
+		if (heading > hmax)	hmax = heading;
+		
+		cnt ++;
+		
+		if (cnt == 200)
+		{
+			int16_t avg = (int16_t)(sum/cnt);
+			dprintf("%6d %6d %6d %6d\n", heading, avg, hmin - avg, hmax - avg);
+			
+			cnt = 0;
+			sum = 0;
+			hmin = 32767;
+			hmax = -32768;
+		}
+	}
+
+	//if (dbgEmpty())
+	//	dprintf("%d %d %d\n", euler[0], euler[1], euler[2]);
+}
+
 bool process_packet(mpu_packet_t* pckt)
 {
 	// we're getting the settings pointer here and pass it on to the functions below
@@ -191,16 +251,18 @@ bool process_packet(mpu_packet_t* pckt)
 	if (!do_center(euler))
 		return false;
 	
+	do_mag(pckt->compass, euler, pSettings);
+	
 	// apply the drift compensations
 	do_drift(euler, pSettings);
 
 	// save the current yaw angle after drift compensation
 	yaw_value = euler[0];
 
-	do_auto_center(euler, pSettings);
+	//do_auto_center(euler, pSettings);
 	
 	// do the axis response transformations
-	do_response(euler, pSettings);
+	//do_response(euler, pSettings);
 
 	// copy the data into the USB report
 	usb_joystick_report.x = euler[0];

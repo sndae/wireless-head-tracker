@@ -4,8 +4,8 @@
 
 #ifdef CALC_CORDIC
 
-#define CORDIC_NUM_BITS 	14
 #define ASIN_GAIN			0x10000000
+#define SINCOS_GAIN			((int32_t)(CORDIC_RANGE * 0.6072529183))
 
 // These are CORDIC implementations of the atan2 and asin functions.
 // These take up about 2.5kb less flash than the standard C math library
@@ -29,6 +29,52 @@ int16_t __code atanTable[CORDIC_NUM_BITS] =
 3,      // 12
 1,      // 13
 };     
+
+void isincos_cord(int32_t angle, int32_t* rcos, int32_t* rsin)
+{
+	int32_t rotation_angle;
+	int32_t x, y;
+	int32_t xi, yi;
+	uint8_t i;
+ 
+	rotation_angle = 0;
+	y = 0;
+	x = SINCOS_GAIN;
+
+	if (angle > CORDIC_RANGE/2)				// PI/2
+		rotation_angle = CORDIC_RANGE;		// PI
+
+	//if (angle > CORDIC_RANGE*2/3)			// 3*PI/2
+	//	rotation_angle = CORDIC_RANGE*2;	// 2*PI
+
+	for (i = 0; i < CORDIC_NUM_BITS; i++)
+	{
+		xi = x >> i;
+		yi = y >> i;
+
+		if (angle > rotation_angle)
+		{
+			// rotate counter-clockwise
+			x -= yi;
+			y += xi;
+			rotation_angle += atanTable[i];
+		} else {
+			// rotate clockwise
+			x += yi;
+			y -= xi;
+			rotation_angle -= atanTable[i];
+		}
+	}
+	
+	if (angle > CORDIC_RANGE/2  &&  angle < CORDIC_RANGE*2/3)
+	{
+		x = -x;
+		y = -y;
+	}
+	
+	*rcos = x;
+	*rsin = y;
+}
 
 // We are doing the double iteration variant of the CORDIC algorithm
 // This is needed to keep the accuracy good enough for our purposes,
