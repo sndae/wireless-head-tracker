@@ -1,6 +1,6 @@
 // These are tests for the cordic trigonometric functions in ../dongle/math_cordic.c
 
-// we need this so that the STD library defines M_PI
+// we need this so that the STD library defines M_PI for us
 #define _USE_MATH_DEFINES
 
 #include <stdio.h>
@@ -41,27 +41,28 @@ void calc_cordic_gain()
 
 void test_sincos()
 {
-	int32_t s, c;
+	int16_t s, c;
 
 	for (int32_t angle = -ANGLE_PI; angle <= ANGLE_PI; angle += ANGLE_PI/45)
 	{
 		isincos_cord(angle, &c, &s);
 
-		float rad_angle = float((double)angle / ANGLE_PI * M_PI);
-		int32_t sc = int32_t(sinf(rad_angle) * ANGLE_PI + .5);
-		int32_t cc = int32_t(cosf(rad_angle) * ANGLE_PI + .5);
+		double rad_angle = angle / (double)ANGLE_PI * M_PI;
+		int32_t sc = int32_t(sin(rad_angle) * ANGLE_PI + .5);
+		int32_t cc = int32_t(cos(rad_angle) * ANGLE_PI + .5);
 
 		printf("a=%4d sc=%6i s=%6i cc=%6i c=%6i sdif=%6i cdif=%6i\n", angle * 180 / ANGLE_PI, s, sc, c, cc, s-sc, c-cc);
 	}
 }
 
-#define ATAN_RANGE		100000
+#define ATAN_RANGE	100000
+#define ATAN_STEP	(ATAN_RANGE/100)
 
 void test_atan()
 {
-	for (int32_t x = -ATAN_RANGE; x < ATAN_RANGE; x += ATAN_RANGE / 100)
+	for (int32_t x = -ATAN_RANGE; x < ATAN_RANGE; x += ATAN_STEP)
 	{
-		for (int32_t y = -ATAN_RANGE; y < ATAN_RANGE; y += ATAN_RANGE / 100)
+		for (int32_t y = -ATAN_RANGE; y < ATAN_RANGE; y += ATAN_STEP)
 		{
 			int32_t res = int32_t(atan2((double) x, (double) y) / M_PI * ANGLE_PI + .5);
 			int32_t resc = iatan2_cord(x, y);
@@ -73,5 +74,5 @@ void test_atan()
 
 void main()
 {
-	test_atan();
+	test_sincos();
 }

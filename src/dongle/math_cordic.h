@@ -7,10 +7,11 @@
 #define ANGLE_PI			0x7fff
 
 #define CORDIC_GAIN			0.6072529365170104
-#define SINCOS_GAIN			((int32_t)(ANGLE_PI * CORDIC_GAIN))
+#define SINCOS_RANGE		ANGLE_PI
+#define SINCOS_GAIN			((int32_t)(SINCOS_RANGE * CORDIC_GAIN))
 
 // sincos returns both the sine and cosine of an angle
-void isincos_cord(int32_t angle, int32_t* rcos, int32_t* rsin);
+void isincos_cord(int32_t angle, int16_t* rcos, int16_t* rsin);
 
 // returns angle in the range -ANGLE_PI -> ANGLE_PI
 int16_t iatan2_cord(int32_t y, int32_t x);
