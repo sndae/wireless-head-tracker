@@ -4,9 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <math.h>
-
-#include <compiler_mcs51.h>
+//#include <compiler_mcs51.h>
 
 #include "nrfdbg.h"
 
@@ -28,7 +26,7 @@ void save_x_drift_comp(void)
 	FeatRep_DongleSettings __xdata new_settings;
 	memcpy(&new_settings, get_dongle_settings(), sizeof(FeatRep_DongleSettings));
 
-	new_settings.drift_per_1k += (int16_t)((1024.0 * yaw_value) / sample_cnt);
+	new_settings.drift_per_1k += (int16_t)((1024 * yaw_value) / sample_cnt);
 
 	save_dongle_settings(&new_settings);
 
@@ -38,14 +36,6 @@ void save_x_drift_comp(void)
 void recenter(void)
 {
 	should_recenter = true;
-}
-
-float get_curr_x_drift_comp(void)
-{
-	if (sample_cnt > 0)
-		return yaw_value / (float)sample_cnt;
-
-	return 0;
 }
 
 // convert the raw quaternions from the sensors into Euler angles
@@ -149,8 +139,8 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 	{
 		for (i = 0; i < 3; ++i)
 		{
-			// the floating arithemetic is only temporary
-			// it will be replaced by custom axis responses
+			// this is only temporary. it will be replaced with
+			// multi-point custom axis responses
 
 			int32_t new_val = mul_16x16(euler[i], abs(euler[i]));
 			euler[i] = (int16_t) (new_val >>= 13);		// / 8192
@@ -181,6 +171,7 @@ void do_auto_center(int16_t* euler, const FeatRep_DongleSettings __xdata* pSetti
 	euler, pSettings;
 }
 
+/*
 void do_mag(int16_t* mag, int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings)
 {
 	int16_t heading;
@@ -233,6 +224,7 @@ void do_mag(int16_t* mag, int16_t* euler, const FeatRep_DongleSettings __xdata* 
 	//if (dbgEmpty())
 	//	dprintf("%d %d %d\n", euler[0], euler[1], euler[2]);
 }
+*/
 
 bool process_packet(mpu_packet_t* pckt)
 {
@@ -251,7 +243,8 @@ bool process_packet(mpu_packet_t* pckt)
 	if (!do_center(euler))
 		return false;
 	
-	do_mag(pckt->compass, euler, pSettings);
+	// magnetometer
+	//do_mag(pckt->compass, euler, pSettings);
 	
 	// apply the drift compensations
 	do_drift(euler, pSettings);
@@ -259,10 +252,10 @@ bool process_packet(mpu_packet_t* pckt)
 	// save the current yaw angle after drift compensation
 	yaw_value = euler[0];
 
-	//do_auto_center(euler, pSettings);
+	do_auto_center(euler, pSettings);
 	
 	// do the axis response transformations
-	//do_response(euler, pSettings);
+	do_response(euler, pSettings);
 
 	// copy the data into the USB report
 	usb_joystick_report.x = euler[0];

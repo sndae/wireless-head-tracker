@@ -1,19 +1,24 @@
-#define _USE_MATH_DEFINES		// we need this for M_PI
+// These are tests for the cordic trigonometric functions in ../dongle/math_cordic.c
+
+// we need this so that the STD library defines M_PI
+#define _USE_MATH_DEFINES
 
 #include <stdio.h>
 #include <math.h>
 #include <stdint.h>
 
-extern "C" {
+extern "C"
+{
 #include "../dongle/math_cordic.h"
 }
 
+// this creates the atanTable needed in math_cordic.c
 void create_atan_table()
 {
 	float val = 1;
-	for (int i = 0; i < CORDIC_NUM_BITS; i++)
+	for (int i = 0; i < CORDIC_TABLE_SIZE; i++)
 	{
-		double atanVal = atanf(val) * (CORDIC_RANGE / M_PI);
+		double atanVal = atanf(val) * (ANGLE_PI / M_PI);
 		int atanValInt = int(atanVal + 0.5);
 
 		printf("%d,\t// %i\tatan(%g) * (CORDIC_RANGE / M_PI)\n", atanValInt, i, val);
@@ -21,23 +26,52 @@ void create_atan_table()
 	}
 }
 
+void calc_cordic_gain()
+{
+	double atanarg = 1;
+	double cordic_gain = 1;
+	for (int i = 0; i < CORDIC_TABLE_SIZE; i++)
+	{
+		cordic_gain *= cos(atan(atanarg));
+		atanarg /= 2;
+	}
+
+	printf("CORDIC_GAIN = %18.16f\n", cordic_gain);
+}
+
 void test_sincos()
 {
 	int32_t s, c;
 
-	for (int32_t angle = 119; angle < 180; angle++)
+	for (int32_t angle = -ANGLE_PI; angle <= ANGLE_PI; angle += ANGLE_PI/45)
 	{
-		isincos_cord(int32_t(angle * 182.03888 + .5), &c, &s);
+		isincos_cord(angle, &c, &s);
 
-		int32_t sc = int32_t(sinf(angle / (float) 180.0 * (float) M_PI) * CORDIC_RANGE + .5);
-		int32_t cc = int32_t(cosf(angle / (float) 180.0 * (float) M_PI) * CORDIC_RANGE + .5);
+		float rad_angle = float((double)angle / ANGLE_PI * M_PI);
+		int32_t sc = int32_t(sinf(rad_angle) * ANGLE_PI + .5);
+		int32_t cc = int32_t(cosf(rad_angle) * ANGLE_PI + .5);
 
-		printf("sincord=%6i sin=%6i coscord=%6i cos=%6i sindif=%6i cosdif=%6i\n", s, sc, c, cc, s-sc, c-cc);
+		printf("a=%4d sc=%6i s=%6i cc=%6i c=%6i sdif=%6i cdif=%6i\n", angle * 180 / ANGLE_PI, s, sc, c, cc, s-sc, c-cc);
 	}
 }
 
-int main()
+#define ATAN_RANGE		100000
+
+void test_atan()
 {
-	test_sincos();
-	return 0;
+	for (int32_t x = -ATAN_RANGE; x < ATAN_RANGE; x += ATAN_RANGE / 100)
+	{
+		for (int32_t y = -ATAN_RANGE; y < ATAN_RANGE; y += ATAN_RANGE / 100)
+		{
+			int32_t res = int32_t(atan2((double) x, (double) y) / M_PI * ANGLE_PI + .5);
+			int32_t resc = iatan2_cord(x, y);
+
+			printf("math=%8i  cord=%8i  diff=%6i\n", res, resc, resc - res);
+		}
+	}
+}
+
+void main()
+{
+	test_atan();
 }
