@@ -171,9 +171,29 @@ void do_auto_center(int16_t* euler, const FeatRep_DongleSettings __xdata* pSetti
 	euler, pSettings;
 }
 
-/*
-void do_mag(int16_t* mag, int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings)
+void do_mag(int16_t* mag, int16_t* euler/*, const FeatRep_DongleSettings __xdata* pSettings*/)
 {
+	// this is a tilt compensated heading calculation. read more here:
+	// http://www.st.com/web/en/resource/technical/document/application_note/CD00269797.pdf
+	
+	int32_t Xh, Yh;
+	int16_t sinroll, cosroll;
+	int16_t sinpitch, cospitch;
+	int16_t sinrol_pitch, mag_heading;
+
+	isincos_cord(euler[1], &cosroll, &sinroll);
+	isincos_cord(euler[2], &cospitch, &sinpitch);
+	
+	Xh = mul_16x16(mag[0], cospitch) + mul_16x16(mag[2], sinpitch);
+	
+	Yh = mul_16x16(sinroll, sinpitch);
+	sinrol_pitch = (Yh >> 16);
+	
+	Yh = mul_16x16(mag[0], sinrol_pitch) + mul_16x16(mag[1], cosroll) + mul_16x16(mag[2], sinrol_pitch);
+	
+	mag_heading = iatan2_cord(Yh, Xh);
+
+/*
 	int16_t heading;
 	
 	float Xh, Yh;
@@ -220,11 +240,11 @@ void do_mag(int16_t* mag, int16_t* euler, const FeatRep_DongleSettings __xdata* 
 			hmax = -32768;
 		}
 	}
+	*/
 
 	//if (dbgEmpty())
 	//	dprintf("%d %d %d\n", euler[0], euler[1], euler[2]);
 }
-*/
 
 bool process_packet(mpu_packet_t* pckt)
 {
@@ -244,18 +264,18 @@ bool process_packet(mpu_packet_t* pckt)
 		return false;
 	
 	// magnetometer
-	//do_mag(pckt->compass, euler, pSettings);
+	do_mag(pckt->compass, euler);
 	
 	// apply the drift compensations
-	do_drift(euler, pSettings);
+	//do_drift(euler, pSettings);
 
 	// save the current yaw angle after drift compensation
 	yaw_value = euler[0];
 
-	do_auto_center(euler, pSettings);
+	//do_auto_center(euler, pSettings);
 	
 	// do the axis response transformations
-	do_response(euler, pSettings);
+	//do_response(euler, pSettings);
 
 	// copy the data into the USB report
 	usb_joystick_report.x = euler[0];

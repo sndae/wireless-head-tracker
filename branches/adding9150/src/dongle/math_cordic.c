@@ -32,7 +32,7 @@ int16_t __code atanTable[CORDIC_TABLE_SIZE] =
 1,      // 13
 };
 
-void isincos_cord(int32_t angle, int32_t* rcos, int32_t* rsin)
+void isincos_cord(int32_t angle, int16_t* rcos, int16_t* rsin)
 {
 	uint8_t i;
 	int32_t xi, yi;
@@ -72,6 +72,17 @@ void isincos_cord(int32_t angle, int32_t* rcos, int32_t* rsin)
 		y = -y;
 	}
 	
+	// make sure there's no overflows
+	if (x > SINCOS_RANGE)
+		x = SINCOS_RANGE;
+	else if (x < -SINCOS_RANGE)
+		x = -SINCOS_RANGE;
+
+	if (y > SINCOS_RANGE)
+		y = SINCOS_RANGE;
+	else if (y < -SINCOS_RANGE)
+		y = -SINCOS_RANGE;
+
 	*rcos = x;
 	*rsin = y;
 }
