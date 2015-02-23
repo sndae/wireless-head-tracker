@@ -4,15 +4,12 @@
 #include <stdio.h>
 #include <string.h>
 
-//#include <compiler_mcs51.h>
-
 #include "nrfdbg.h"
 
 #include "rf_protocol.h"
 #include "proc_packet.h"
 #include "math_cordic.h"
 #include "mdu.h"
-#include "mymath.h"
 #include "reports.h"
 #include "dongle_settings.h"
 
@@ -171,7 +168,7 @@ void do_auto_center(int16_t* euler, const FeatRep_DongleSettings __xdata* pSetti
 	euler, pSettings;
 }
 
-void do_mag(int16_t* mag, int16_t* euler/*, const FeatRep_DongleSettings __xdata* pSettings*/)
+void do_mag(int16_t* mag, int16_t* euler)
 {
 	// this is a tilt compensated heading calculation. read more here:
 	// http://www.st.com/web/en/resource/technical/document/application_note/CD00269797.pdf
@@ -179,7 +176,7 @@ void do_mag(int16_t* mag, int16_t* euler/*, const FeatRep_DongleSettings __xdata
 	int32_t Xh, Yh;
 	int16_t sinroll, cosroll;
 	int16_t sinpitch, cospitch;
-	int16_t sinrol_pitch, mag_heading;
+	int16_t sinroll_pitch, mag_heading;
 
 	isincos_cord(euler[1], &cosroll, &sinroll);
 	isincos_cord(euler[2], &cospitch, &sinpitch);
@@ -187,63 +184,83 @@ void do_mag(int16_t* mag, int16_t* euler/*, const FeatRep_DongleSettings __xdata
 	Xh = mul_16x16(mag[0], cospitch) + mul_16x16(mag[2], sinpitch);
 	
 	Yh = mul_16x16(sinroll, sinpitch);
-	sinrol_pitch = (Yh >> 16);
+	sinroll_pitch = (Yh >> 16);
 	
-	Yh = mul_16x16(mag[0], sinrol_pitch) + mul_16x16(mag[1], cosroll) + mul_16x16(mag[2], sinrol_pitch);
+	Yh = mul_16x16(mag[0], sinroll_pitch) + mul_16x16(mag[1], cosroll) - mul_16x16(mag[2], sinroll_pitch);
 	
-	mag_heading = iatan2_cord(Yh, Xh);
-
-/*
-	int16_t heading;
+	mag_heading = -iatan2_cord(Yh, Xh);
+	//mag_heading = -iatan2_cord(mag[1], mag[0]);
 	
-	float Xh, Yh;
-	float sinroll, cosroll;
-	float sinpitch, cospitch;
-	
-	sinroll = sinf(euler[1] * 9.58737e-5);
-	cosroll = cosf(euler[1] * 9.58737e-5);
-	sinpitch = sinf(euler[2] * 9.58737e-5);
-	cospitch = cosf(euler[2] * 9.58737e-5);
-	
-	Xh = mag[0] * cospitch + mag[2] * sinpitch;
-	Yh = mag[0] * sinroll * sinpitch + mag[1] * cosroll - mag[2] * sinroll * sinpitch;
-	heading = iatan2_cord(Yh * 32768, Xh * 32768);
-
-	//heading = iatan2_cord(mag[1], mag[0]);
-	
-	if (dbgEmpty())
 	{
-		//dprintf("%d %d %d\n", mag[0], mag[1], mag[2]);
-		//dprintf("%d %f %f\n", heading, Xh, Yh);
-		//dprintf("%d\n", heading);
+		static int16_t consec_count = 0;
+		static bool behind = false;
+		int16_t mag_delta = mag_heading - euler[0];
+		int16_t correction;
+
+		// EDtracker quote:
+		// Mag is so noisy on 9150 we just ask 'is Mag ahead or behind DMP'
+		// and keep a count of consecutive behinds or aheads and use this 
+		// to adjust our DMP heading and also tweak the DMP drift
+		if (mag_delta > 0)
+		{
+			if (behind)
+				consec_count--;
+			else
+				consec_count = 0;
+			
+			behind = true;
+		} else {
+			if (!behind)
+				consec_count++;
+			else
+				consec_count = 0;
+			
+			behind = false;
+		}
+
+		// Tweek the yaw offset. 0.01 keeps the head central with no visible twitching
+		correction = mul_16x16(consec_count, abs(consec_count)) >> 6;
+		
+		if (dbgEmpty())
+		{
+			//dprintf("delta=%6d  corr=%6d\n", mag_delta, correction);
+			//dprintf("heading=%6d  yaw=%6d  delta=%6d\n", mag_heading, euler[0], mag_delta);
+			dprintf("%6d  %6d  %6d\n", mag_heading, euler[0], mag_delta);
+		}
+		//euler[1] = mag_heading;
+		//euler[2] = mag_delta;
+		
+		// Also tweak the overall drift compensation.
+		// DMP still suffers from 'warm-up' issues and this helps greatly.
+		//xDriftComp = xDriftComp + (float)(consecCount) * 0.00001;
 	}
 	
+	/*
 	{
-		static int32_t sum = 0;
-		static int16_t hmin = 32767, hmax = -32768;
-		static uint8_t cnt = 0;
+		static int16_t hmin = 32767;
+		static int16_t hmax = -32768;
+		static int32_t hsum = 0;
+		static int16_t hcnt = 0;
 		
-		sum += heading;
-		if (heading < hmin)	hmin = heading;
-		if (heading > hmax)	hmax = heading;
+		int16_t mag_diff = euler[0] - mag_heading;
 		
-		cnt ++;
+		if (hmin > mag_diff)		hmin = mag_diff;
+		if (hmax < mag_diff)		hmax = mag_diff;
 		
-		if (cnt == 200)
+		hsum += mag_diff;
+		
+		if (++hcnt == 100)
 		{
-			int16_t avg = (int16_t)(sum/cnt);
-			dprintf("%6d %6d %6d %6d\n", heading, avg, hmin - avg, hmax - avg);
+			int32_t havg = hsum/hcnt;
+			dprintf("avg=%6ld min=%l6d max=%l6d rng=%6d\n", havg, hmin-havg, hmax-havg, hmax-hmin);
 			
-			cnt = 0;
-			sum = 0;
 			hmin = 32767;
 			hmax = -32768;
+			hcnt = 0;
+			hsum = 0;
 		}
 	}
 	*/
-
-	//if (dbgEmpty())
-	//	dprintf("%d %d %d\n", euler[0], euler[1], euler[2]);
 }
 
 bool process_packet(mpu_packet_t* pckt)
@@ -264,10 +281,11 @@ bool process_packet(mpu_packet_t* pckt)
 		return false;
 	
 	// magnetometer
-	do_mag(pckt->compass, euler);
+	if (pckt->flags & FLAG_COMPASS_VALID)
+		do_mag(pckt->compass, euler);
 	
 	// apply the drift compensations
-	//do_drift(euler, pSettings);
+	do_drift(euler, pSettings);
 
 	// save the current yaw angle after drift compensation
 	yaw_value = euler[0];
@@ -275,7 +293,7 @@ bool process_packet(mpu_packet_t* pckt)
 	//do_auto_center(euler, pSettings);
 	
 	// do the axis response transformations
-	//do_response(euler, pSettings);
+	do_response(euler, pSettings);
 
 	// copy the data into the USB report
 	usb_joystick_report.x = euler[0];
