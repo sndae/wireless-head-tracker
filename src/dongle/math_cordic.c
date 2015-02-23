@@ -1,6 +1,7 @@
 #include <stdint.h>
 
-// VC2010 does not support stdbool.h
+// VC2010 does not support stdbool.h in C
+// we need this because of the cordic test in ../cordic
 #if WIN32
 # define bool uint8_t
 #else

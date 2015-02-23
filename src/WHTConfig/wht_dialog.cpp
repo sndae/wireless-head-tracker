@@ -313,7 +313,11 @@ void WHTDialog::OnTimer()
 
 		SetStatusbarText(STATBAR_RF_STATUS, L"RF packets: " + res + L"%");
 
-		SetCtrlText(IDC_LBL_NEW_DRIFT_COMP, flt2str(repStatus.yaw_value / (float)repStatus.sample_cnt));
+		if (repStatus.sample_cnt)
+			SetCtrlText(IDC_LBL_NEW_DRIFT_COMP, flt2str(repStatus.yaw_value / (float)repStatus.sample_cnt));
+		else
+			SetCtrlText(IDC_LBL_NEW_DRIFT_COMP, L"0");
+
 		SetCtrlText(IDC_LBL_PACKETS_SUM, int2str(repStatus.sample_cnt) + L" / " + int2str(repStatus.yaw_value));
 
 		const int BUFF_SIZE = 256;
