@@ -142,7 +142,6 @@ void on_get_report(void)
 			total += total_packets[c];
 
 		pResult->num_packets = total;
-		pResult->new_drift_comp = get_curr_x_drift_comp();
 		pResult->sample_cnt = sample_cnt > 0 ? sample_cnt : 0;
 		pResult->yaw_value = yaw_value;
 		
