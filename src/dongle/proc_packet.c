@@ -17,6 +17,11 @@ bool should_recenter = true;
 int32_t sample_cnt;
 int32_t yaw_value;
 
+// these are indexes of the euler[] array
+#define YAW		0
+#define ROLL	1
+#define PITCH	2
+
 void save_x_drift_comp(void)
 {
 	// get the current settings
@@ -57,13 +62,13 @@ void quat2euler(int16_t* quat, int16_t* euler)
 	qzz = mul_16x16(qz, qz);
 
 	// x - yaw
-	euler[0] = -iatan2_cord(2 * (mul_16x16(qx, qy) + mul_16x16(qw, qz)), qww + qxx - qyy - qzz);
+	euler[YAW] = -iatan2_cord(2 * (mul_16x16(qx, qy) + mul_16x16(qw, qz)), qww + qxx - qyy - qzz);
 	
 	// y - roll
-	euler[1] = -iasin_cord(-2 * (mul_16x16(qx, qz) - mul_16x16(qw, qy)));
+	euler[ROLL] = -iasin_cord(-2 * (mul_16x16(qx, qz) - mul_16x16(qw, qy)));
 	
 	// z - pitch
-	euler[2] =  iatan2_cord(2 * (mul_16x16(qy, qz) + mul_16x16(qw, qx)), qww - qxx - qyy + qzz);
+	euler[PITCH] =  iatan2_cord(2 * (mul_16x16(qy, qz) + mul_16x16(qw, qx)), qww - qxx - qyy + qzz);
 }
 
 #define SAMPLES_FOR_RECENTER	8
@@ -93,7 +98,7 @@ bool do_center(int16_t* euler)
 		memset(center, 0, sizeof(center));
 	}
 
-	sample_cnt++;
+	++sample_cnt;
 
 	// accumulate the samples
 	if (!is_center_valid)
@@ -124,7 +129,7 @@ void do_drift(int16_t* euler, const FeatRep_DongleSettings __xdata * pSettings)
 {
 	int16_t compensate = (sample_cnt * pSettings->drift_per_1k) >> 10;
 
-	euler[0] -= compensate;
+	euler[YAW] -= compensate;
 }
 
 // do the axis response
@@ -142,10 +147,6 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 			int32_t new_val = mul_16x16(euler[i], abs(euler[i]));
 			euler[i] = (int16_t) (new_val >>= 13);		// / 8192
 		}
-
-		//dprintf("%d %d %d\n", euler[0], euler[1], euler[2]);
-		
-		//dzlimit = 39.0 * pSettings->fact_x * pSettings->autocenter;
 	}
 	
 	// apply the axis factors
@@ -160,12 +161,6 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 
 		euler[i] = (int16_t) new_val;
 	}
-}
-
-void do_auto_center(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings)
-{
-	// TODO
-	euler, pSettings;
 }
 
 void do_mag(int16_t* mag, int16_t* euler)
@@ -194,7 +189,7 @@ void do_mag(int16_t* mag, int16_t* euler)
 	{
 		static int16_t consec_count = 0;
 		static bool behind = false;
-		int16_t mag_delta = mag_heading - euler[0];
+		int16_t mag_delta = mag_heading - euler[YAW];
 		int16_t correction;
 
 		// EDtracker quote:
@@ -204,14 +199,14 @@ void do_mag(int16_t* mag, int16_t* euler)
 		if (mag_delta > 0)
 		{
 			if (behind)
-				consec_count--;
+				--consec_count;
 			else
 				consec_count = 0;
 			
 			behind = true;
 		} else {
 			if (!behind)
-				consec_count++;
+				++consec_count;
 			else
 				consec_count = 0;
 			
@@ -225,7 +220,7 @@ void do_mag(int16_t* mag, int16_t* euler)
 		{
 			//dprintf("delta=%6d  corr=%6d\n", mag_delta, correction);
 			//dprintf("heading=%6d  yaw=%6d  delta=%6d\n", mag_heading, euler[0], mag_delta);
-			dprintf("%6d  %6d  %6d\n", mag_heading, euler[0], mag_delta);
+			dprintf("%6d  %6d  %6d\n", mag_heading, euler[YAW], mag_delta);
 		}
 		//euler[1] = mag_heading;
 		//euler[2] = mag_delta;
@@ -263,6 +258,52 @@ void do_mag(int16_t* mag, int16_t* euler)
 	*/
 }
 
+#define SAMPLES_FOR_AUTOCENTER_BITS		6
+
+void do_auto_center(int16_t* euler, uint8_t autocenter)
+{
+	static int16_t ticks_in_zone = 0;
+	static int16_t last_yaw = 0;
+	static int32_t sum_yaw = 0;
+	static int16_t autocenter_correction = 0;
+	
+	int16_t yaw_limit = autocenter * 300;
+
+	// have we had a reset?
+	if (sample_cnt == 0)
+		autocenter_correction = 0;
+		
+	// apply the current auto-centering
+	euler[YAW] += autocenter_correction;
+	
+	if (abs(euler[YAW]) < yaw_limit					// if we're looking ahead, give or take
+			&&  abs(euler[YAW] - last_yaw) < 300	// and not moving
+			&&  abs(euler[PITCH]) < 1000)			// and pitch is levelish
+	{
+		// start counting
+		++ticks_in_zone;
+		sum_yaw += euler[YAW];
+	} else {
+		// stop counting
+		ticks_in_zone = 0;
+		sum_yaw = 0;
+	}
+	
+	last_yaw = euler[YAW];
+
+	// if we stayed looking ahead-ish long enough then adjust yaw offset
+	if (ticks_in_zone >= (1<<SAMPLES_FOR_AUTOCENTER_BITS))
+	{
+		dprintf("auto_center=%6d  correction %6ld\n", autocenter_correction, sum_yaw >> SAMPLES_FOR_AUTOCENTER_BITS);
+		
+		// NB this currently causes a small but visible jump in the
+		// view. Useful for debugging!
+		autocenter_correction -= sum_yaw >> SAMPLES_FOR_AUTOCENTER_BITS;
+		ticks_in_zone = 0;
+		sum_yaw = 0;
+	}
+}
+
 bool process_packet(mpu_packet_t* pckt)
 {
 	// we're getting the settings pointer here and pass it on to the functions below
@@ -281,24 +322,26 @@ bool process_packet(mpu_packet_t* pckt)
 		return false;
 	
 	// magnetometer
-	if (pckt->flags & FLAG_COMPASS_VALID)
-		do_mag(pckt->compass, euler);
+	//if (pckt->flags & FLAG_COMPASS_VALID)
+	//	do_mag(pckt->compass, euler);
 	
 	// apply the drift compensations
 	do_drift(euler, pSettings);
 
-	// save the current yaw angle after drift compensation
-	yaw_value = euler[0];
+	// save the current yaw angle after drift compensation and before auto-centering
+	yaw_value = euler[YAW];
 
-	//do_auto_center(euler, pSettings);
-	
+	// do the auto-centering if required
+	if (pSettings->autocenter)
+		do_auto_center(euler, pSettings->autocenter);
+
 	// do the axis response transformations
 	do_response(euler, pSettings);
 
 	// copy the data into the USB report
-	usb_joystick_report.x = euler[0];
-	usb_joystick_report.y = euler[1];
-	usb_joystick_report.z = euler[2];
+	usb_joystick_report.x = euler[YAW];
+	usb_joystick_report.y = euler[ROLL];
+	usb_joystick_report.z = euler[PITCH];
 
 	return true;
 }

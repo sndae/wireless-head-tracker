@@ -137,6 +137,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\dongle\reports.h" />
     <ClInclude Include="dllwrap.h" />
     <ClInclude Include="hid.h" />
     <ClInclude Include="myutils.h" />
