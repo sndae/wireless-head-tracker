@@ -27,6 +27,7 @@ bool WHTDevice::Open()
 	DWORD index, required_size;
 	SP_DEVICE_INTERFACE_DATA iface;
 	SP_DEVICE_INTERFACE_DETAIL_DATA* details;
+	std::vector<char> buff;
 	HIDD_ATTRIBUTES attrib;
 
 	HidD_GetHidGuid(&guid);
@@ -48,25 +49,21 @@ bool WHTDevice::Open()
 		SetupDiGetDeviceInterfaceDetail(info, &iface, NULL, 0, &required_size, NULL);
 
 		// allocate and clear
-		details = (SP_DEVICE_INTERFACE_DETAIL_DATA*) malloc(required_size);
-		if (details == NULL)
-			continue;
+		buff.clear();
+		buff.insert(buff.end(), required_size, '\0');
 
-		memset(details, 0, required_size);
+		details = (SP_DEVICE_INTERFACE_DETAIL_DATA*) &buff.front();
 
 		// now get the details
 		details->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
 		if (!SetupDiGetDeviceInterfaceDetail(info, &iface, details, required_size, NULL, NULL))
-		{
-			free(details);
 			continue;
-		}
 
 		// open the HID device
 		HANDLE h = CreateFile(details->DevicePath, GENERIC_READ|GENERIC_WRITE,
 						FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_EXISTING,
 						FILE_FLAG_OVERLAPPED, NULL);
-		free(details);
+
 		if (h == INVALID_HANDLE_VALUE)
 			continue;
 

@@ -533,8 +533,8 @@ void WHTDialog::SendConfigToDevice()
 	rep.autocenter = GetComboSelection(IDC_CMB_AUTOCENTER);
 
 	rep.fact[0] = GetCtrlTextInt(IDC_EDT_FACT_X);
-	rep.fact[1] = int16_t(GetCtrlTextInt(IDC_EDT_FACT_Y) * (float)4.0);
-	rep.fact[2] = int16_t(GetCtrlTextInt(IDC_EDT_FACT_Z) * (float)4.0);
+	rep.fact[1] = GetCtrlTextInt(IDC_EDT_FACT_Y);
+	rep.fact[2] = GetCtrlTextInt(IDC_EDT_FACT_Z);
 
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	device.SetFeatureReport(rep);

@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 // C++
-#include <memory>
 #include <string>
+#include <vector>
 
 // Windows
 #include <windows.h>
