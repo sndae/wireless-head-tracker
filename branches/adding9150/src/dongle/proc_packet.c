@@ -168,6 +168,10 @@ void do_mag(int16_t* mag, int16_t* euler)
 	// this is a tilt compensated heading calculation. read more here:
 	// http://www.st.com/web/en/resource/technical/document/application_note/CD00269797.pdf
 	
+	if (dbgEmpty())
+		dprintf("p(%d,%d,%d);\n", mag[0], mag[1], mag[2]);
+	
+	/*
 	int32_t Xh, Yh;
 	int16_t sinroll, cosroll;
 	int16_t sinpitch, cospitch;
@@ -229,6 +233,7 @@ void do_mag(int16_t* mag, int16_t* euler)
 		// DMP still suffers from 'warm-up' issues and this helps greatly.
 		//xDriftComp = xDriftComp + (float)(consecCount) * 0.00001;
 	}
+	*/
 	
 	/*
 	{
@@ -294,7 +299,7 @@ void do_auto_center(int16_t* euler, uint8_t autocenter)
 	// if we stayed looking ahead-ish long enough then adjust yaw offset
 	if (ticks_in_zone >= (1<<SAMPLES_FOR_AUTOCENTER_BITS))
 	{
-		dprintf("auto_center=%6d  correction %6ld\n", autocenter_correction, sum_yaw >> SAMPLES_FOR_AUTOCENTER_BITS);
+		//dprintf("auto_center=%6d  correction %6ld\n", autocenter_correction, sum_yaw >> SAMPLES_FOR_AUTOCENTER_BITS);
 		
 		// NB this currently causes a small but visible jump in the
 		// view. Useful for debugging!
@@ -322,8 +327,8 @@ bool process_packet(mpu_packet_t* pckt)
 		return false;
 	
 	// magnetometer
-	//if (pckt->flags & FLAG_COMPASS_VALID)
-	//	do_mag(pckt->compass, euler);
+	if (pckt->flags & FLAG_COMPASS_VALID)
+		do_mag(pckt->compass, euler);
 	
 	// apply the drift compensations
 	do_drift(euler, pSettings);
