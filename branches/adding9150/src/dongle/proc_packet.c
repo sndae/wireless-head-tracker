@@ -17,7 +17,7 @@ bool should_recenter = true;
 int32_t sample_cnt;
 int32_t yaw_value;
 
-// these are indexes of the euler[] array
+// these are indexes of the euler[] and center[] arrays
 #define YAW		0
 #define ROLL	1
 #define PITCH	2
@@ -28,7 +28,8 @@ void save_x_drift_comp(void)
 	FeatRep_DongleSettings __xdata new_settings;
 	memcpy(&new_settings, get_dongle_settings(), sizeof(FeatRep_DongleSettings));
 
-	new_settings.drift_per_1k += (int16_t)((1024 * yaw_value) / sample_cnt);
+	// << 10 is identical to * 1024
+	new_settings.drift_per_1k += (int16_t)((yaw_value << 10) / sample_cnt);
 
 	save_dongle_settings(&new_settings);
 
@@ -153,29 +154,25 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 	for (i = 0; i < 3; ++i)
 	{
 		int32_t new_val = mul_16x16(euler[i], pSettings->fact[i]);
-		
-		if (new_val < -32768)
-			new_val = -32768;
-		else if (new_val > 32767)
-			new_val = 32767;
 
-		euler[i] = (int16_t) new_val;
+		if (new_val < -32768)
+			euler[i] = -32768;
+		else if (new_val > 32767)
+			euler[i] = 32767;
+		else
+			euler[i] = (int16_t) new_val;
 	}
 }
 
-void do_mag(int16_t* mag, int16_t* euler)
+int16_t get_mag_heading(int16_t* mag, int16_t* euler)
 {
 	// this is a tilt compensated heading calculation. read more here:
 	// http://www.st.com/web/en/resource/technical/document/application_note/CD00269797.pdf
-	
-	if (dbgEmpty())
-		dprintf("p(%d,%d,%d);\n", mag[0], mag[1], mag[2]);
-	
-	/*
+
 	int32_t Xh, Yh;
 	int16_t sinroll, cosroll;
 	int16_t sinpitch, cospitch;
-	int16_t sinroll_pitch, mag_heading;
+	int16_t sinroll_pitch;
 
 	isincos_cord(euler[1], &cosroll, &sinroll);
 	isincos_cord(euler[2], &cospitch, &sinpitch);
@@ -187,80 +184,79 @@ void do_mag(int16_t* mag, int16_t* euler)
 	
 	Yh = mul_16x16(mag[0], sinroll_pitch) + mul_16x16(mag[1], cosroll) - mul_16x16(mag[2], sinroll_pitch);
 	
-	mag_heading = -iatan2_cord(Yh, Xh);
-	//mag_heading = -iatan2_cord(mag[1], mag[0]);
-	
-	{
-		static int16_t consec_count = 0;
-		static bool behind = false;
-		int16_t mag_delta = mag_heading - euler[YAW];
-		int16_t correction;
+	return -iatan2_cord(Yh, Xh);
+}
 
-		// EDtracker quote:
-		// Mag is so noisy on 9150 we just ask 'is Mag ahead or behind DMP'
-		// and keep a count of consecutive behinds or aheads and use this 
-		// to adjust our DMP heading and also tweak the DMP drift
-		if (mag_delta > 0)
+// 10 seconds on 50Hz samples rate
+#define CALIB_MAG_HEADING_OFFSET_SAMPLES	1000
+
+void do_mag(int16_t* mag, int16_t* euler)
+{
+	static int16_t consec_count = 0;
+	static bool behind = false;
+	static int32_t mag_heading_offset = 0;
+	static uint16_t mag_head_off_cnt = 0;
+	static int16_t mag_correction = 0;
+	
+	int16_t mag_heading, mag_delta;
+
+	mag[0] -= -10;		// hard-coded for now
+	mag[1] -= -7;
+	mag[2] -= -106;
+	
+	mag_correction += mag_correction;
+	
+	mag_heading = get_mag_heading(mag, euler);
+	mag_delta = mag_heading - euler[YAW];
+
+	// have we accumulated enough samples for a magnetic heading offset?
+	if (mag_head_off_cnt < CALIB_MAG_HEADING_OFFSET_SAMPLES)
+	{
+		++mag_head_off_cnt;
+
+		mag_heading_offset += mag_delta;
+		
+		if (mag_head_off_cnt == CALIB_MAG_HEADING_OFFSET_SAMPLES)
 		{
-			if (behind)
-				--consec_count;
-			else
-				consec_count = 0;
-			
-			behind = true;
+			mag_heading_offset /= CALIB_MAG_HEADING_OFFSET_SAMPLES;
+			dprintf("mag_heading_offset=%ld\n", mag_heading_offset);
 		} else {
-			if (!behind)
-				++consec_count;
-			else
-				consec_count = 0;
-			
-			behind = false;
+			return;
 		}
-
-		// Tweek the yaw offset. 0.01 keeps the head central with no visible twitching
-		correction = mul_16x16(consec_count, abs(consec_count)) >> 6;
-		
-		if (dbgEmpty())
-		{
-			//dprintf("delta=%6d  corr=%6d\n", mag_delta, correction);
-			//dprintf("heading=%6d  yaw=%6d  delta=%6d\n", mag_heading, euler[0], mag_delta);
-			dprintf("%6d  %6d  %6d\n", mag_heading, euler[YAW], mag_delta);
-		}
-		//euler[1] = mag_heading;
-		//euler[2] = mag_delta;
-		
-		// Also tweak the overall drift compensation.
-		// DMP still suffers from 'warm-up' issues and this helps greatly.
-		//xDriftComp = xDriftComp + (float)(consecCount) * 0.00001;
 	}
-	*/
 	
-	/*
+	mag_delta -= mag_heading_offset;	// apply the heading offset
+	
+	// EDtracker quote:
+	//
+	// Mag is so noisy on 9150 we just ask 'is Mag ahead or behind DMP'
+	// and keep a count of consecutive behinds or aheads and use this 
+	// to adjust our DMP heading and also tweak the DMP drift
+	if (mag_delta > 0)
 	{
-		static int16_t hmin = 32767;
-		static int16_t hmax = -32768;
-		static int32_t hsum = 0;
-		static int16_t hcnt = 0;
+		if (behind)
+			--consec_count;
+		else
+			consec_count = 0;
 		
-		int16_t mag_diff = euler[0] - mag_heading;
+		behind = true;
+	} else {
+		if (!behind)
+			++consec_count;
+		else
+			consec_count = 0;
 		
-		if (hmin > mag_diff)		hmin = mag_diff;
-		if (hmax < mag_diff)		hmax = mag_diff;
-		
-		hsum += mag_diff;
-		
-		if (++hcnt == 100)
-		{
-			int32_t havg = hsum/hcnt;
-			dprintf("avg=%6ld min=%l6d max=%l6d rng=%6d\n", havg, hmin-havg, hmax-havg, hmax-hmin);
-			
-			hmin = 32767;
-			hmax = -32768;
-			hcnt = 0;
-			hsum = 0;
-		}
+		behind = false;
 	}
-	*/
+
+	mag_correction += (int16_t) (mul_16x16(consec_count, abs(consec_count)) / 80);
+
+	if (dbgEmpty())
+		dprintf("delta=%6d  corr=%6d  conscnt=%d\n", mag_delta, mag_correction, consec_count);
+	
+	// Also tweak the overall drift compensation.
+	// DMP still suffers from 'warm-up' issues and this helps greatly.
+	//xDriftComp = xDriftComp + (float)(consecCount) * 0.00001;
 }
 
 #define SAMPLES_FOR_AUTOCENTER_BITS		6
@@ -299,8 +295,6 @@ void do_auto_center(int16_t* euler, uint8_t autocenter)
 	// if we stayed looking ahead-ish long enough then adjust yaw offset
 	if (ticks_in_zone >= (1<<SAMPLES_FOR_AUTOCENTER_BITS))
 	{
-		//dprintf("auto_center=%6d  correction %6ld\n", autocenter_correction, sum_yaw >> SAMPLES_FOR_AUTOCENTER_BITS);
-		
 		// NB this currently causes a small but visible jump in the
 		// view. Useful for debugging!
 		autocenter_correction -= sum_yaw >> SAMPLES_FOR_AUTOCENTER_BITS;
@@ -322,13 +316,13 @@ bool process_packet(mpu_packet_t* pckt)
 	if (pckt->flags & FLAG_RECENTER)
 		recenter();
 
-	// calc and/or apply the centering offset
-	if (!do_center(euler))
-		return false;
-	
 	// magnetometer
 	if (pckt->flags & FLAG_COMPASS_VALID)
 		do_mag(pckt->compass, euler);
+
+	// calc and/or apply the centering offset
+	if (!do_center(euler))
+		return false;
 	
 	// apply the drift compensations
 	do_drift(euler, pSettings);

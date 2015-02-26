@@ -118,9 +118,6 @@ void on_get_report(void)
 				pReport->accel_bias[2] = tracker_settings.accel_bias[2];
 				pReport->rf_power = tracker_settings.rf_power;
 
-				//dprintf("%c %d %d %d\n", calib_data.is_calibrated ? 'C' : 'N',
-				//						calib_data.accel_bias[0], calib_data.accel_bias[1], calib_data.accel_bias[2]);
-				
 				break;
 			}
 			

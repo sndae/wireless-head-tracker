@@ -21,26 +21,6 @@
 #define BLOCKS_CAPACITY			((DATA_PAGE_SIZE*2) / sizeof(FeatRep_DongleSettings))
 
 /*
-void list_settings(void)
-{
-	const __xdata dongle_settings_t* pStart = DATA0_ADDR;
-	uint8_t cnt;
-	
-	dputs("------------");
-	for (cnt = 0; cnt < BLOCKS_CAPACITY; ++cnt)
-	{
-		// define PRINTF as printf_fast_f in the makefile
-		dprintf("%d %d %d %f %f %f %f %f %f\n",
-				cnt,
-				pStart[cnt].is_selfcenter, pStart[cnt].is_linear,
-				pStart[cnt].lin_fact_x, pStart[cnt].lin_fact_y, pStart[cnt].lin_fact_z,
-				pStart[cnt].exp_fact_x, pStart[cnt].exp_fact_y, pStart[cnt].exp_fact_z);
-	}
-	
-	dbgFlush();
-}
-*/
-
 __xdata FeatRep_DongleSettings default_settings =
 {
 	0,		// report_id		is_empty
@@ -49,6 +29,19 @@ __xdata FeatRep_DongleSettings default_settings =
 	0,		// is_linear - exponential
 
 	{12, 12, 12},		// factors
+	
+	0.0,	// x_drift_comp
+};
+*/
+
+__xdata FeatRep_DongleSettings default_settings =
+{
+	0,		// report_id		is_empty
+	
+	0,		// autocenter - medium
+	1,		// is_linear - exponential
+
+	{1, 1, 1},		// factors
 	
 	0.0,	// x_drift_comp
 };
