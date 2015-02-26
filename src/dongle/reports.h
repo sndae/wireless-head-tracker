@@ -76,7 +76,7 @@ enum head_tracker_commands_t
 // direction: PC -> dongle
 typedef struct
 {
-	uint8_t		report_id;		// COMMAND_REPORT_ID
+	uint8_t		report_id;		// == COMMAND_REPORT_ID
 	uint8_t		command;
 } FeatRep_Command;
 
@@ -89,11 +89,11 @@ typedef struct
 // direction: dongle -> PC
 typedef struct
 {
-	uint8_t		report_id;		// TRACKER_SETTINGS_REPORT_ID
+	uint8_t		report_id;		// == TRACKER_SETTINGS_REPORT_ID
 
 	uint8_t		has_tracker_responded;
 	
-	uint8_t		is_calibrated;
+	uint8_t		is_calibrated;	// if gyro and accel have been calibrated
 
 	int16_t		gyro_bias[3];
 	int16_t		accel_bias[3];
@@ -113,7 +113,7 @@ typedef struct
 // direction: dongle -> PC
 typedef struct
 {
-	uint8_t		report_id;		// STATUS_REPORT_ID
+	uint8_t		report_id;		// == STATUS_REPORT_ID
 
 	uint8_t		num_packets;	// number of packets received in the last second
 	
@@ -128,18 +128,6 @@ typedef struct
 // *****************************************************************
 // *****************************************************************
 // *****************************************************************
-
-#define STATUS_REPORT_ID				5
-
-// direction: dongle -> PC
-typedef struct
-{
-	uint8_t		report_id;		// STATUS_REPORT_ID
-
-	uint8_t		flags;			// 0x01 - increase drift comp by 0.1
-								// 0x02 - decrease drift comp by 0.1
-
-} FeatRep_ManualDrift;
 
 #ifdef _MSC_VER
 # pragma pack(pop)
