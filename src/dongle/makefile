@@ -12,7 +12,7 @@ endif
 
 TARGET    = whtdngl
 CFLAGS    = --model-large -I../tracker -I../mcu-lib -DNRF24LU1
-CFLAGS   += -DDBG_MODE=2 -DPRINTF=printf_fast_f
+CFLAGS   += -DDBG_MODE=0 -DPRINTF=printf_fast_f
 LFLAGS    = --code-loc 0x0000 --code-size $(CODE_SIZE) --xram-loc 0x8000 --xram-size 0x800
 ASFLAGS   = -plosgff
 RELFILES  = dongle.rel proc_packet.rel usb_desc.rel rf_dngl.rel usb.rel reports.rel mdu.rel math_cordic.rel

@@ -164,7 +164,7 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 	}
 }
 
-int16_t get_mag_heading(int16_t* mag, int16_t* euler)
+int16_t calc_mag_heading(int16_t* mag, int16_t* euler)
 {
 	// this is a tilt compensated heading calculation. read more here:
 	// http://www.st.com/web/en/resource/technical/document/application_note/CD00269797.pdf
@@ -188,7 +188,7 @@ int16_t get_mag_heading(int16_t* mag, int16_t* euler)
 }
 
 // 10 seconds on 50Hz samples rate
-#define CALIB_MAG_HEADING_OFFSET_SAMPLES	1000
+#define CALIB_MAG_HEADING_OFFSET_SAMPLES	200
 
 void do_mag(int16_t* mag, int16_t* euler)
 {
@@ -200,13 +200,36 @@ void do_mag(int16_t* mag, int16_t* euler)
 	
 	int16_t mag_heading, mag_delta;
 
-	mag[0] -= -10;		// hard-coded for now
-	mag[1] -= -7;
-	mag[2] -= -106;
+	/*
+	{
+		static int16_t magmin[3] = {32767, 32767, 32767};
+		static int16_t magmax[3] = {-32768, -32768, -32768};
+		uint8_t i;
+		bool changed = false;
+		
+		for (i = 0; i < 3; ++i)
+		{
+			if (magmin[i] > mag[i])		magmin[i] = mag[i], changed = true;
+			if (magmax[i] < mag[i])		magmax[i] = mag[i], changed = true;
+		}
+
+		if (changed)
+		{
+			dputs("--------------");
+			for (i = 0; i < 3; ++i)
+				dprintf("%d  %5d  %5d  %5d\n", i, magmin[i], magmax[i], (magmin[i] + magmax[i]) / 2);
+		}
+	}
+	*/
 	
-	mag_correction += mag_correction;
+	mag[0] -= -20;		// hard-coded for now
+	mag[1] -= -14;
+	mag[2] -= -105;
 	
-	mag_heading = get_mag_heading(mag, euler);
+	// apply the correction
+	euler[YAW] -= mag_correction;
+	
+	mag_heading = calc_mag_heading(mag, euler);
 	mag_delta = mag_heading - euler[YAW];
 
 	// have we accumulated enough samples for a magnetic heading offset?
@@ -252,7 +275,11 @@ void do_mag(int16_t* mag, int16_t* euler)
 	mag_correction += (int16_t) (mul_16x16(consec_count, abs(consec_count)) / 80);
 
 	if (dbgEmpty())
-		dprintf("delta=%6d  corr=%6d  conscnt=%d\n", mag_delta, mag_correction, consec_count);
+		dprintf("delta=%6d  corr=%6d  conscnt=%4d\n", mag_delta, mag_correction, consec_count);
+	
+	//euler[0] = ;
+	euler[1] = mag_heading;
+	euler[2] = mag_delta;
 	
 	// Also tweak the overall drift compensation.
 	// DMP still suffers from 'warm-up' issues and this helps greatly.
@@ -317,8 +344,8 @@ bool process_packet(mpu_packet_t* pckt)
 		recenter();
 
 	// magnetometer
-	if (pckt->flags & FLAG_COMPASS_VALID)
-		do_mag(pckt->compass, euler);
+	//if (pckt->flags & FLAG_COMPASS_VALID)
+	//	do_mag(pckt->compass, euler);
 
 	// calc and/or apply the centering offset
 	if (!do_center(euler))
