@@ -20,7 +20,6 @@
 // how many settings blocks can we store in the two pages
 #define BLOCKS_CAPACITY			((DATA_PAGE_SIZE*2) / sizeof(FeatRep_DongleSettings))
 
-/*
 __xdata FeatRep_DongleSettings default_settings =
 {
 	0,		// report_id		is_empty
@@ -32,8 +31,8 @@ __xdata FeatRep_DongleSettings default_settings =
 	
 	0.0,	// x_drift_comp
 };
-*/
 
+/*
 __xdata FeatRep_DongleSettings default_settings =
 {
 	0,		// report_id		is_empty
@@ -45,6 +44,7 @@ __xdata FeatRep_DongleSettings default_settings =
 	
 	0.0,	// x_drift_comp
 };
+*/
 
 void flash_page_erase(uint8_t pn)
 {
