@@ -22,6 +22,11 @@ int32_t yaw_value;
 #define ROLL	1
 #define PITCH	2
 
+#if DBG_MODE
+bool log_now = false;
+uint8_t cnt_dropped = 0;
+#endif
+
 void save_x_drift_comp(void)
 {
 	// get the current settings
@@ -117,11 +122,24 @@ bool do_center(int16_t* euler)
 		is_center_valid = true;
 	}
 
+#if DBG_MODE
+	if (log_now)
+	{
+		dprintf("smpl=%ld\n", sample_cnt);
+		dprintf("cntr=%d,%d,%d\n", center[0], center[1], center[2]);
+	}
+#endif	
+	
 	// correct the euler angles
 	if (is_center_valid)
 		for (i = 0; i < 3; ++i)
 			euler[i] -= center[i];
 
+#if DBG_MODE
+	if (log_now)
+		dprintf("acnt=%d,%d,%d\n", euler[0], euler[1], euler[2]);
+#endif
+		
 	return is_center_valid;
 }
 
@@ -131,6 +149,14 @@ void do_drift(int16_t* euler, const FeatRep_DongleSettings __xdata * pSettings)
 	int16_t compensate = (sample_cnt * pSettings->drift_per_1k) >> 10;
 
 	euler[YAW] -= compensate;
+
+#if DBG_MODE
+	if (log_now)
+	{
+		dprintf("drftcmp=%d\n", compensate);
+		dprintf("yaw=%d\n", euler[YAW]);
+	}
+#endif
 }
 
 // do the axis response
@@ -146,9 +172,20 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 			// multi-point custom axis responses
 
 			int32_t new_val = mul_16x16(euler[i], abs(euler[i]));
-			euler[i] = (int16_t) (new_val >>= 13);		// / 8192
+			new_val >>= 13;		// / 8192
+			if (new_val > 32767)
+				euler[i] = 32767;
+			else if (new_val < -32768)
+				euler[i] = -32768;
+			else
+				euler[i] = (int16_t) new_val;
 		}
 	}
+	
+#if DBG_MODE
+	if (log_now)
+		dprintf("exp=%d,%d,%d\n", euler[0], euler[1], euler[2]);
+#endif
 	
 	// apply the axis factors
 	for (i = 0; i < 3; ++i)
@@ -162,6 +199,11 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 		else
 			euler[i] = (int16_t) new_val;
 	}
+	
+#if DBG_MODE
+	if (log_now)
+		dprintf("fact=%d,%d,%d\n", euler[0], euler[1], euler[2]);
+#endif
 }
 
 int16_t calc_mag_heading(int16_t* mag, int16_t* euler)
@@ -295,7 +337,7 @@ void do_auto_center(int16_t* euler, uint8_t autocenter)
 	static int32_t sum_yaw = 0;
 	static int16_t autocenter_correction = 0;
 	
-	int16_t yaw_limit = autocenter * 300;
+	const int16_t yaw_limit = autocenter * 300;
 
 	// have we had a reset?
 	if (sample_cnt == 0)
@@ -304,6 +346,11 @@ void do_auto_center(int16_t* euler, uint8_t autocenter)
 	// apply the current auto-centering
 	euler[YAW] += autocenter_correction;
 	
+#if DBG_MODE
+	if (log_now)
+		dprintf("ac=%d\nyaw=%d\n", autocenter_correction, euler[YAW]);
+#endif
+		
 	if (abs(euler[YAW]) < yaw_limit					// if we're looking ahead, give or take
 			&&  abs(euler[YAW] - last_yaw) < 300	// and not moving
 			&&  abs(euler[PITCH]) < 1000)			// and pitch is levelish
@@ -338,7 +385,23 @@ bool process_packet(mpu_packet_t* pckt)
 	
 	int16_t euler[3];		// the resulting angles
 
+#if DBG_MODE
+	log_now	= dbgEmpty();
+	if (log_now)
+	{
+		dprintf("------- %d\n", cnt_dropped);
+		cnt_dropped = 0;
+	} else {
+		++cnt_dropped;
+	}
+#endif
+
 	quat2euler(pckt->quat, euler);	// convert quaternions to euler angles
+	
+#if DBG_MODE
+	if (log_now)
+		dprintf("raw=%d,%d,%d\n", euler[0], euler[1], euler[2]);
+#endif	
 
 	if (pckt->flags & FLAG_RECENTER)
 		recenter();
@@ -364,6 +427,11 @@ bool process_packet(mpu_packet_t* pckt)
 	// do the axis response transformations
 	do_response(euler, pSettings);
 
+#if DBG_MODE
+	if (log_now)
+		dprintf("final=%d,%d,%d\n", euler[0], euler[1], euler[2]);
+#endif	
+	
 	// copy the data into the USB report
 	usb_joystick_report.x = euler[YAW];
 	usb_joystick_report.y = euler[ROLL];
