@@ -129,6 +129,29 @@ typedef struct
 // *****************************************************************
 // *****************************************************************
 
+#define MAG_RAW_DATA_REPORT_ID		6
+
+// direction: dongle -> PC
+typedef struct
+{
+	int16_t		x;
+	int16_t		y;
+	int16_t		z;
+} mag_sample_t;
+
+typedef struct
+{
+	uint8_t			report_id;		// == MAG_RAW_DATA_REPORT_ID
+	
+	uint8_t			num_samples;
+	mag_sample_t	mag[10];
+
+} FeatRep_MagRawData;
+
+// *****************************************************************
+// *****************************************************************
+// *****************************************************************
+
 #ifdef _MSC_VER
 # pragma pack(pop)
 #endif

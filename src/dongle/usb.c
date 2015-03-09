@@ -42,7 +42,7 @@ void usbInit(void)
 	usbcs &= ~0x08;
 	
 	// set up interrupts and clear interrupt flags
-	usbien = 0x1B;	// bit	description
+	usbien = 0x1b;	// bit	description
 					// 5-7	unused
 					// 4	uresie	USB reset interrupt enable
 					// 3	suspie	USB suspend interrupt enable

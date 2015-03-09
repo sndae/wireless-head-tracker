@@ -7,6 +7,7 @@
 #include "nrfdbg.h"
 
 #include "rf_protocol.h"
+#include "reports.h"
 #include "proc_packet.h"
 #include "math_cordic.h"
 #include "mdu.h"
@@ -16,6 +17,8 @@
 bool should_recenter = true;
 int32_t sample_cnt;
 int32_t yaw_value;
+
+FeatRep_MagRawData mag_data_samples;
 
 // these are indexes of the euler[] and center[] arrays
 #define YAW		0
@@ -264,6 +267,15 @@ void do_mag(int16_t* mag, int16_t* euler)
 	}
 	*/
 	
+	if (mag_data_samples.num_samples < 10)
+	{
+		mag_data_samples.mag[0].x = mag[0];
+		mag_data_samples.mag[1].y = mag[1];
+		mag_data_samples.mag[2].z = mag[2];
+
+		mag_data_samples.num_samples++;
+	}
+	
 	mag[0] -= -20;		// hard-coded for now
 	mag[1] -= -14;
 	mag[2] -= -105;
@@ -320,8 +332,8 @@ void do_mag(int16_t* mag, int16_t* euler)
 		dprintf("delta=%6d  corr=%6d  conscnt=%4d\n", mag_delta, mag_correction, consec_count);
 	
 	//euler[0] = ;
-	euler[1] = mag_heading;
-	euler[2] = mag_delta;
+	//euler[1] = mag_heading;
+	//euler[2] = mag_delta;
 	
 	// Also tweak the overall drift compensation.
 	// DMP still suffers from 'warm-up' issues and this helps greatly.
