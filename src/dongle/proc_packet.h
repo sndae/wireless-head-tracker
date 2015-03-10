@@ -6,7 +6,7 @@ bool process_packet(mpu_packet_t* pckt);
 // drift compensation configuration
 void save_x_drift_comp(void);
 
-// recenter initiated from the PC
+// recenter requested
 void recenter(void);
 
 extern int32_t sample_cnt;
