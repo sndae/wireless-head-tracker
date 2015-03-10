@@ -269,9 +269,9 @@ void do_mag(int16_t* mag, int16_t* euler)
 	
 	if (mag_data_samples.num_samples < 10)
 	{
-		mag_data_samples.mag[0].x = mag[0];
-		mag_data_samples.mag[1].y = mag[1];
-		mag_data_samples.mag[2].z = mag[2];
+		mag_data_samples.mag[mag_data_samples.num_samples].x = mag[0];
+		mag_data_samples.mag[mag_data_samples.num_samples].y = mag[1];
+		mag_data_samples.mag[mag_data_samples.num_samples].z = mag[2];
 
 		mag_data_samples.num_samples++;
 	}
@@ -419,8 +419,8 @@ bool process_packet(mpu_packet_t* pckt)
 		recenter();
 
 	// magnetometer
-	//if (pckt->flags & FLAG_COMPASS_VALID)
-	//	do_mag(pckt->compass, euler);
+	if (pckt->flags & FLAG_COMPASS_VALID)
+		do_mag(pckt->compass, euler);
 
 	// calc and/or apply the centering offset
 	if (!do_center(euler))

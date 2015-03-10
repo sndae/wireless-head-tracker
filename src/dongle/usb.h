@@ -207,7 +207,7 @@ typedef struct
 	usb_ep_desc_t	ep1in;
 } usb_conf_desc_joystick_t;
 
-#define JOYSTICK_HID_REPORT_DESC_SIZE	116
+#define JOYSTICK_HID_REPORT_DESC_SIZE	137
 #define USB_STRING_DESC_COUNT			4
 
 extern __code const usb_conf_desc_joystick_t usb_conf_desc;
