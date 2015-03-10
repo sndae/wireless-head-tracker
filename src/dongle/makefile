@@ -1,6 +1,6 @@
 # set FLASH_SIZE_KB to either 16 or 32
 
-FLASH_SIZE_KB = 32
+FLASH_SIZE_KB = 16
 
 ifeq ($(FLASH_SIZE_KB),32)
     CODE_SIZE = 0x8000

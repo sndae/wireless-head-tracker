@@ -39,6 +39,9 @@
     <ClInclude Include="..\dongle\reports.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="my_win.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WHTConfig.rc">
@@ -62,6 +65,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="wht_dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="my_win.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
