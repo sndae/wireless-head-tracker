@@ -154,7 +154,7 @@ void on_get_report(void)
 		mag_data_samples.report_id = MAG_RAW_DATA_REPORT_ID;
 		memcpy(in0buf, &mag_data_samples, sizeof(mag_data_samples));
 
-		// send the data
+		// send the data on it's way
 		in0bc = sizeof(mag_data_samples);
 		
 		mag_data_samples.num_samples = 0;

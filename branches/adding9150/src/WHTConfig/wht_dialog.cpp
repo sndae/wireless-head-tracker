@@ -300,6 +300,18 @@ void WHTDialog::OnTimer()
 		SetCtrlTextInt(IDC_LBL_AXIS_NUM_Y, rep.y);
 		SetCtrlTextInt(IDC_LBL_AXIS_NUM_Z, rep.z);
 
+		/*
+		// get raw the mag data
+		FeatRep_MagRawData repMagData;
+		repMagData.report_id = MAG_RAW_DATA_REPORT_ID;
+		device.GetFeatureReport(repMagData);
+
+		debug(int2str(repMagData.num_samples) + L" samples ----------------");
+
+		for (int i = 0; i < repMagData.num_samples; ++i)
+			debug(int2str(repMagData.mag[i].x) + L"," + int2str(repMagData.mag[i].y) + L"," + int2str(repMagData.mag[i].z));
+		*/
+
 		// get the current status
 		FeatRep_Status repStatus;
 		repStatus.report_id = STATUS_REPORT_ID;
