@@ -3,29 +3,23 @@
 // undefine to enable minimize to tray
 //#define MINIMIZE_TO_TRAY
 
-class WHTDialog
+class WHTDialog: public Dialog
 {
 private:
-	HWND		hDialog;
-	HICON		hIconSmall;
-	HICON		hIconBig;
-	WHTDevice	device;
+	HICON		_hIconSmall;
+	HICON		_hIconBig;
+	WHTDevice	_device;
 
-	bool		isConfigChanged;
-	bool		autoConnect;
-	bool		isPowerChanged;
-	bool		ignoreNotifications;
-	bool		isTrackerFound;
-	int			readCalibrationCnt;
+	bool		_isConfigChanged;
+	bool		_autoConnect;
+	bool		_isPowerChanged;
+	bool		_ignoreNotifications;
+	bool		_isTrackerFound;
+	int			_readCalibrationCnt;
 
 	void ReadConfigFromDevice();
 	void ReadTrackerSettings();
 	void SendConfigToDevice();
-
-	HWND GetCtrl(int ctrl_id)
-	{
-		return GetDlgItem(hDialog, ctrl_id);
-	}
 
 	void InitStatusbar();
 	void SetStatusbarText(int part, const std::wstring& text)
@@ -66,12 +60,12 @@ private:
 
 	void SetCheckState(int ctrl_id, bool new_state)
 	{
-		CheckDlgButton(hDialog, ctrl_id, new_state ? BST_CHECKED : BST_UNCHECKED);
+		CheckDlgButton(_hWnd, ctrl_id, new_state ? BST_CHECKED : BST_UNCHECKED);
 	}
 
 	bool GetCheckState(int ctrl_id)
 	{
-		return IsDlgButtonChecked(hDialog, ctrl_id) == BST_CHECKED;
+		return IsDlgButtonChecked(_hWnd, ctrl_id) == BST_CHECKED;
 	}
 
 #ifdef MINIMIZE_TO_TRAY
@@ -93,16 +87,20 @@ private:
 
 #endif
 
-	BOOL OnMessage(int message, WPARAM wParam, LPARAM lParam);
-	void OnCommand(int ctrl_id, int notification);
-	void OnTimer();
-
 	bool ConnectDongle();
 	void ChangeConnectedStateUI();
 
 public:
-	explicit WHTDialog(HWND hDlg);
-	~WHTDialog();
+	WHTDialog();
+	virtual ~WHTDialog()		{}
 
-	static BOOL CALLBACK MyDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam);
+	virtual void OnInit();
+	
+	virtual void OnDestroy()
+	{
+		::PostQuitMessage(0);
+	}
+
+	virtual void OnTimer(int timerID);
+	virtual void OnControl(int ctrlID, int notifyID, HWND hWndCtrl);
 };
