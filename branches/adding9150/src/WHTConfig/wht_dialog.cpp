@@ -7,10 +7,6 @@
 #include "my_win.h"
 #include "wht_dialog.h"
 
-#ifdef MINIMIZE_TO_TRAY
-# define WM_TRAYNOTIFY		(WM_APP+1)
-#endif
-
 #define WIDEN2(x)		L ## x
 #define WIDEN(x)		WIDEN2(x)
 
@@ -38,37 +34,73 @@ void WHTDialog::OnInit()
 	_hIconSmall = (HICON) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON), IMAGE_ICON, 16, 16, LR_SHARED);
 	SendMessage(_hWnd, WM_SETICON, ICON_SMALL, (LPARAM) _hIconSmall);
 
+	// setup our controls
+	_cmb_axis_response.SetHandle(GetCtrl(IDC_CMB_AXIS_RESPONSE));
+	_cmb_autocenter.SetHandle(GetCtrl(IDC_CMB_AUTOCENTER));
+	_cmb_rf_power.SetHandle(GetCtrl(IDC_CMB_RF_POWER));
+
+	_prg_axis_x.SetHandle(GetCtrl(IDC_PRG_AXIS_X));
+	_prg_axis_y.SetHandle(GetCtrl(IDC_PRG_AXIS_Y));
+	_prg_axis_z.SetHandle(GetCtrl(IDC_PRG_AXIS_Z));
+
+	_lbl_axis_num_x.SetHandle(GetCtrl(IDC_LBL_AXIS_NUM_X));
+	_lbl_axis_num_y.SetHandle(GetCtrl(IDC_LBL_AXIS_NUM_Y));
+	_lbl_axis_num_z.SetHandle(GetCtrl(IDC_LBL_AXIS_NUM_Z));
+
+	_edt_fact_x.SetHandle(GetCtrl(IDC_EDT_FACT_X));
+	_edt_fact_y.SetHandle(GetCtrl(IDC_EDT_FACT_Y));
+	_edt_fact_z.SetHandle(GetCtrl(IDC_EDT_FACT_Z));
+
+	_lbl_new_drift_comp.SetHandle(GetCtrl(IDC_LBL_NEW_DRIFT_COMP));
+	_lbl_packets_sum.SetHandle(GetCtrl(IDC_LBL_PACKETS_SUM));
+	_lbl_calib_status.SetHandle(GetCtrl(IDC_LBL_CALIB_STATUS));
+
+	_lbl_gyro_bias_x.SetHandle(GetCtrl(IDC_LBL_GYRO_BIAS_X));
+	_lbl_gyro_bias_y.SetHandle(GetCtrl(IDC_LBL_GYRO_BIAS_Y));
+	_lbl_gyro_bias_z.SetHandle(GetCtrl(IDC_LBL_GYRO_BIAS_Z));
+
+	_lbl_accel_bias_x.SetHandle(GetCtrl(IDC_LBL_ACCEL_BIAS_X));
+	_lbl_accel_bias_y.SetHandle(GetCtrl(IDC_LBL_ACCEL_BIAS_Y));
+	_lbl_accel_bias_z.SetHandle(GetCtrl(IDC_LBL_ACCEL_BIAS_Z));
+
+	_status_bar.SetHandle(GetCtrl(IDC_STATUS_BAR));
+
 	// setup the progress bar ranges
-	SendMessage(GetCtrl(IDC_PRG_AXIS_X), PBM_SETRANGE, 0, MAKELPARAM(0, 0xffff));
-	SendMessage(GetCtrl(IDC_PRG_AXIS_Y), PBM_SETRANGE, 0, MAKELPARAM(0, 0xffff));
-	SendMessage(GetCtrl(IDC_PRG_AXIS_Z), PBM_SETRANGE, 0, MAKELPARAM(0, 0xffff));
+	_prg_axis_x.SetRange(0, 0xffff);
+	_prg_axis_y.SetRange(0, 0xffff);
+	_prg_axis_z.SetRange(0, 0xffff);
 
-	// start the timer
-	SetTimer(_hWnd, 1, 100, NULL);	// 100ms which is 10 Hz
+	// init the combo boxes
+	_cmb_axis_response.AddString(L"Exponential");
+	_cmb_axis_response.AddString(L"Linear");
 
-	// init the the axis response combo box
-	AddComboString(IDC_CMB_AXIS_RESPONSE, L"Exponential");
-	AddComboString(IDC_CMB_AXIS_RESPONSE, L"Linear");
-	//SetComboSelection(IDC_CMB_AXIS_RESPONSE, 0);
+	_cmb_autocenter.AddString(L"Off");
+	_cmb_autocenter.AddString(L"Light");
+	_cmb_autocenter.AddString(L"Medium");
+	_cmb_autocenter.AddString(L"Heavy");
 
-	AddComboString(IDC_CMB_AUTOCENTER, L"Off");
-	AddComboString(IDC_CMB_AUTOCENTER, L"Light");
-	AddComboString(IDC_CMB_AUTOCENTER, L"Medium");
-	AddComboString(IDC_CMB_AUTOCENTER, L"Heavy");
-	//SetComboSelection(IDC_CMB_AUTOCENTER, 0);
-
-	AddComboString(IDC_CMB_RF_POWER, L"Lowest");
-	AddComboString(IDC_CMB_RF_POWER, L"Lower");
-	AddComboString(IDC_CMB_RF_POWER, L"Higher");
-	AddComboString(IDC_CMB_RF_POWER, L"Highest");
+	_cmb_rf_power.AddString(L"Lowest");
+	_cmb_rf_power.AddString(L"Lower");
+	_cmb_rf_power.AddString(L"Higher");
+	_cmb_rf_power.AddString(L"Highest");
 
 	// disable the controls since we're not connected to the dongle yet
 	ChangeConnectedStateUI();
 
-	// setup the status bar
-	InitStatusbar();
+	// setup the status bar parts
+	const int NUM_PARTS = 4;
+	int parts[NUM_PARTS];
+	parts[0] = 110;
+	parts[1] = 230;
+	parts[2] = 350;
+	parts[3] = -1;
 
-	SetStatusbarText(STATBAR_VERSION, WIDEN(__DATE__) L" " WIDEN(__TIME__));
+	_status_bar.SetParts(parts, NUM_PARTS);
+
+	_status_bar.SetPartText(STATBAR_VERSION, WIDEN(__DATE__) L" " WIDEN(__TIME__));
+
+	// start the timer
+	::SetTimer(_hWnd, 1, 100, NULL);	// 100ms which is 10 Hz
 }
 
 /*
@@ -135,13 +167,13 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		_device.SetFeatureReport(rep);
 
 		// clear the calibration fields
-		SetCtrlText(IDC_LBL_CALIB_STATUS, L"Calibrating...");
-		ClearCtrlText(IDC_LBL_GYRO_BIAS_X);
-		ClearCtrlText(IDC_LBL_GYRO_BIAS_Y);
-		ClearCtrlText(IDC_LBL_GYRO_BIAS_Z);
-		ClearCtrlText(IDC_LBL_ACCEL_BIAS_X);
-		ClearCtrlText(IDC_LBL_ACCEL_BIAS_Y);
-		ClearCtrlText(IDC_LBL_ACCEL_BIAS_Z);
+		_lbl_calib_status.SetText(L"Calibrating...");
+		_lbl_gyro_bias_x.ClearText();
+		_lbl_gyro_bias_y.ClearText();
+		_lbl_gyro_bias_z.ClearText();
+		_lbl_accel_bias_x.ClearText();
+		_lbl_accel_bias_y.ClearText();
+		_lbl_accel_bias_z.ClearText();
 
 		_readCalibrationCnt = 15;
 
@@ -241,7 +273,7 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		FeatRep_Command repReset;
 		repReset.report_id = COMMAND_REPORT_ID;
 
-		switch (GetComboSelection(IDC_CMB_RF_POWER))
+		switch (_cmb_rf_power.GetSelection())
 		{
 		case 0:		repReset.command = CMD_RF_PWR_LOWEST;		break;
 		case 1:		repReset.command = CMD_RF_PWR_LOWER;		break;
@@ -265,13 +297,13 @@ void WHTDialog::OnTimer(int timerID)
 		rep.report_id = JOYSTICK_REPORT_ID;
 		_device.GetInputReport(rep);
 
-		SendMessage(GetCtrl(IDC_PRG_AXIS_X), PBM_SETPOS, (WPARAM) rep.x + 0x8000, 0);
-		SendMessage(GetCtrl(IDC_PRG_AXIS_Y), PBM_SETPOS, (WPARAM) rep.y + 0x8000, 0);
-		SendMessage(GetCtrl(IDC_PRG_AXIS_Z), PBM_SETPOS, (WPARAM) rep.z + 0x8000, 0);
+		_prg_axis_x.SetPos(rep.x + 0x8000);
+		_prg_axis_y.SetPos(rep.y + 0x8000);
+		_prg_axis_z.SetPos(rep.z + 0x8000);
 
-		SetCtrlTextInt(IDC_LBL_AXIS_NUM_X, rep.x);
-		SetCtrlTextInt(IDC_LBL_AXIS_NUM_Y, rep.y);
-		SetCtrlTextInt(IDC_LBL_AXIS_NUM_Z, rep.z);
+		_lbl_axis_num_x.SetText(rep.x);
+		_lbl_axis_num_y.SetText(rep.y);
+		_lbl_axis_num_z.SetText(rep.z);
 
 		/*
 		// get raw the mag data
@@ -296,22 +328,22 @@ void WHTDialog::OnTimer(int timerID)
 		else
 			res = int2str(repStatus.num_packets * 2);
 
-		SetStatusbarText(STATBAR_RF_STATUS, L"RF packets: " + res + L"%");
+		_status_bar.SetPartText(STATBAR_RF_STATUS, L"RF packets: " + res + L"%");
 
 		if (repStatus.sample_cnt)
-			SetCtrlText(IDC_LBL_NEW_DRIFT_COMP, flt2str(repStatus.yaw_value / (float)repStatus.sample_cnt));
+			_lbl_new_drift_comp.SetText(repStatus.yaw_value / (float)repStatus.sample_cnt);
 		else
-			SetCtrlText(IDC_LBL_NEW_DRIFT_COMP, L"0");
+			_lbl_new_drift_comp.SetText(0);
 
-		SetCtrlText(IDC_LBL_PACKETS_SUM, int2str(repStatus.sample_cnt) + L" / " + int2str(repStatus.yaw_value));
+		_lbl_packets_sum.SetText(int2str(repStatus.sample_cnt) + L" / " + int2str(repStatus.yaw_value));
 
 		const int BUFF_SIZE = 256;
 		wchar_t buff[BUFF_SIZE];
 		swprintf_s(buff, BUFF_SIZE, L"Batt. voltage: %2.2fV", repStatus.battery_voltage / 100.0);
-		SetStatusbarText(STATBAR_VOLTAGE, buff);
+		_status_bar.SetPartText(STATBAR_VOLTAGE, buff);
 
 		swprintf_s(buff, BUFF_SIZE, L"Temperature: %2.1f°C", repStatus.temperature / 10.0);
-		SetStatusbarText(STATBAR_TEMPERATURE, buff);
+		_status_bar.SetPartText(STATBAR_TEMPERATURE, buff);
 
 		// read the calibration if needed
 		if (_readCalibrationCnt)
@@ -341,22 +373,26 @@ void WHTDialog::OnTimer(int timerID)
 
 	} else {
 
-		SendMessage(GetCtrl(IDC_PRG_AXIS_X), PBM_SETPOS, 0, 0);
-		SendMessage(GetCtrl(IDC_PRG_AXIS_Y), PBM_SETPOS, 0, 0);
-		SendMessage(GetCtrl(IDC_PRG_AXIS_Z), PBM_SETPOS, 0, 0);
+		_prg_axis_x.SetPos(0);
+		_prg_axis_y.SetPos(0);
+		_prg_axis_z.SetPos(0);
 
-		SetStatusbarText(STATBAR_RF_STATUS, L"Disconnected");
-		SetStatusbarText(STATBAR_VOLTAGE, L"Batt. voltage:");
-		SetStatusbarText(STATBAR_TEMPERATURE, L"Temperature:");
+		_status_bar.SetPartText(STATBAR_RF_STATUS, L"Disconnected");
+		_status_bar.SetPartText(STATBAR_VOLTAGE, L"Batt. voltage:");
+		_status_bar.SetPartText(STATBAR_TEMPERATURE, L"Temperature:");
 	}
 }
 
 #ifdef MINIMIZE_TO_TRAY
 
-void WHTDialog::OnMinimize()
+void WHTDialog::OnSysCommand(WPARAM wParam)
 {
-	CreateTrayIcon();
-	Hide();
+	if (wParam == SC_MINIMIZE)
+	{
+		// minimize to tray
+		CreateTrayIcon();
+		Hide();
+	}
 }
 
 void WHTDialog::CreateTrayIcon()
@@ -364,11 +400,11 @@ void WHTDialog::CreateTrayIcon()
 	NOTIFYICONDATA nid;
  
 	nid.cbSize = sizeof(NOTIFYICONDATA);
-	nid.hWnd = hDialog;
+	nid.hWnd = _hWnd;
 	nid.uID = 100;
 	nid.uVersion = NOTIFYICON_VERSION;
 	nid.uCallbackMessage = WM_TRAYNOTIFY;
-	nid.hIcon = hIconSmall;
+	nid.hIcon = _hIconSmall;
 	wcscpy_s(nid.szTip, L"Wireless Head Tracker");
 	nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
  
@@ -381,7 +417,6 @@ void WHTDialog::OnTrayNotify(LPARAM lParam)
 	{
 		Show();
 		RemoveTrayIcon();
-	//} else if (lParam == WM_RBUTTONDOWN) {
 	}
 }
 
@@ -390,11 +425,11 @@ void WHTDialog::RemoveTrayIcon()
 	NOTIFYICONDATA nid;
  
 	nid.cbSize = sizeof(NOTIFYICONDATA);
-	nid.hWnd = hDialog;
+	nid.hWnd = _hWnd;
 	nid.uID = 100;
 	nid.uVersion = NOTIFYICON_VERSION;
 	nid.uCallbackMessage = WM_TRAYNOTIFY;
-	nid.hIcon = hIconSmall;
+	nid.hIcon = _hIconSmall;
 	wcscpy_s(nid.szTip, L"Wireless Head Tracker");
 	nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
  
@@ -402,37 +437,6 @@ void WHTDialog::RemoveTrayIcon()
 }
 
 #endif
-
-void WHTDialog::InitStatusbar()
-{
-	// make the status bar parts
-	const int NUM_PARTS = 4;
-	int parts[NUM_PARTS];
-	parts[0] = 110;
-	parts[1] = 230;
-	parts[2] = 350;
-	parts[3] = -1;
-
-	SendMessage(GetCtrl(IDC_STATUS_BAR), SB_SETPARTS, NUM_PARTS, (LPARAM) parts);
-}
-
-int16_t WHTDialog::GetCtrlTextInt(int ctrl_id)
-{
-	const int BUFF_SIZE = 256;
-	wchar_t buff[BUFF_SIZE];
-	SendMessage(GetCtrl(ctrl_id), WM_GETTEXT, BUFF_SIZE, (LPARAM) buff);
-
-	return (int16_t) _wtoi(buff);
-}
-
-float WHTDialog::GetCtrlTextFloat(int ctrl_id)
-{
-	const int BUFF_SIZE = 256;
-	wchar_t buff[BUFF_SIZE];
-	SendMessage(GetCtrl(ctrl_id), WM_GETTEXT, BUFF_SIZE, (LPARAM) buff);
-
-	return (float) _wtof(buff);
-}
 
 void WHTDialog::ReadConfigFromDevice()
 {
@@ -444,8 +448,8 @@ void WHTDialog::ReadConfigFromDevice()
 
 	_ignoreNotifications = true;
 
-	SetComboSelection(IDC_CMB_AXIS_RESPONSE, rep.is_linear ? 1 : 0);
-	SetComboSelection(IDC_CMB_AUTOCENTER, rep.autocenter);
+	_cmb_axis_response.SetSelection(rep.is_linear ? 1 : 0);
+	_cmb_autocenter.SetSelection(rep.autocenter);
 
 	SetCtrlText(IDC_EDT_FACT_X, int2str(rep.fact[0]));
 	SetCtrlText(IDC_EDT_FACT_Y, int2str(rep.fact[1]));
@@ -458,14 +462,15 @@ void WHTDialog::ReadConfigFromDevice()
 
 void WHTDialog::ReadTrackerSettings()
 {
-	ClearCtrlText(IDC_LBL_CALIB_STATUS);
-	ClearCtrlText(IDC_LBL_GYRO_BIAS_X);
-	ClearCtrlText(IDC_LBL_GYRO_BIAS_Y);
-	ClearCtrlText(IDC_LBL_GYRO_BIAS_Z);
-	ClearCtrlText(IDC_LBL_ACCEL_BIAS_X);
-	ClearCtrlText(IDC_LBL_ACCEL_BIAS_Y);
-	ClearCtrlText(IDC_LBL_ACCEL_BIAS_Z);
-	SetComboSelection(IDC_CMB_RF_POWER, -1);		// deselect
+	_lbl_calib_status.ClearText();
+	_lbl_gyro_bias_x.ClearText();
+	_lbl_gyro_bias_y.ClearText();
+	_lbl_gyro_bias_z.ClearText();
+	_lbl_accel_bias_x.ClearText();
+	_lbl_accel_bias_y.ClearText();
+	_lbl_accel_bias_z.ClearText();
+
+	_cmb_rf_power.SetSelection(-1);		// deselect
 
 	FeatRep_TrackerSettings rep;
 	rep.report_id = TRACKER_SETTINGS_REPORT_ID;
@@ -501,7 +506,7 @@ void WHTDialog::ReadTrackerSettings()
 			else if (rep.rf_power == CMD_RF_PWR_HIGHEST)
 				sel = 3;
 
-			SetComboSelection(IDC_CMB_RF_POWER, sel);
+			_cmb_rf_power.SetSelection(sel);
 
 			_ignoreNotifications = false;
 		}
@@ -514,12 +519,12 @@ void WHTDialog::SendConfigToDevice()
 {
 	FeatRep_DongleSettings rep;
 
-	rep.is_linear = GetComboSelection(IDC_CMB_AXIS_RESPONSE);
-	rep.autocenter = GetComboSelection(IDC_CMB_AUTOCENTER);
+	rep.is_linear = _cmb_axis_response.GetSelection();
+	rep.autocenter = _cmb_autocenter.GetSelection();
 
-	rep.fact[0] = GetCtrlTextInt(IDC_EDT_FACT_X);
-	rep.fact[1] = GetCtrlTextInt(IDC_EDT_FACT_Y);
-	rep.fact[2] = GetCtrlTextInt(IDC_EDT_FACT_Z);
+	rep.fact[0] = _edt_fact_x.GetInt();
+	rep.fact[1] = _edt_fact_y.GetInt();
+	rep.fact[2] = _edt_fact_z.GetInt();
 
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	_device.SetFeatureReport(rep);
