@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+#include "myutils.h"
 #include "my_win.h"
 
 LRESULT CALLBACK Dialog::DialogProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -63,6 +64,13 @@ LRESULT CALLBACK Dialog::DialogProcedure(HWND hwnd, UINT message, WPARAM wParam,
 			else
 				pDlg->OnControl(LOWORD(wParam), HIWORD(wParam), (HWND) lParam);
 
+			return TRUE;
+
+		case WM_SYSCOMMAND:
+			pDlg->OnSysCommand(wParam);
+			return FALSE;
+		case WM_TRAYNOTIFY:
+			pDlg->OnTrayNotify(lParam);
 			return TRUE;
 		}
 
