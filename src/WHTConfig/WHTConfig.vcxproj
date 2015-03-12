@@ -150,8 +150,8 @@
     <ClInclude Include="my_win.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="wht_device.h" />
     <ClInclude Include="wht_dialog.h" />
+    <ClInclude Include="wht_dongle.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WHTConfig.rc" />
@@ -169,8 +169,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="wht_device.cpp" />
     <ClCompile Include="wht_dialog.cpp" />
+    <ClCompile Include="wht_dongle.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="icons\icon.ico" />

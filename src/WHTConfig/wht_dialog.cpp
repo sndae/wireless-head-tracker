@@ -3,7 +3,7 @@
 #include "resource.h"
 #include "../dongle/reports.h"
 #include "my_utils.h"
-#include "wht_device.h"
+#include "wht_dongle.h"
 #include "my_win.h"
 #include "wht_dialog.h"
 

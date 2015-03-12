@@ -1,8 +1,9 @@
 #include "stdafx.h"
+#pragma hdrstop
 
 #include "resource.h"
 #include "hid.h"
-#include "wht_device.h"
+#include "wht_dongle.h"
 #include "my_utils.h"
 #include "my_win.h"
 #include "wht_dialog.h"

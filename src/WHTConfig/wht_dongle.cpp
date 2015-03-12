@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "wht_device.h"
+#include "wht_dongle.h"
 #include "hid.h"
 #include "my_utils.h"
 
