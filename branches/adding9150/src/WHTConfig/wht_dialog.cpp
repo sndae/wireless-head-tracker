@@ -2,7 +2,7 @@
 
 #include "resource.h"
 #include "../dongle/reports.h"
-#include "myutils.h"
+#include "my_utils.h"
 #include "wht_device.h"
 #include "my_win.h"
 #include "wht_dialog.h"
@@ -52,6 +52,7 @@ void WHTDialog::OnInit()
 	_edt_fact_z.SetHandle(GetCtrl(IDC_EDT_FACT_Z));
 
 	_lbl_new_drift_comp.SetHandle(GetCtrl(IDC_LBL_NEW_DRIFT_COMP));
+	_lbl_applied_drift_comp.SetHandle(GetCtrl(IDC_LBL_APPLIED_DRIFT_COMP));
 	_lbl_packets_sum.SetHandle(GetCtrl(IDC_LBL_PACKETS_SUM));
 	_lbl_calib_status.SetHandle(GetCtrl(IDC_LBL_CALIB_STATUS));
 
@@ -62,6 +63,16 @@ void WHTDialog::OnInit()
 	_lbl_accel_bias_x.SetHandle(GetCtrl(IDC_LBL_ACCEL_BIAS_X));
 	_lbl_accel_bias_y.SetHandle(GetCtrl(IDC_LBL_ACCEL_BIAS_Y));
 	_lbl_accel_bias_z.SetHandle(GetCtrl(IDC_LBL_ACCEL_BIAS_Z));
+
+	_btn_connect.SetHandle(GetCtrl(IDC_BTN_CONNECT));
+	_btn_calibrate.SetHandle(GetCtrl(IDC_BTN_CALIBRATE));
+	_btn_reset_drift_comp.SetHandle(GetCtrl(IDC_BTN_RESET_DRIFT_COMP));
+	_btn_save_drift_comp.SetHandle(GetCtrl(IDC_BTN_SAVE_DRIFT_COMP));
+	_btn_plus.SetHandle(GetCtrl(IDC_BTN_PLUS));
+	_btn_minus.SetHandle(GetCtrl(IDC_BTN_MINUS));
+	_btn_save_rf_power.SetHandle(GetCtrl(IDC_BTN_SAVE_RF_POWER));
+	_btn_save_axes_setup.SetHandle(GetCtrl(IDC_BTN_SAVE_AXES_SETUP));
+	_btn_compass_calibration.SetHandle(GetCtrl(IDC_BTN_COMPASS_CALIBRATION));
 
 	_status_bar.SetHandle(GetCtrl(IDC_STATUS_BAR));
 
@@ -103,60 +114,6 @@ void WHTDialog::OnInit()
 	::SetTimer(_hWnd, 1, 100, NULL);	// 100ms which is 10 Hz
 }
 
-/*
-BOOL WHTDialog::OnMessage(int message, WPARAM wParam, LPARAM lParam)
-{
-	try {
-		switch (message)
-		{
-		case WM_COMMAND:
-
-			OnCommand(LOWORD(wParam), HIWORD(wParam));
-			return FALSE;
-
-		case WM_TIMER:
-
-			OnTimer();
-			return TRUE;
-
-#ifdef MINIMIZE_TO_TRAY
-
-		case WM_SYSCOMMAND:
-
-			if (wParam == SC_MINIMIZE)
-			{
-				// minimize to tray
-				OnMinimize();
-				return TRUE;
-			}
-
-			return FALSE;
-
-		case WM_TRAYNOTIFY:
-
-			OnTrayNotify(lParam);
-			return TRUE;
-
-#endif
-
-		case WM_CLOSE:
-
-			EndDialog(hDialog, 0);
-			return TRUE;
-		}
-
-	} catch (std::wstring& e) {
-
-		device.Close();				// close the HID device
-		isConfigChanged = false;	// we're haven't changed anything since we're close
-		ChangeConnectedStateUI();	// disable controls change the UI
-
-		MessageBox(hDialog, e.c_str(), L"Exception", MB_OK | MB_ICONERROR);
-	}
-
-	return FALSE;
-}*/
-
 void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 {
 	if (ctrlID == IDC_BTN_CALIBRATE)
@@ -196,7 +153,7 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		} else {
 
 			if (!ConnectDongle())
-				MessageBox(_hWnd, L"Wireless head tracker dongle not found.", L"Error", MB_OK | MB_ICONERROR);
+				MsgBox(L"Wireless head tracker dongle not found.\nCheck if the dongle is connected to USB and try again.", L"Error", MB_OK | MB_ICONERROR);
 		}
 
 
@@ -219,7 +176,7 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		repSettings.report_id = DONGLE_SETTINGS_REPORT_ID;
 		_device.GetFeatureReport(repSettings);
 
-		SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(repSettings.drift_per_1k / float(1024)));
+		_lbl_applied_drift_comp.SetText(repSettings.drift_per_1k / float(1024));
 
 		// reset the drift calculation
 		FeatRep_Command repReset;
@@ -239,7 +196,7 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		repSettings.report_id = DONGLE_SETTINGS_REPORT_ID;
 		_device.GetFeatureReport(repSettings);
 
-		SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(repSettings.drift_per_1k / float(1024)));
+		_lbl_applied_drift_comp.SetText(repSettings.drift_per_1k / float(1024));
 
 	} else if (ctrlID == IDC_EDT_FACT_X  ||  ctrlID == IDC_EDT_FACT_Y  ||  ctrlID == IDC_EDT_FACT_Z) {
 
@@ -383,16 +340,29 @@ void WHTDialog::OnTimer(int timerID)
 	}
 }
 
+void WHTDialog::OnException(const std::wstring& str)
+{
+	_device.Close();			// close the HID device
+	_isConfigChanged = false;	// we're haven't changed anything since we're close
+	ChangeConnectedStateUI();	// disable controls change the UI
+
+	MsgBox(str, L"Exception", MB_OK | MB_ICONERROR);
+}
+
 #ifdef MINIMIZE_TO_TRAY
 
-void WHTDialog::OnSysCommand(WPARAM wParam)
+bool WHTDialog::OnSysCommand(WPARAM wParam)
 {
 	if (wParam == SC_MINIMIZE)
 	{
 		// minimize to tray
 		CreateTrayIcon();
 		Hide();
+
+		return true;
 	}
+
+	return false;
 }
 
 void WHTDialog::CreateTrayIcon()
@@ -436,7 +406,7 @@ void WHTDialog::RemoveTrayIcon()
 	Shell_NotifyIcon(NIM_DELETE, &nid);
 }
 
-#endif
+#endif	// MINIMIZE_TO_TRAY
 
 void WHTDialog::ReadConfigFromDevice()
 {
@@ -444,16 +414,16 @@ void WHTDialog::ReadConfigFromDevice()
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	_device.GetFeatureReport(rep);
 
-	SetCtrlText(IDC_LBL_APPLIED_DRIFT_COMP, flt2str(rep.drift_per_1k / float(1024)));
+	_lbl_applied_drift_comp.SetText(rep.drift_per_1k / float(1024));
 
 	_ignoreNotifications = true;
 
 	_cmb_axis_response.SetSelection(rep.is_linear ? 1 : 0);
 	_cmb_autocenter.SetSelection(rep.autocenter);
 
-	SetCtrlText(IDC_EDT_FACT_X, int2str(rep.fact[0]));
-	SetCtrlText(IDC_EDT_FACT_Y, int2str(rep.fact[1]));
-	SetCtrlText(IDC_EDT_FACT_Z, int2str(rep.fact[2]));
+	_edt_fact_x.SetText(rep.fact[0]);
+	_edt_fact_y.SetText(rep.fact[1]);
+	_edt_fact_z.SetText(rep.fact[2]);
 
 	_isConfigChanged = false;
 
@@ -478,18 +448,18 @@ void WHTDialog::ReadTrackerSettings()
 
 	if (rep.has_tracker_responded == 0)
 	{
-		SetCtrlText(IDC_LBL_CALIB_STATUS, L"Tracker not found");
+		_lbl_calib_status.SetText(L"Tracker not found");
 		_isTrackerFound = false;
 	} else {
-		SetCtrlText(IDC_LBL_CALIB_STATUS, rep.is_calibrated ? L"Calibrated" : L"Not calibrated");
+		_lbl_calib_status.SetText(rep.is_calibrated ? L"Calibrated" : L"Not calibrated");
 
-		SetCtrlText(IDC_LBL_GYRO_BIAS_X, int2str(rep.gyro_bias[0]));
-		SetCtrlText(IDC_LBL_GYRO_BIAS_Y, int2str(rep.gyro_bias[1]));
-		SetCtrlText(IDC_LBL_GYRO_BIAS_Z, int2str(rep.gyro_bias[2]));
+		_lbl_gyro_bias_x.SetText(rep.gyro_bias[0]);
+		_lbl_gyro_bias_y.SetText(rep.gyro_bias[1]);
+		_lbl_gyro_bias_z.SetText(rep.gyro_bias[2]);
 
-		SetCtrlText(IDC_LBL_ACCEL_BIAS_X, int2str(rep.accel_bias[0]));
-		SetCtrlText(IDC_LBL_ACCEL_BIAS_Y, int2str(rep.accel_bias[1]));
-		SetCtrlText(IDC_LBL_ACCEL_BIAS_Z, int2str(rep.accel_bias[2]));
+		_lbl_accel_bias_x.SetText(rep.accel_bias[0]);
+		_lbl_accel_bias_y.SetText(rep.accel_bias[1]);
+		_lbl_accel_bias_z.SetText(rep.accel_bias[2]);
 
 		// refresh if the value is not changed
 		if (!_isPowerChanged)
@@ -548,20 +518,21 @@ void WHTDialog::ChangeConnectedStateUI()
 {
 	bool is_connected = _device.IsOpen();
 
-	SetCtrlText(IDC_BTN_CONNECT, is_connected ? L"Disconnect" : L"Connect");
+	_btn_connect.SetText(is_connected ? L"Disconnect" : L"Connect");
 
-	EnableWindow(GetCtrl(IDC_BTN_CALIBRATE), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_BTN_MINUS), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_BTN_PLUS), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_BTN_RESET_DRIFT_COMP), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_BTN_SAVE_DRIFT_COMP), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_CMB_AXIS_RESPONSE), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_CMB_AUTOCENTER), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_EDT_FACT_X), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_EDT_FACT_Y), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_EDT_FACT_Z), is_connected ? TRUE : FALSE);
-	EnableWindow(GetCtrl(IDC_CMB_RF_POWER), is_connected ? TRUE : FALSE);
+	_btn_calibrate.Enable(is_connected);
+	_btn_minus.Enable(is_connected);
+	_btn_plus.Enable(is_connected);
+	_btn_reset_drift_comp.Enable(is_connected);
+	_btn_save_drift_comp.Enable(is_connected);
+	_cmb_axis_response.Enable(is_connected);
+	_cmb_autocenter.Enable(is_connected);
+	_edt_fact_x.Enable(is_connected);
+	_edt_fact_y.Enable(is_connected);
+	_edt_fact_z.Enable(is_connected);
+	_cmb_rf_power.Enable(is_connected);
+	_btn_compass_calibration.Enable(is_connected);
 
-	EnableWindow(GetCtrl(IDC_BTN_SAVE_AXES_SETUP), is_connected ? _isConfigChanged : FALSE);
-	EnableWindow(GetCtrl(IDC_BTN_SAVE_RF_POWER), is_connected ? _isPowerChanged : FALSE);
+	_btn_save_axes_setup.Enable(is_connected  &&  _isConfigChanged);
+	_btn_save_rf_power.Enable(is_connected  &&  _isPowerChanged);
 }

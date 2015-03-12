@@ -142,7 +142,7 @@
     <ClInclude Include="..\dongle\reports.h" />
     <ClInclude Include="dllwrap.h" />
     <ClInclude Include="hid.h" />
-    <ClInclude Include="myutils.h" />
+    <ClInclude Include="my_utils.h" />
     <ClInclude Include="my_win.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="stdafx.h" />
@@ -155,7 +155,7 @@
   <ItemGroup>
     <ClCompile Include="hid.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="myutils.cpp" />
+    <ClCompile Include="my_utils.cpp" />
     <ClCompile Include="my_win.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

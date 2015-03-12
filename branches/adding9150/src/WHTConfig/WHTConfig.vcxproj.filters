@@ -30,9 +30,6 @@
     <ClInclude Include="wht_device.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="myutils.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="wht_dialog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -40,6 +37,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="my_win.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="my_utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -61,13 +61,13 @@
     <ClCompile Include="wht_device.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="myutils.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="wht_dialog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="my_win.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="my_utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

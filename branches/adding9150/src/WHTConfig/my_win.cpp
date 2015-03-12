@@ -1,7 +1,17 @@
 #include "stdafx.h"
 
-#include "myutils.h"
+#include "my_utils.h"
 #include "my_win.h"
+
+std::wstring Window::GetText()
+{
+	const int BUFF_SIZE = 2048;		// should be enough, i guess...
+	wchar_t buff[BUFF_SIZE];
+
+	int bytes_copied = ::GetWindowText(_hWnd, buff, BUFF_SIZE);
+
+	return buff;
+}
 
 LRESULT CALLBACK Dialog::DialogProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -67,15 +77,19 @@ LRESULT CALLBACK Dialog::DialogProcedure(HWND hwnd, UINT message, WPARAM wParam,
 			return TRUE;
 
 		case WM_SYSCOMMAND:
-			pDlg->OnSysCommand(wParam);
-			return FALSE;
+			if (pDlg->OnSysCommand(wParam & 0xfff0))
+				return TRUE;
+			break;
 		case WM_TRAYNOTIFY:
 			pDlg->OnTrayNotify(lParam);
 			return TRUE;
 		}
 
 	} catch (std::wstring& e) {
-		::MessageBox(hwnd, e.c_str(), L"Exception", MB_OK | MB_ICONERROR);
+		if (pDlg != 0)
+			pDlg->OnException(e);
+		else
+			::MessageBox(hwnd, e.c_str(), L"Exception", MB_OK | MB_ICONERROR);
 	}
 
 	return FALSE;
