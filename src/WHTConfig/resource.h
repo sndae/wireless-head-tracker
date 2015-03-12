@@ -4,6 +4,7 @@
 //
 #define IDI_ICON                        101
 #define IDD_MAIN_DIALOG                 102
+#define IDD_MAGNETOMETER_CALIB          103
 #define IDC_PRG_AXIS_X                  1001
 #define IDC_PRG_AXIS_Y                  1002
 #define IDC_PRG_AXIS_Z                  1003
@@ -35,16 +36,18 @@
 #define IDC_LBL_AXIS_NUM_X              1032
 #define IDC_LBL_AXIS_NUM_Y              1033
 #define IDC_LBL_AXIS_NUM_Z              1034
-#define IDC_BTN_COMPASS_CALIBRATION     1035
+#define IDC_BTN_MAG_CALIBRATION         1035
+#define IDC_CHK_LIGHTING                1036
+#define IDC_D3D                         1037 
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        103
+#define _APS_NEXT_RESOURCE_VALUE        104
 #define _APS_NEXT_COMMAND_VALUE         40003
-#define _APS_NEXT_CONTROL_VALUE         1036
+#define _APS_NEXT_CONTROL_VALUE         1038
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

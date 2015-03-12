@@ -1,5 +1,8 @@
 #pragma once
 
+#define WIDEN2(x)		L ## x
+#define WIDEN(x)		WIDEN2(x)
+
 std::wstring int2str(const int i);
 std::wstring flt2str(const float f);
 
