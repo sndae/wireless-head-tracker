@@ -47,7 +47,7 @@ private:
 	Button		_btn_minus;
 	Button		_btn_save_rf_power;
 	Button		_btn_save_axes_setup;
-	Button		_btn_compass_calibration;
+	Button		_btn_mag_calibration;
 
 	StatusBar	_status_bar;
 

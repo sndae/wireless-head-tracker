@@ -7,9 +7,6 @@
 #include "my_win.h"
 #include "wht_dialog.h"
 
-#define WIDEN2(x)		L ## x
-#define WIDEN(x)		WIDEN2(x)
-
 // status bar "parts"
 #define STATBAR_RF_STATUS	0
 #define STATBAR_VOLTAGE		1
@@ -28,10 +25,10 @@ WHTDialog::WHTDialog()
 void WHTDialog::OnInit()
 {
 	// create the icons
-	_hIconBig = (HICON) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON), IMAGE_ICON, 48, 48, LR_SHARED);
+	_hIconBig = (HICON) ::LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON), IMAGE_ICON, 48, 48, LR_SHARED);
 	SendMessage(_hWnd, WM_SETICON, ICON_BIG, (LPARAM) _hIconBig);
 
-	_hIconSmall = (HICON) LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON), IMAGE_ICON, 16, 16, LR_SHARED);
+	_hIconSmall = (HICON) ::LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON), IMAGE_ICON, 16, 16, LR_SHARED);
 	SendMessage(_hWnd, WM_SETICON, ICON_SMALL, (LPARAM) _hIconSmall);
 
 	// setup our controls
@@ -72,7 +69,7 @@ void WHTDialog::OnInit()
 	_btn_minus.SetHandle(GetCtrl(IDC_BTN_MINUS));
 	_btn_save_rf_power.SetHandle(GetCtrl(IDC_BTN_SAVE_RF_POWER));
 	_btn_save_axes_setup.SetHandle(GetCtrl(IDC_BTN_SAVE_AXES_SETUP));
-	_btn_compass_calibration.SetHandle(GetCtrl(IDC_BTN_COMPASS_CALIBRATION));
+	_btn_mag_calibration.SetHandle(GetCtrl(IDC_BTN_MAG_CALIBRATION));
 
 	_status_bar.SetHandle(GetCtrl(IDC_STATUS_BAR));
 
@@ -531,7 +528,7 @@ void WHTDialog::ChangeConnectedStateUI()
 	_edt_fact_y.Enable(is_connected);
 	_edt_fact_z.Enable(is_connected);
 	_cmb_rf_power.Enable(is_connected);
-	_btn_compass_calibration.Enable(is_connected);
+	_btn_mag_calibration.Enable(is_connected);
 
 	_btn_save_axes_setup.Enable(is_connected  &&  _isConfigChanged);
 	_btn_save_rf_power.Enable(is_connected  &&  _isPowerChanged);

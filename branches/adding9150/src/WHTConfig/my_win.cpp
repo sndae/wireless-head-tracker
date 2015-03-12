@@ -97,7 +97,7 @@ LRESULT CALLBACK Dialog::DialogProcedure(HWND hwnd, UINT message, WPARAM wParam,
 
 bool Dialog::CreateDlg(int dlgID, HWND hWndParent)
 {
-	HWND hDlg = ::CreateDialogParam(::GetModuleHandle(0),
+	HWND hDlg = ::CreateDialogParam(::GetModuleHandle(NULL),
 									MAKEINTRESOURCE(dlgID),
 									hWndParent,
 									(DLGPROC) DialogProcedure,
