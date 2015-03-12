@@ -9,6 +9,7 @@
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <fstream>
 
 // Windows
 #include <windows.h>

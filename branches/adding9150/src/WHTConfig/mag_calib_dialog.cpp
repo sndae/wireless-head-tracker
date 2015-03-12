@@ -55,6 +55,12 @@ void MagCalibDialog::OnDestroy()
 	// release all our D3D objects except the Direct3D
 	_d3d_device.Release();
 	_coord_sys.Release();
+
+	ClearSamples();
+}
+
+void MagCalibDialog::ClearSamples()
+{
 	_mags.clear();
 	_mag_set.clear();
 	_num_samples = 0;
@@ -187,17 +193,13 @@ void MagCalibDialog::OnTimer(int timerID)
 void MagCalibDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 {
 	if (ctrlID == IDC_BTN_CLEAR_POINTS)
-	{
-		_mags.clear();
-		_mag_set.clear();
-		_num_samples = 0;
-	} else if (ctrlID == IDC_BTN_RESET_CAMERA) {
+		ClearSamples();
+	else if (ctrlID == IDC_BTN_RESET_CAMERA)
 		_camera.Reset();
-	} else if (ctrlID == IDC_BTN_SAVE) {
+	else if (ctrlID == IDC_BTN_SAVE)
 		SaveData();
-	} else if (ctrlID == IDC_BTN_LOAD) {
+	else if (ctrlID == IDC_BTN_LOAD)
 		LoadData();
-	}
 }
 
 void MagCalibDialog::OnLButtonDown(int x, int y, WPARAM wParam)
@@ -231,14 +233,78 @@ void MagCalibDialog::OnMouseWheel(int x, int y, int delta, WPARAM wParam)
 
 void MagCalibDialog::SaveData()
 {
-	SaveDialog saveFile;
+	OpenSaveFileDialog saveFile;
 	saveFile.AddFilter(L"CSV file (*.csv)", L"*.csv");
 	saveFile.AddFilter(L"All files (*.*)", L"*.*");
+	saveFile.SetDefaultFileName(L"magdata.csv");
 
-	if (saveFile.Run(L"save something", *this))
-		MsgBox(saveFile.GetFileName(), L"info", MB_OK);
+	if (saveFile.GetSaveFile(L"Save magnetometer samples", *this))
+	{
+		std::ofstream outf(saveFile.GetFullFileName().c_str(), std::ios_base::trunc);
+
+		if (outf.is_open())
+		{
+			for (std::vector<MagPoint>::iterator mi(_mags.begin()); mi != _mags.end(); ++mi)
+				outf << mi->x << ',' << mi->y << ',' << mi->z << std::endl;
+		} else {
+			MsgBox(L"Unable to open file " + saveFile.GetFullFileName(), L"Error", MB_OK | MB_ICONERROR);
+		}
+	}
 }
 
 void MagCalibDialog::LoadData()
 {
+	OpenSaveFileDialog openFile;
+	openFile.AddFilter(L"CSV file (*.csv)", L"*.csv");
+	openFile.AddFilter(L"All files (*.*)", L"*.*");
+	openFile.SetDefaultFileName(L"magdata.csv");
+
+	if (openFile.GetOpenFile(L"Load magnetometer samples", *this))
+	{
+		std::ifstream inf(openFile.GetFullFileName().c_str());
+
+		if (inf.is_open())
+		{
+			ClearSamples();
+
+			while (!inf.eof())
+			{
+				MagPoint mp;
+
+				std::string line;
+				std::getline(inf, line);
+
+				const char* pstart = line.c_str();
+				char* pend;
+
+				mag_point_t mps;
+
+				mps.x = (int16_t) strtol(pstart, &pend, 10);
+				if (pstart == pend)
+					break;
+				pstart = pend + 1;
+
+				mps.y = (int16_t) strtol(pstart, &pend, 10);
+				if (pstart == pend)
+					break;
+				pstart = pend + 1;
+
+				mps.z = (int16_t) strtol(pstart, NULL, 10);
+				if (pstart == pend)
+					break;
+
+				if (_mag_set.find(mps) == _mag_set.end())
+				{
+					_mag_set.insert(mps);
+
+					mp.Build(_d3d_device, mps.x, mps.y, mps.z);
+					_mags.push_back(mp);
+				}
+			}
+
+			_num_samples = _mags.size();
+		} else {
+			MsgBox(L"Unable to open file " + openFile.GetFullFileName(), L"Error", MB_OK | MB_ICONERROR);
+		}
+	}
 }

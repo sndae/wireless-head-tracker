@@ -237,7 +237,7 @@ public:
 	}
 };
 
-class SaveDialog
+class OpenSaveFileDialog
 {
 private:
 	OPENFILENAME				_ofname;
@@ -247,8 +247,10 @@ private:
 	std::wstring				_selected_full_file_name;
 	std::wstring				_selected_file_name;
 
+	bool Run(const std::wstring& window_title, const Window& winOwner, bool runSave);
+	
 public:
-	SaveDialog()
+	OpenSaveFileDialog()
 	{
 		::memset(&_ofname, 0, sizeof(_ofname));
 		_ofname.lStructSize = sizeof(_ofname);
@@ -270,7 +272,15 @@ public:
 		_default_path = path;
 	}
 
-	bool Run(const std::wstring& window_title, const Window& winOwner);
+	bool GetSaveFile(const std::wstring& window_title, const Window& winOwner)
+	{
+		return Run(window_title, winOwner, true);
+	}
+
+	bool GetOpenFile(const std::wstring& window_title, const Window& winOwner)
+	{
+		return Run(window_title, winOwner, false);
+	}
 
 	const std::wstring& GetFileName() const			{ return _selected_file_name; }
 	const std::wstring& GetFullFileName() const		{ return _selected_full_file_name; }
