@@ -434,10 +434,17 @@ void VertexBuffer::Unlock()
 }
 
 Camera::Camera(DeviceD3D& d)
-:	_dev(d),
-	_rotX(45), _rotY(135),
-	_scale(1)
+:	_dev(d)
 {
+	Reset();
+}
+
+void Camera::Reset()
+{
+	_rotX = 45;
+	_rotY = 135;
+	_scale = 1;
+
 	CalcCamera();
 }
 

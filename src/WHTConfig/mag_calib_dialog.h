@@ -3,6 +3,11 @@
 class MagCalibDialog: public Dialog
 {
 private:
+	Button		_btn_clear_points;
+	Button		_btn_reset_camera;
+
+	Window		_lbl_num_points;
+
 	Window		_d3d_window;
 
 	Icon		_icon_large;
@@ -33,6 +38,7 @@ public:
 	virtual void OnSize(int width, int height, WPARAM wParam);
 	virtual void OnException(const std::wstring& str);
 	virtual void OnTimer(int timerID);
+	virtual void OnControl(int ctrlID, int notifyID, HWND hWndCtrl);
 
 	// view transformation
 	virtual void OnLButtonDown(int x, int y, WPARAM wParam);
