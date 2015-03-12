@@ -1,7 +1,7 @@
 #pragma once
 
 // undefine to enable minimize to tray
-#define MINIMIZE_TO_TRAY
+//#define MINIMIZE_TO_TRAY
 
 class WHTDialog: public Dialog
 {
@@ -34,9 +34,20 @@ private:
 	Window		_lbl_accel_bias_z;
 
 	Window		_lbl_new_drift_comp;
+	Window		_lbl_applied_drift_comp;
 	Window		_lbl_packets_sum;
 
 	Window		_lbl_calib_status;
+
+	Button		_btn_connect;
+	Button		_btn_calibrate;
+	Button		_btn_reset_drift_comp;
+	Button		_btn_save_drift_comp;
+	Button		_btn_plus;
+	Button		_btn_minus;
+	Button		_btn_save_rf_power;
+	Button		_btn_save_axes_setup;
+	Button		_btn_compass_calibration;
 
 	StatusBar	_status_bar;
 
@@ -54,16 +65,17 @@ private:
 	void SendConfigToDevice();
 
 #ifdef MINIMIZE_TO_TRAY
-
 	void CreateTrayIcon();
 	void RemoveTrayIcon();
 	virtual void OnTrayNotify(LPARAM lParam);
-	void OnMinimize();
-
+	virtual bool OnSysCommand(WPARAM wParam);
 #endif
 
 	bool ConnectDongle();
 	void ChangeConnectedStateUI();
+
+	virtual void OnTimer(int timerID);
+	virtual void OnControl(int ctrlID, int notifyID, HWND hWndCtrl);
 
 public:
 	WHTDialog();
@@ -76,7 +88,5 @@ public:
 		::PostQuitMessage(0);
 	}
 
-	virtual void OnTimer(int timerID);
-	virtual void OnControl(int ctrlID, int notifyID, HWND hWndCtrl);
-	virtual void OnSysCommand(WPARAM wParam);
+	virtual void OnException(const std::wstring& str);
 };

@@ -2,7 +2,7 @@
 
 #include "wht_device.h"
 #include "hid.h"
-#include "myutils.h"
+#include "my_utils.h"
 
 #define VENDOR_ID	0x40AA
 #define PRODUCT_ID	0x9005

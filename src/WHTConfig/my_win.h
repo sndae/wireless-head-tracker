@@ -11,18 +11,12 @@ protected:
 	HWND		_hWnd;
 
 public:
-	explicit Window(HWND hWnd)
-		: _hWnd(hWnd)
-	{}
-
 	Window()
 		: _hWnd(0)
 	{}
 
-	void SetHandle(HWND hWnd)
-	{
-		_hWnd = hWnd;
-	}
+	void SetHandle(HWND hWnd)	{ _hWnd = hWnd; }
+	HWND GetHandle() const		{ return _hWnd; }
 
 	bool IsValid() const		{ return _hWnd != 0; }
 
@@ -36,6 +30,19 @@ public:
 		return SetText(str.c_str());
 	}
 
+	bool ClearText()
+	{
+		return SetText(L"");
+	}
+
+	std::wstring GetText();
+
+	bool Enable(bool should_enable)
+	{
+		return ::EnableWindow(_hWnd, should_enable ? TRUE : FALSE) == 0;
+	}
+
+	// the int and float variants are shortcuts -- we use these a lot
 	bool SetText(const int val)
 	{
 		return SetText(int2str(val));
@@ -46,42 +53,25 @@ public:
 		return SetText(flt2str(val));
 	}
 
-	bool ClearText()
-	{
-		return SetText(L"");
-	}
-
-	std::wstring GetText()
-	{
-		const int BUFF_SIZE = 2048;		// should be enough, i guess...
-		wchar_t buff[BUFF_SIZE];
-
-		int bytes_copied = ::GetWindowText(_hWnd, buff, BUFF_SIZE);
-
-		return buff;
-	}
-
 	float GetFloat()
 	{
 		return (float) _wtof(GetText().c_str());
 	}
 
-	int16_t GetInt()
+	int GetInt()
 	{
-		return (int16_t) _wtoi(GetText().c_str());
+		return _wtoi(GetText().c_str());
+	}
+
+	int16_t GetInt16()
+	{
+		return (int16_t) GetInt();
 	}
 };
 
 class ComboBox: public Window
 {
 public:
-	explicit ComboBox(HWND hWnd)
-		: Window(hWnd)
-	{}
-
-	ComboBox()
-	{}
-
 	void AddString(const wchar_t* str)
 	{
 		::SendMessage(_hWnd, CB_ADDSTRING, 0, (LPARAM) str);
@@ -102,13 +92,6 @@ public:
 class CheckBox: public Window
 {
 public:
-	explicit CheckBox(HWND hWnd)
-		: Window(hWnd)
-	{}
-
-	CheckBox()
-	{}
-
 	void SetState(bool is_checked)
 	{
 		::SendMessage(_hWnd, BM_SETCHECK, is_checked ? BST_CHECKED : BST_UNCHECKED, 0);
@@ -123,13 +106,6 @@ public:
 class ProgressBar: public Window
 {
 public:
-	ProgressBar()
-	{}
-
-	explicit ProgressBar(HWND hWnd)
-		: Window(hWnd)
-	{}
-
 	void SetRange(uint16_t min, uint16_t max)
 	{
 		::SendMessage(_hWnd, PBM_SETRANGE, 0, MAKELPARAM(min, max));
@@ -144,13 +120,6 @@ public:
 class StatusBar: public Window
 {
 public:
-	StatusBar()
-	{}
-
-	explicit StatusBar(HWND hWnd)
-		: Window(hWnd)
-	{}
-
 	void SetParts(const int* parts, int num_parts)
 	{
 		::SendMessage(_hWnd, SB_SETPARTS, num_parts, (LPARAM) parts);
@@ -162,6 +131,11 @@ public:
 	}
 };
 
+// at the moment, we can't really do anything with these simple controls that we can not do with a base window
+// but I will keep them anyway
+class Button: public Window		{};
+class Label: public Window		{};
+
 class Dialog: public Window
 {
 protected:
@@ -170,22 +144,12 @@ protected:
 	static LRESULT CALLBACK DialogProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 public:
-	Dialog()
-		: Window(0)
-	{}
-
 	virtual ~Dialog()	{}
 
 	bool CreateDlg(int dlgID, HWND hWndParent = NULL);
 	HWND GetCtrl(int ctrlID)
 	{
 		return ::GetDlgItem(_hWnd, ctrlID);
-	}
-
-	void SetCtrlText(int ctrl_id, const std::wstring& text)
-	{
-		Window ctrl(GetCtrl(ctrl_id));
-		ctrl.SetText(text);
 	}
 
 	void Hide()
@@ -196,6 +160,11 @@ public:
 	void Show()
 	{
 		::ShowWindow(_hWnd, SW_SHOW);
+	}
+
+	void MsgBox(const std::wstring& msg, const std::wstring& title, const UINT boxtype)
+	{
+		::MessageBox(_hWnd, msg.c_str(), title.c_str(), boxtype);
 	}
 
 	virtual void OnInit()					{}
@@ -210,8 +179,11 @@ public:
 	virtual void OnControl(int ctrlID, int notifyID, HWND hWndCtrl)			{}
 	virtual void OnMenu(int menuID)											{}
 	virtual void OnAccelerator(int acceleratorID)							{}
-	virtual void OnSysCommand(WPARAM wParam)								{}
+	virtual bool OnSysCommand(WPARAM wParam)								{ return false; }
 	virtual void OnTrayNotify(LPARAM lParam)								{}
+
+	// pure virtual - the derived class MUST handle exceptions
+	virtual void OnException(const std::wstring& str) = 0;
 };
 
 class WaitCursor
