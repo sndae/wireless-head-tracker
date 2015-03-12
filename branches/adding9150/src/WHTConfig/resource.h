@@ -43,8 +43,10 @@
 #define IDC_BTN_CLEAR_POINTS            1039
 #define IDC_BTN_RESET_CAMERA            1040
 #define IDC_LBL_NUM_POINTS              1041
-#define IDC_BUTTON4                     1042
-#define IDC_BTN_CALC                    1042
+#define IDC_LBL_NUM_SAMPLES             1042
+#define IDC_BTN_CALC                    1043
+#define IDC_BTN_SAVE                    1044
+#define IDC_BTN_LOAD                    1045
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -53,7 +55,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        105
 #define _APS_NEXT_COMMAND_VALUE         40003
-#define _APS_NEXT_CONTROL_VALUE         1043
+#define _APS_NEXT_CONTROL_VALUE         1046
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
