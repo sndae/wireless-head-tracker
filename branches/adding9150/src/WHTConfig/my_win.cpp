@@ -117,3 +117,49 @@ bool Dialog::CreateDlg(int dlgID, HWND hWndParent)
 
 	return hDlg != NULL;
 }
+
+bool SaveDialog::Run(const std::wstring& window_title, const Window& winOwner)
+{
+	// the filters
+	std::vector<wchar_t> buff;
+	std::vector<std::wstring>::iterator filters_iter = _filters.begin();
+	while (filters_iter != _filters.end())
+	{
+		buff.insert(buff.end(), filters_iter->begin(), filters_iter->end());
+		buff.push_back(L'\0');
+
+		++filters_iter;
+	}
+
+	buff.push_back(L'\0');
+	buff.push_back(L'\0');
+
+	_ofname.lpstrFilter = &buff.front();
+	_ofname.nFilterIndex = 1;
+
+	// the default file name buffer, also received the selected file name
+	wchar_t file_name[MAX_PATH];
+	::wcscpy_s(file_name, MAX_PATH, _default_file_name.c_str());
+
+	_ofname.lpstrFile = file_name;
+	_ofname.nMaxFile = MAX_PATH - 1;
+	_ofname.lpstrInitialDir = _default_path.c_str();
+
+	if (!window_title.empty())
+		_ofname.lpstrTitle = window_title.c_str();
+	else
+		_ofname.lpstrTitle = NULL;
+
+	_ofname.hInstance = ::GetModuleHandle(0);
+	_ofname.hwndOwner = winOwner.GetHandle();
+
+	BOOL result = ::GetSaveFileName(&_ofname);
+
+	if (result != 0)
+	{
+		_selected_full_file_name = file_name;
+		_selected_file_name = file_name + _ofname.nFileOffset;
+	}
+
+	return result != 0;
+}

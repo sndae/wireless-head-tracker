@@ -42,6 +42,9 @@ private:
 
 	void UpdateD3DSize();
 
+	void SaveData();
+	void LoadData();
+
 public:
 
 	MagCalibDialog(WHTDongle& dngl);
