@@ -22,8 +22,8 @@ public:
 
 	std::string GetAdapterName() const;
 	void GetAdapterDisplayMode(D3DDISPLAYMODE& d3ddm);
-	bool CheckDeviceMultiSampleType(D3DFORMAT format);
-	IDirect3DDevice9* CreateDevice(HWND hwnd, D3DPRESENT_PARAMETERS& d3d_pp);
+	bool CheckDeviceMultiSampleType(D3DFORMAT format, D3DMULTISAMPLE_TYPE multisample_type);
+	IDirect3DDevice9* CreateDevice(const Window& wnd, D3DPRESENT_PARAMETERS& d3d_pp);
 };
 
 //
@@ -55,7 +55,7 @@ public:
 		_pDevice = 0;
 	}
 	
-	void Init(Direct3D& d3d, HWND d3d_win);
+	void Init(Direct3D& d3d, const Window& d3d_win);
 	void EnableLight();
 	void DisableLight();
 	void SetView(const D3DXVECTOR3& camera_pos, const D3DXVECTOR3& look_at, const D3DXVECTOR3& up);
@@ -80,7 +80,7 @@ public:
 // the vertex buffer -- every CD3DObject has one embedded
 //
 
-class CVertexBuffer
+class VertexBuffer
 {
 	friend class Object3D;
 private:
@@ -89,10 +89,10 @@ private:
 	size_t		_vertex_count;
 
 public:
-	CVertexBuffer();
-	CVertexBuffer(const CVertexBuffer& c);
+	VertexBuffer();
+	VertexBuffer(const VertexBuffer& c);
 
-	~CVertexBuffer()
+	~VertexBuffer()
 	{
 		Release();
 	}
@@ -113,7 +113,7 @@ public:
 // the only vertex format we'll be using
 //
 
-struct CSimpleVertex
+struct SimpleVertex
 {
 	enum {fvf_id = D3DFVF_XYZ | D3DFVF_DIFFUSE | D3DFVF_NORMAL};
 
@@ -129,7 +129,7 @@ struct CSimpleVertex
 
 		transform_t(const D3DXMATRIX tm) : transform_matrix(tm)		{}
 
-		void operator () (CSimpleVertex& v)
+		void operator () (SimpleVertex& v)
 		{
 			D3DXVec3Transform(&out, &v.pos, &transform_matrix);
 
@@ -149,10 +149,10 @@ class Object3D
 {
 protected:
 	// this holds the vertices for the object
-	std::vector<CSimpleVertex>	_vertices;
+	std::vector<SimpleVertex>	_vertices;
 
 	// this is the vertex buffer for the object
-	CVertexBuffer				_vertex_buffer;
+	VertexBuffer				_vertex_buffer;
 
 	void MakeVertexBuffer(DeviceD3D& dev);
 
@@ -171,7 +171,7 @@ public:
 // the camera class
 //
 
-class CCamera
+class Camera
 {
 private:
 	D3DXVECTOR3		_up;
@@ -186,7 +186,7 @@ private:
 	void CalcCamera();
 
 public:
-	CCamera(DeviceD3D& d);
+	Camera(DeviceD3D& d);
 
 	// sets the view transformation on the device
 	void RefreshPos();
@@ -196,10 +196,10 @@ public:
 };
 
 // builds a cube of given dimensions around (0,0,0)
-void BuildCube(std::vector<CSimpleVertex>& v, float Width, float Height, float Depth);
+void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth);
 
 // builds a cube of given dimensions at given coordinates
-void BuildCube(std::vector<CSimpleVertex>& v, float Width, float Height, float Depth, float x, float y, float z);
+void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth, float x, float y, float z);
 
 // returns the angle between 2 NORMALIZED vectors
 inline float GetAngle(const D3DXVECTOR3& v1, const D3DXVECTOR3& v2)

@@ -6,8 +6,8 @@
 class WHTDialog: public Dialog
 {
 private:
-	HICON		_hIconSmall;
-	HICON		_hIconBig;
+	Icon		_icon_large;
+	Icon		_icon_small;
 
 	ComboBox	_cmb_axis_response;
 	ComboBox	_cmb_autocenter;
@@ -51,7 +51,7 @@ private:
 
 	StatusBar	_status_bar;
 
-	WHTDevice	_device;
+	WHTDongle	_dongle;
 
 	bool		_isConfigChanged;
 	bool		_autoConnect;
@@ -77,6 +77,9 @@ private:
 	virtual void OnTimer(int timerID);
 	virtual void OnControl(int ctrlID, int notifyID, HWND hWndCtrl);
 
+	// the magnetometer calibration dialog
+	MagCalibDialog		_mag_calig_dlg;
+
 public:
 	WHTDialog();
 	virtual ~WHTDialog()		{}
@@ -89,4 +92,9 @@ public:
 	}
 
 	virtual void OnException(const std::wstring& str);
+
+	MagCalibDialog& GetMagCompDialog()
+	{
+		return _mag_calig_dlg;
+	}
 };

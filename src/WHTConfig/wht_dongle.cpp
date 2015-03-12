@@ -7,16 +7,16 @@
 #define VENDOR_ID	0x40AA
 #define PRODUCT_ID	0x9005
 
-WHTDevice::WHTDevice()
+WHTDongle::WHTDongle()
 	: hDevice(NULL)
 {}
 
-WHTDevice::~WHTDevice()
+WHTDongle::~WHTDongle()
 {
 	Close();
 }
 
-bool WHTDevice::Open()
+bool WHTDongle::Open()
 {
 	Close();
 
@@ -92,7 +92,7 @@ bool WHTDevice::Open()
 	return true;
 }
 
-void WHTDevice::Close()
+void WHTDongle::Close()
 {
 	if (!hDevice)
 		return;
@@ -102,7 +102,7 @@ void WHTDevice::Close()
 	hDevice = NULL;
 }
 
-void WHTDevice::ThrowException(const wchar_t* during, int report_id)
+void WHTDongle::ThrowException(const wchar_t* during, int report_id)
 {
 	int last_error = GetLastError();
 	std::wstring msg(during);
@@ -110,19 +110,19 @@ void WHTDevice::ThrowException(const wchar_t* during, int report_id)
 	throw msg;
 }
 
-void WHTDevice::GetFeatureReportRaw(void* buffer, int report_size)
+void WHTDongle::GetFeatureReportRaw(void* buffer, int report_size)
 {
 	if (HidD_GetFeature(hDevice, buffer, report_size) != TRUE)
 		ThrowException(L"HidD_GetFeature", ((uint8_t*) buffer)[0]);
 }
 
-void WHTDevice::SetFeatureReportRaw(const void* buffer, int report_size)
+void WHTDongle::SetFeatureReportRaw(const void* buffer, int report_size)
 {
 	if (HidD_SetFeature(hDevice, (PVOID) buffer, report_size) != TRUE)
 		ThrowException(L"HidD_SetFeature", ((uint8_t*) buffer)[0]);
 }
 
-void WHTDevice::GetInputReportRaw(void* buffer, int report_size)
+void WHTDongle::GetInputReportRaw(void* buffer, int report_size)
 {
 	if (HidD_GetInputReport(hDevice, buffer, report_size) != TRUE)
 		ThrowException(L"HidD_GetInputReport", ((uint8_t*) buffer)[0]);

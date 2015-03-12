@@ -2,10 +2,14 @@
 #pragma hdrstop
 
 #include "resource.h"
+
 #include "hid.h"
 #include "wht_dongle.h"
 #include "my_utils.h"
 #include "my_win.h"
+#include "d3d.h"
+#include "d3d_objects.h"
+#include "mag_calib_dialog.h"
 #include "wht_dialog.h"
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
@@ -33,8 +37,8 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 					::TranslateMessage(&msg);
 					::DispatchMessage(&msg);
 				}
-			//} else {
-			//	compCalibDlg.Render();
+			} else if (mainDlg.GetMagCompDialog().IsValid()) {
+				mainDlg.GetMagCompDialog().Render();
 			}
 		} while (msg.message != WM_QUIT);
 

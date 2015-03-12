@@ -1,10 +1,14 @@
 #include "stdafx.h"
 
 #include "resource.h"
+
 #include "../dongle/reports.h"
 #include "my_utils.h"
 #include "wht_dongle.h"
 #include "my_win.h"
+#include "d3d.h"
+#include "d3d_objects.h"
+#include "mag_calib_dialog.h"
 #include "wht_dialog.h"
 
 // status bar "parts"
@@ -14,22 +18,21 @@
 #define STATBAR_VERSION		3
 
 WHTDialog::WHTDialog()
-:	_autoConnect(true),
+:	_icon_large(IDI_ICON, true),
+	_icon_small(IDI_ICON, false),
+	_autoConnect(true),
 	_isConfigChanged(false),
 	_isPowerChanged(false),
 	_isTrackerFound(false),
 	_ignoreNotifications(false),
-	_readCalibrationCnt(0)
+	_readCalibrationCnt(0),
+	_mag_calig_dlg(_dongle)
 {}
 
 void WHTDialog::OnInit()
 {
-	// create the icons
-	_hIconBig = (HICON) ::LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON), IMAGE_ICON, 48, 48, LR_SHARED);
-	SendMessage(_hWnd, WM_SETICON, ICON_BIG, (LPARAM) _hIconBig);
-
-	_hIconSmall = (HICON) ::LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(IDI_ICON), IMAGE_ICON, 16, 16, LR_SHARED);
-	SendMessage(_hWnd, WM_SETICON, ICON_SMALL, (LPARAM) _hIconSmall);
+	SetIcon(_icon_small);
+	SetIcon(_icon_large);
 
 	// setup our controls
 	_cmb_axis_response.SetHandle(GetCtrl(IDC_CMB_AXIS_RESPONSE));
@@ -118,7 +121,7 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		FeatRep_Command rep;
 		rep.report_id = COMMAND_REPORT_ID;
 		rep.command = CMD_CALIBRATE;
-		_device.SetFeatureReport(rep);
+		_dongle.SetFeatureReport(rep);
 
 		// clear the calibration fields
 		_lbl_calib_status.SetText(L"Calibrating...");
@@ -139,9 +142,9 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 
 	} else if (ctrlID == IDC_BTN_CONNECT) {
 
-		if (_device.IsOpen())
+		if (_dongle.IsOpen())
 		{
-			_device.Close();
+			_dongle.Close();
 			_isConfigChanged = false;
 			_isPowerChanged = false;
 			_isTrackerFound = false;
@@ -159,19 +162,19 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		FeatRep_Command rep;
 		rep.report_id = COMMAND_REPORT_ID;
 		rep.command = CMD_RECENTER;
-		_device.SetFeatureReport(rep);
+		_dongle.SetFeatureReport(rep);
 
 	} else if (ctrlID == IDC_BTN_SAVE_DRIFT_COMP) {
 
 		FeatRep_Command rep;
 		rep.report_id = COMMAND_REPORT_ID;
 		rep.command = CMD_SAVE_DRIFT;
-		_device.SetFeatureReport(rep);
+		_dongle.SetFeatureReport(rep);
 
 		// read the new drift compensation value back
 		FeatRep_DongleSettings repSettings;
 		repSettings.report_id = DONGLE_SETTINGS_REPORT_ID;
-		_device.GetFeatureReport(repSettings);
+		_dongle.GetFeatureReport(repSettings);
 
 		_lbl_applied_drift_comp.SetText(repSettings.drift_per_1k / float(1024));
 
@@ -179,19 +182,19 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		FeatRep_Command repReset;
 		repReset.report_id = COMMAND_REPORT_ID;
 		repReset.command = CMD_RECENTER;
-		_device.SetFeatureReport(repReset);
+		_dongle.SetFeatureReport(repReset);
 
 	} else if (ctrlID == IDC_BTN_PLUS  ||  ctrlID == IDC_BTN_MINUS) {
 
 		FeatRep_Command repReset;
 		repReset.report_id = COMMAND_REPORT_ID;
 		repReset.command = (ctrlID == IDC_BTN_PLUS ? CMD_INC_DRIFT_COMP : CMD_DEC_DRIFT_COMP);
-		_device.SetFeatureReport(repReset);
+		_dongle.SetFeatureReport(repReset);
 
 		// read the new drift compensation value back
 		FeatRep_DongleSettings repSettings;
 		repSettings.report_id = DONGLE_SETTINGS_REPORT_ID;
-		_device.GetFeatureReport(repSettings);
+		_dongle.GetFeatureReport(repSettings);
 
 		_lbl_applied_drift_comp.SetText(repSettings.drift_per_1k / float(1024));
 
@@ -235,21 +238,28 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		case 3:		repReset.command = CMD_RF_PWR_HIGHEST;		break;
 		}
 
-		_device.SetFeatureReport(repReset);
+		_dongle.SetFeatureReport(repReset);
 
 		_isPowerChanged = false;
 		ChangeConnectedStateUI();
+
+	} else if (ctrlID == IDC_BTN_MAG_CALIBRATION) {
+		
+		if (_mag_calig_dlg.IsValid())
+			_mag_calig_dlg.Show();
+		else
+			_mag_calig_dlg.CreateDlg(IDD_MAGNETOMETER_CALIB, 0);
 	}
 }
 
 void WHTDialog::OnTimer(int timerID)
 {
-	if (_device.IsOpen())
+	if (_dongle.IsOpen())
 	{
 		// get the axis states
 		hid_joystick_report_t rep;
 		rep.report_id = JOYSTICK_REPORT_ID;
-		_device.GetInputReport(rep);
+		_dongle.GetInputReport(rep);
 
 		_prg_axis_x.SetPos(rep.x + 0x8000);
 		_prg_axis_y.SetPos(rep.y + 0x8000);
@@ -259,22 +269,10 @@ void WHTDialog::OnTimer(int timerID)
 		_lbl_axis_num_y.SetText(rep.y);
 		_lbl_axis_num_z.SetText(rep.z);
 
-		/*
-		// get raw the mag data
-		FeatRep_MagRawData repMagData;
-		repMagData.report_id = MAG_RAW_DATA_REPORT_ID;
-		device.GetFeatureReport(repMagData);
-
-		debug(int2str(repMagData.num_samples) + L" samples ----------------");
-
-		for (int i = 0; i < repMagData.num_samples; ++i)
-			debug(int2str(repMagData.mag[i].x) + L"," + int2str(repMagData.mag[i].y) + L"," + int2str(repMagData.mag[i].z));
-		*/
-
 		// get the current status
 		FeatRep_Status repStatus;
 		repStatus.report_id = STATUS_REPORT_ID;
-		_device.GetFeatureReport(repStatus);
+		_dongle.GetFeatureReport(repStatus);
 
 		std::wstring res;
 		if (repStatus.num_packets >= 48)
@@ -339,7 +337,7 @@ void WHTDialog::OnTimer(int timerID)
 
 void WHTDialog::OnException(const std::wstring& str)
 {
-	_device.Close();			// close the HID device
+	_dongle.Close();			// close the HID device
 	_isConfigChanged = false;	// we're haven't changed anything since we're close
 	ChangeConnectedStateUI();	// disable controls change the UI
 
@@ -409,7 +407,7 @@ void WHTDialog::ReadConfigFromDevice()
 {
 	FeatRep_DongleSettings rep;
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
-	_device.GetFeatureReport(rep);
+	_dongle.GetFeatureReport(rep);
 
 	_lbl_applied_drift_comp.SetText(rep.drift_per_1k / float(1024));
 
@@ -441,7 +439,7 @@ void WHTDialog::ReadTrackerSettings()
 
 	FeatRep_TrackerSettings rep;
 	rep.report_id = TRACKER_SETTINGS_REPORT_ID;
-	_device.GetFeatureReport(rep);
+	_dongle.GetFeatureReport(rep);
 
 	if (rep.has_tracker_responded == 0)
 	{
@@ -494,12 +492,12 @@ void WHTDialog::SendConfigToDevice()
 	rep.fact[2] = _edt_fact_z.GetInt();
 
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
-	_device.SetFeatureReport(rep);
+	_dongle.SetFeatureReport(rep);
 }
 
 bool WHTDialog::ConnectDongle()
 {
-	if (_device.Open())
+	if (_dongle.Open())
 	{
 		ReadConfigFromDevice();
 		ReadTrackerSettings();
@@ -513,7 +511,7 @@ bool WHTDialog::ConnectDongle()
 
 void WHTDialog::ChangeConnectedStateUI()
 {
-	bool is_connected = _device.IsOpen();
+	bool is_connected = _dongle.IsOpen();
 
 	_btn_connect.SetText(is_connected ? L"Disconnect" : L"Connect");
 

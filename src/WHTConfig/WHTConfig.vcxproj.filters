@@ -48,6 +48,9 @@
     <ClInclude Include="wht_dongle.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="mag_calib_dialog.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="WHTConfig.rc">
@@ -82,9 +85,15 @@
     <ClCompile Include="wht_dongle.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="mag_calib_dialog.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="icons\icon.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="icons\magnet.ico">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

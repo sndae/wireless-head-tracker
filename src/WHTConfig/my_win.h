@@ -5,6 +5,23 @@
 
 #define WM_TRAYNOTIFY		(WM_APP+1)
 
+// only icons from resources are supported
+class Icon
+{
+private:
+	HICON		_hIcon;
+	bool		_is_large;
+public:
+	Icon(int iconID, bool is_large);
+
+	bool IsLarge() const	{ return _is_large; }
+
+	HICON GetHandle() const
+	{
+		return _hIcon;
+	}
+};
+
 class Window
 {
 protected:
@@ -19,6 +36,10 @@ public:
 	HWND GetHandle() const		{ return _hWnd; }
 
 	bool IsValid() const		{ return _hWnd != 0; }
+	void GetRect(RECT& r) const
+	{
+		::GetWindowRect(_hWnd, &r);
+	}
 
 	bool SetText(const wchar_t* str)
 	{
@@ -147,6 +168,7 @@ public:
 	virtual ~Dialog()	{}
 
 	bool CreateDlg(int dlgID, HWND hWndParent = NULL);
+
 	HWND GetCtrl(int ctrlID)
 	{
 		return ::GetDlgItem(_hWnd, ctrlID);
@@ -166,6 +188,8 @@ public:
 	{
 		::MessageBox(_hWnd, msg.c_str(), title.c_str(), boxtype);
 	}
+
+	void SetIcon(const Icon& ic);
 
 	virtual void OnInit()					{}
 	virtual void OnTimer(int timerID)		{}
