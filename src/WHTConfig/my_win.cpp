@@ -22,7 +22,7 @@ std::wstring Window::GetText()
 
 LRESULT CALLBACK Dialog::DialogProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	Dialog* pDlg = (Dialog*)(::GetWindowLong(hwnd, GWL_USERDATA));
+	Dialog* pDlg = (Dialog*)::GetWindowLong(hwnd, GWL_USERDATA);
 
 	try {
 		if (message == WM_INITDIALOG)
@@ -118,7 +118,7 @@ bool Dialog::CreateDlg(int dlgID, HWND hWndParent)
 	return hDlg != NULL;
 }
 
-bool SaveDialog::Run(const std::wstring& window_title, const Window& winOwner)
+bool OpenSaveFileDialog::Run(const std::wstring& window_title, const Window& winOwner, bool runSave)
 {
 	// the filters
 	std::vector<wchar_t> buff;
@@ -150,10 +150,15 @@ bool SaveDialog::Run(const std::wstring& window_title, const Window& winOwner)
 	else
 		_ofname.lpstrTitle = NULL;
 
-	_ofname.hInstance = ::GetModuleHandle(0);
+	_ofname.hInstance = ::GetModuleHandle(NULL);
 	_ofname.hwndOwner = winOwner.GetHandle();
 
-	BOOL result = ::GetSaveFileName(&_ofname);
+	BOOL result;
+	
+	if (runSave)
+		result = ::GetSaveFileName(&_ofname);
+	else
+		result = ::GetOpenFileName(&_ofname);
 
 	if (result != 0)
 	{

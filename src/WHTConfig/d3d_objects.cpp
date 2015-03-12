@@ -22,12 +22,16 @@ void CoordSys::Build(DeviceD3D& dev)
 	std::for_each(_vertices.begin() + vert_per_cube*2, _vertices.begin() + vert_per_cube*3, [] (SimpleVertex& v) { v.diffuse = D3DCOLOR_XRGB(80, 80, 150); } );
 }
 
-void MagPoint::Build(DeviceD3D& dev, int16_t x, int16_t y, int16_t z)
+void MagPoint::Build(DeviceD3D& dev, int16_t newx, int16_t newy, int16_t newz)
 {
 	BuildCube(_vertices, 0.8f, 0.8f, 0.8f);
 
+	x = newx;
+	y = newy;
+	z = newz;
+
 	D3DXMATRIX translate;
-	D3DXMatrixTranslation(&translate, x, y, z);
+	D3DXMatrixTranslation(&translate, newx, newy, newz);
 
 	std::for_each(_vertices.begin(), _vertices.end(), SimpleVertex::transform_t(translate));
 

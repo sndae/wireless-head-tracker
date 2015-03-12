@@ -42,6 +42,7 @@ private:
 
 	void UpdateD3DSize();
 
+	void ClearSamples();
 	void SaveData();
 	void LoadData();
 
