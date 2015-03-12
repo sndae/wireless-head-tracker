@@ -17,7 +17,8 @@ MagCalibDialog::MagCalibDialog(WHTDongle& dngl)
 	_icon_small(IDI_MAGNET, false),
 	_camera(_d3d_device),
 	_is_dragging(false),
-	_dongle(dngl)
+	_dongle(dngl),
+	_num_samples(0)
 {}
 
 void MagCalibDialog::OnInit()
@@ -29,6 +30,7 @@ void MagCalibDialog::OnInit()
 	_btn_reset_camera.SetHandle(GetCtrl(IDC_BTN_RESET_CAMERA));
 
 	_lbl_num_points.SetHandle(GetCtrl(IDC_LBL_NUM_POINTS));
+	_lbl_num_samples.SetHandle(GetCtrl(IDC_LBL_NUM_SAMPLES));
 
 	_d3d_window.SetHandle(GetCtrl(IDC_D3D));
 	
@@ -54,6 +56,8 @@ void MagCalibDialog::OnDestroy()
 	_d3d_device.Release();
 	_coord_sys.Release();
 	_mags.clear();
+	_mag_set.clear();
+	_num_samples = 0;
 }
 
 void MagCalibDialog::OnSize(int width, int height, WPARAM wParam)
@@ -83,7 +87,7 @@ void MagCalibDialog::UpdateD3DSize()
 	dlgh = dlgrect.bottom - dlgrect.top;
 
 	dxw = dlgw - 30;
-	dxh = dlgh - 75;
+	dxh = dlgh - 87;
 
 	// set the D3D window size
 	::SetWindowPos(_d3d_window.GetHandle(), HWND_TOP, 0, 0, dxw, dxh, SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
@@ -155,24 +159,43 @@ void MagCalibDialog::OnTimer(int timerID)
 	repMagData.report_id = MAG_RAW_DATA_REPORT_ID;
 	_dongle.GetFeatureReport(repMagData);
 
+	_num_samples += repMagData.num_samples;
+
 	for (int i = 0; i < repMagData.num_samples; ++i)
 	{
-		MagPoint mp;
-		mp.Build(_d3d_device, repMagData.mag[i].x, repMagData.mag[i].y, repMagData.mag[i].z);
+		mag_point_t mps;
+		mps.x = repMagData.mag[i].x;
+		mps.y = repMagData.mag[i].y;
+		mps.z = repMagData.mag[i].z;
 
-		_mags.push_back(mp);
+		if (_mag_set.find(mps) == _mag_set.end())
+		{
+			MagPoint mp;
+			mp.Build(_d3d_device, repMagData.mag[i].x, repMagData.mag[i].y, repMagData.mag[i].z);
+
+			_mags.push_back(mp);
+
+			_mag_set.insert(mps);
+		}
 	}
 
-	// update the counter
+	// update the counters
 	_lbl_num_points.SetText((int) _mags.size());
+	_lbl_num_samples.SetText(_num_samples);
 }
 
 void MagCalibDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 {
 	if (ctrlID == IDC_BTN_CLEAR_POINTS)
+	{
 		_mags.clear();
-	else if (ctrlID == IDC_BTN_RESET_CAMERA)
+		_mag_set.clear();
+		_num_samples = 0;
+	} else if (ctrlID == IDC_BTN_RESET_CAMERA) {
 		_camera.Reset();
+	} else if (ctrlID == IDC_BTN_SAVE) {
+	} else if (ctrlID == IDC_BTN_LOAD) {
+	}
 }
 
 void MagCalibDialog::OnLButtonDown(int x, int y, WPARAM wParam)
