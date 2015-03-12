@@ -194,7 +194,9 @@ void MagCalibDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 	} else if (ctrlID == IDC_BTN_RESET_CAMERA) {
 		_camera.Reset();
 	} else if (ctrlID == IDC_BTN_SAVE) {
+		SaveData();
 	} else if (ctrlID == IDC_BTN_LOAD) {
+		LoadData();
 	}
 }
 
@@ -225,4 +227,18 @@ void MagCalibDialog::OnMouseMove(int x, int y, WPARAM wParam)
 void MagCalibDialog::OnMouseWheel(int x, int y, int delta, WPARAM wParam)
 {
 	_camera.Zoom(delta);
+}
+
+void MagCalibDialog::SaveData()
+{
+	SaveDialog saveFile;
+	saveFile.AddFilter(L"CSV file (*.csv)", L"*.csv");
+	saveFile.AddFilter(L"All files (*.*)", L"*.*");
+
+	if (saveFile.Run(L"save something", *this))
+		MsgBox(saveFile.GetFileName(), L"info", MB_OK);
+}
+
+void MagCalibDialog::LoadData()
+{
 }

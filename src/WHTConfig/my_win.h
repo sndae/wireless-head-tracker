@@ -236,3 +236,42 @@ public:
 		Restore();
 	}
 };
+
+class SaveDialog
+{
+private:
+	OPENFILENAME				_ofname;
+	std::vector<std::wstring>	_filters;
+	std::wstring				_default_file_name;
+	std::wstring				_default_path;
+	std::wstring				_selected_full_file_name;
+	std::wstring				_selected_file_name;
+
+public:
+	SaveDialog()
+	{
+		::memset(&_ofname, 0, sizeof(_ofname));
+		_ofname.lStructSize = sizeof(_ofname);
+	}
+
+	void AddFilter(const std::wstring& desc, const std::wstring& filter)
+	{
+		_filters.push_back(desc);
+		_filters.push_back(filter);
+	}
+
+	void SetDefaultFileName(const std::wstring& fname)
+	{
+		_default_file_name = fname;
+	}
+
+	void SetDefaultPath(const std::wstring& path)
+	{
+		_default_path = path;
+	}
+
+	bool Run(const std::wstring& window_title, const Window& winOwner);
+
+	const std::wstring& GetFileName() const			{ return _selected_file_name; }
+	const std::wstring& GetFullFileName() const		{ return _selected_full_file_name; }
+};
