@@ -25,6 +25,11 @@ void MagCalibDialog::OnInit()
 	SetIcon(_icon_small);
 	SetIcon(_icon_large);
 
+	_btn_clear_points.SetHandle(GetCtrl(IDC_BTN_CLEAR_POINTS));
+	_btn_reset_camera.SetHandle(GetCtrl(IDC_BTN_RESET_CAMERA));
+
+	_lbl_num_points.SetHandle(GetCtrl(IDC_LBL_NUM_POINTS));
+
 	_d3d_window.SetHandle(GetCtrl(IDC_D3D));
 	
 	UpdateD3DSize();
@@ -157,6 +162,17 @@ void MagCalibDialog::OnTimer(int timerID)
 
 		_mags.push_back(mp);
 	}
+
+	// update the counter
+	_lbl_num_points.SetText((int) _mags.size());
+}
+
+void MagCalibDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
+{
+	if (ctrlID == IDC_BTN_CLEAR_POINTS)
+		_mags.clear();
+	else if (ctrlID == IDC_BTN_RESET_CAMERA)
+		_camera.Reset();
 }
 
 void MagCalibDialog::OnLButtonDown(int x, int y, WPARAM wParam)

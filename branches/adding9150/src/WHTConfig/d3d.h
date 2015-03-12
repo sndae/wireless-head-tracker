@@ -188,6 +188,8 @@ private:
 public:
 	Camera(DeviceD3D& d);
 
+	void Reset();
+
 	// sets the view transformation on the device
 	void RefreshPos();
 

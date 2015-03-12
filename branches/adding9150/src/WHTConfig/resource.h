@@ -39,7 +39,12 @@
 #define IDC_LBL_AXIS_NUM_Z              1034
 #define IDC_BTN_MAG_CALIBRATION         1035
 #define IDC_CHK_LIGHTING                1036
-#define IDC_D3D                         1037 
+#define IDC_D3D                         1037
+#define IDC_BTN_CLEAR_POINTS            1039
+#define IDC_BTN_RESET_CAMERA            1040
+#define IDC_LBL_NUM_POINTS              1041
+#define IDC_BUTTON4                     1042
+#define IDC_BTN_CALC                    1042
 #define IDC_STATIC                      -1
 
 // Next default values for new objects
@@ -48,7 +53,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        105
 #define _APS_NEXT_COMMAND_VALUE         40003
-#define _APS_NEXT_CONTROL_VALUE         1038
+#define _APS_NEXT_CONTROL_VALUE         1043
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
