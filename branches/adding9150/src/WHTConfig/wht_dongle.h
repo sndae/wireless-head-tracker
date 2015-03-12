@@ -1,6 +1,6 @@
 #pragma once
 
-class WHTDevice
+class WHTDongle
 {
 private:
 	HANDLE	hDevice;
@@ -12,8 +12,8 @@ private:
 	void ThrowException(const wchar_t* during, int report_id);
 
 public:
-	WHTDevice();
-	~WHTDevice();
+	WHTDongle();
+	~WHTDongle();
 
 	bool Open();
 	void Close();

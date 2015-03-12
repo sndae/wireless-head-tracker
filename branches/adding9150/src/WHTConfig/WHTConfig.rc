@@ -51,7 +51,7 @@ END
 //
 
 IDD_MAIN_DIALOG DIALOGEX 0, 0, 319, 300
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_MINIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_MINIMIZEBOX | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Wireless Head Tracker Configuration"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -113,9 +113,9 @@ BEGIN
     PUSHBUTTON      "Magnetometer calibration",IDC_BTN_MAG_CALIBRATION,169,176,96,14
 END
 
-IDD_MAGNETOMETER_CALIB DIALOGEX 0, 0, 790, 600
+IDD_MAGNETOMETER_CALIB DIALOGEX 0, 0, 566, 363
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
-CAPTION "Dialog"
+CAPTION "Magnetometer calibration"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     CONTROL         "Lighting",IDC_CHK_LIGHTING,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,7,38,10
@@ -138,6 +138,10 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 297
     END
+
+    IDD_MAGNETOMETER_CALIB, DIALOG
+    BEGIN
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -150,6 +154,7 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_ICON                ICON                    "icons\\icon.ico"
+IDI_MAGNET              ICON                    "icons\\magnet.ico"
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

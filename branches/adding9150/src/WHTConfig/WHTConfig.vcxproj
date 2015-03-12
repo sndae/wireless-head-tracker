@@ -146,6 +146,7 @@
     <ClInclude Include="d3d_objects.h" />
     <ClInclude Include="dllwrap.h" />
     <ClInclude Include="hid.h" />
+    <ClInclude Include="mag_calib_dialog.h" />
     <ClInclude Include="my_utils.h" />
     <ClInclude Include="my_win.h" />
     <ClInclude Include="resource.h" />
@@ -160,6 +161,7 @@
     <ClCompile Include="d3d.cpp" />
     <ClCompile Include="d3d_objects.cpp" />
     <ClCompile Include="hid.cpp" />
+    <ClCompile Include="mag_calib_dialog.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="my_utils.cpp" />
     <ClCompile Include="my_win.cpp" />
@@ -174,6 +176,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="icons\icon.ico" />
+    <None Include="icons\magnet.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

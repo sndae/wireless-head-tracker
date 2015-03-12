@@ -3,8 +3,9 @@
 // Used by WHTConfig.rc
 //
 #define IDI_ICON                        101
-#define IDD_MAIN_DIALOG                 102
-#define IDD_MAGNETOMETER_CALIB          103
+#define IDI_MAGNET                      102
+#define IDD_MAIN_DIALOG                 103
+#define IDD_MAGNETOMETER_CALIB          104
 #define IDC_PRG_AXIS_X                  1001
 #define IDC_PRG_AXIS_Y                  1002
 #define IDC_PRG_AXIS_Z                  1003
@@ -45,7 +46,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        104
+#define _APS_NEXT_RESOURCE_VALUE        105
 #define _APS_NEXT_COMMAND_VALUE         40003
 #define _APS_NEXT_CONTROL_VALUE         1038
 #define _APS_NEXT_SYMED_VALUE           101

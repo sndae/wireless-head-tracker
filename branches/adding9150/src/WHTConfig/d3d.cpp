@@ -5,6 +5,7 @@
 #pragma comment(lib, "d3dx9.lib")
 
 #include "my_utils.h"
+#include "my_win.h"
 #include "d3d.h"
 #include "d3d_objects.h"
 
@@ -57,21 +58,10 @@ void ThrowD3DExceptionFileLine(HRESULT rslt, const std::wstring& m, const wchar_
 
 Direct3D::Direct3D()
 {
-	HRESULT rslt;
-
 	// create the direct3D object
 	_pD3D = Direct3DCreate9(D3D_SDK_VERSION);
 	if (_pD3D == 0)
 		ThrowD3DException(0, L"Direct3DCreate9() returned NULL");
-
-	// check for anti-aliasing
-	rslt = _pD3D->CheckDeviceMultiSampleType(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, D3DFMT_R8G8B8, FALSE, D3DMULTISAMPLE_2_SAMPLES, NULL);
-	if (rslt == D3DERR_NOTAVAILABLE)
-	{
-		// no anti-aliasing...
-	} else if (FAILED(rslt)) {
-		ThrowD3DException(rslt, L"CheckDeviceMultiSampleType() failed!");
-	}
 }
 
 std::string Direct3D::GetAdapterName() const
@@ -104,17 +94,17 @@ void Direct3D::GetAdapterDisplayMode(D3DDISPLAYMODE& d3ddm)
 		ThrowD3DException(rslt, L"GetAdapterDisplayMode() failed!");
 }
 
-bool Direct3D::CheckDeviceMultiSampleType(D3DFORMAT format)
+bool Direct3D::CheckDeviceMultiSampleType(D3DFORMAT format, D3DMULTISAMPLE_TYPE multisample_type)
 {
-	return SUCCEEDED(_pD3D->CheckDeviceMultiSampleType(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, format, TRUE, D3DMULTISAMPLE_2_SAMPLES, 0));
+	return SUCCEEDED(_pD3D->CheckDeviceMultiSampleType(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, format, TRUE, multisample_type, 0));
 }
 
-IDirect3DDevice9* Direct3D::CreateDevice(HWND hwnd, D3DPRESENT_PARAMETERS& d3d_pp)
+IDirect3DDevice9* Direct3D::CreateDevice(const Window& win, D3DPRESENT_PARAMETERS& d3d_pp)
 {
 	IDirect3DDevice9* ret_val;
 	HRESULT rslt = _pD3D->CreateDevice(	D3DADAPTER_DEFAULT,
 										D3DDEVTYPE_HAL,
-										hwnd,
+										win.GetHandle(),
 										D3DCREATE_HARDWARE_VERTEXPROCESSING,
 										&d3d_pp,
 										&ret_val);
@@ -125,7 +115,7 @@ IDirect3DDevice9* Direct3D::CreateDevice(HWND hwnd, D3DPRESENT_PARAMETERS& d3d_p
 	return ret_val;
 }
 
-void DeviceD3D::Init(Direct3D& d3d, HWND d3d_win)
+void DeviceD3D::Init(Direct3D& d3d, const Window& win)
 {
 	// PresentParams struct to hold info about the rendering method
 	::ZeroMemory(&_d3d_pp, sizeof(_d3d_pp));
@@ -137,7 +127,7 @@ void DeviceD3D::Init(Direct3D& d3d, HWND d3d_win)
 
 	// the width & height of the back buffer in pixels
 	RECT r;
-	::GetWindowRect(d3d_win, &r);
+	::GetWindowRect(win.GetHandle(), &r);
 	_d3d_pp.BackBufferWidth = r.right - r.left;
 	_d3d_pp.BackBufferHeight = r.bottom - r.top;
 	
@@ -146,7 +136,7 @@ void DeviceD3D::Init(Direct3D& d3d, HWND d3d_win)
 
 	// handle to render target window
 	_d3d_pp.Windowed = TRUE;
-	_d3d_pp.hDeviceWindow = d3d_win;
+	_d3d_pp.hDeviceWindow = win.GetHandle();
 	
 	// number of back buffers
 	_d3d_pp.BackBufferCount = 1;
@@ -154,8 +144,14 @@ void DeviceD3D::Init(Direct3D& d3d, HWND d3d_win)
 	// swap method
 	_d3d_pp.SwapEffect = D3DSWAPEFFECT_DISCARD;
 
-	// type of multisampling
-	if (d3d.CheckDeviceMultiSampleType(d3ddm.Format))
+	// try the best type of multisampling (anti-aliasing)
+	if (d3d.CheckDeviceMultiSampleType(d3ddm.Format, D3DMULTISAMPLE_16_SAMPLES))
+		_d3d_pp.MultiSampleType = D3DMULTISAMPLE_16_SAMPLES;
+	else if (d3d.CheckDeviceMultiSampleType(d3ddm.Format, D3DMULTISAMPLE_8_SAMPLES))
+		_d3d_pp.MultiSampleType = D3DMULTISAMPLE_8_SAMPLES;
+	else if ((d3d.CheckDeviceMultiSampleType(d3ddm.Format, D3DMULTISAMPLE_4_SAMPLES)))
+		_d3d_pp.MultiSampleType = D3DMULTISAMPLE_4_SAMPLES;
+	else if ((d3d.CheckDeviceMultiSampleType(d3ddm.Format, D3DMULTISAMPLE_2_SAMPLES)))
 		_d3d_pp.MultiSampleType = D3DMULTISAMPLE_2_SAMPLES;
 	else
 		_d3d_pp.MultiSampleType = D3DMULTISAMPLE_NONE;
@@ -173,10 +169,10 @@ void DeviceD3D::Init(Direct3D& d3d, HWND d3d_win)
 	_d3d_pp.PresentationInterval = 0;
 
 	// Get a pointer to the IDirect3DDevice9 interface
-	_pDevice = d3d.CreateDevice(d3d_win, _d3d_pp);
+	_pDevice = d3d.CreateDevice(win, _d3d_pp);
 
 	// set the vector format
-	HRESULT rslt = _pDevice->SetFVF(CSimpleVertex::fvf_id);
+	HRESULT rslt = _pDevice->SetFVF(SimpleVertex::fvf_id);
 	if (FAILED(rslt))		ThrowD3DException(rslt, L"SetFVF() failed");
 
 	// default
@@ -328,9 +324,9 @@ IDirect3DVertexBuffer9* DeviceD3D::CreateVertexBuffer(const int vcount)
 	if (_pDevice == 0)
 		ThrowD3DException(0, L"Device not initilized while creating VertexBuffer");
 
-	HRESULT rslt = _pDevice->CreateVertexBuffer(	vcount * sizeof(CSimpleVertex),
+	HRESULT rslt = _pDevice->CreateVertexBuffer(	vcount * sizeof(SimpleVertex),
 													D3DUSAGE_WRITEONLY,
-													CSimpleVertex::fvf_id,
+													SimpleVertex::fvf_id,
 													D3DPOOL_MANAGED,
 													&ret_val,
 													0);
@@ -350,7 +346,7 @@ void Object3D::Render(DeviceD3D& dev)
 		if (_vertex_buffer.IsEmpty())
 			MakeVertexBuffer(dev);
 
-		rslt = dev._pDevice->SetStreamSource(0, _vertex_buffer._pvb, 0, sizeof(CSimpleVertex));
+		rslt = dev._pDevice->SetStreamSource(0, _vertex_buffer._pvb, 0, sizeof(SimpleVertex));
 		if (FAILED(rslt))		ThrowD3DException(rslt, L"SetStreamSource() failed");
 
 		rslt = dev._pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, _vertices.size() / 3);
@@ -361,8 +357,8 @@ void Object3D::Render(DeviceD3D& dev)
 void Object3D::MakeVertexBuffer(DeviceD3D& dev)
 {
 	// fill the normals
-	std::vector<CSimpleVertex>::iterator first = _vertices.begin();
-	std::vector<CSimpleVertex>::iterator last = _vertices.end();
+	std::vector<SimpleVertex>::iterator first = _vertices.begin();
+	std::vector<SimpleVertex>::iterator last = _vertices.end();
 
 	assert((_vertices.size() % 3) == 0);
 
@@ -378,18 +374,18 @@ void Object3D::MakeVertexBuffer(DeviceD3D& dev)
 	_vertex_buffer.Alloc(dev, _vertices.size());
 
 	// copy
-	memcpy(_vertex_buffer.Lock(), &_vertices.front(), sizeof(CSimpleVertex) * _vertices.size());
+	memcpy(_vertex_buffer.Lock(), &_vertices.front(), sizeof(SimpleVertex) * _vertices.size());
 
 	// give the block back to D3D
 	_vertex_buffer.Unlock();
 }
 
-CVertexBuffer::CVertexBuffer()
+VertexBuffer::VertexBuffer()
 :	_pvb(0),
 	_vertex_count(0)
 {}
 
-CVertexBuffer::CVertexBuffer(const CVertexBuffer& c)
+VertexBuffer::VertexBuffer(const VertexBuffer& c)
 :	_pvb(c._pvb),
 	_vertex_count(c._vertex_count)
 {
@@ -397,7 +393,7 @@ CVertexBuffer::CVertexBuffer(const CVertexBuffer& c)
 		_pvb->AddRef();
 }
 
-void CVertexBuffer::Alloc(DeviceD3D& dev, const int vcount)
+void VertexBuffer::Alloc(DeviceD3D& dev, const int vcount)
 {
 	assert(vcount != 0);
 
@@ -413,7 +409,7 @@ void CVertexBuffer::Alloc(DeviceD3D& dev, const int vcount)
 	_pvb = dev.CreateVertexBuffer(vcount);
 }
 
-void CVertexBuffer::Release()
+void VertexBuffer::Release()
 {
 	if (_pvb)
 		_pvb->Release();
@@ -421,23 +417,23 @@ void CVertexBuffer::Release()
 	_pvb = 0;
 }
 
-char* CVertexBuffer::Lock()
+char* VertexBuffer::Lock()
 {
 	LPVOID ret_val;
-	HRESULT rslt = _pvb->Lock(0, _vertex_count * sizeof(CSimpleVertex), &ret_val, 0);
+	HRESULT rslt = _pvb->Lock(0, _vertex_count * sizeof(SimpleVertex), &ret_val, 0);
 	if (FAILED(rslt))		ThrowD3DException(rslt, L"dev->Lock() failed");
 		
 	return (char*) ret_val;
 }
 
-void CVertexBuffer::Unlock()
+void VertexBuffer::Unlock()
 {
 	HRESULT rslt = _pvb->Unlock();
 
 	if (FAILED(rslt))		ThrowD3DException(rslt, L"dev->CreateVertexBuffer() failed");
 }
 
-CCamera::CCamera(DeviceD3D& d)
+Camera::Camera(DeviceD3D& d)
 :	_dev(d),
 	_rotX(45), _rotY(135),
 	_scale(1)
@@ -445,13 +441,13 @@ CCamera::CCamera(DeviceD3D& d)
 	CalcCamera();
 }
 
-void CCamera::RefreshPos()
+void Camera::RefreshPos()
 {
 	D3DXVECTOR3 look_at(0, 0, 0);
 	_dev.SetView(_camera_pos, look_at, _up);
 }
 
-void CCamera::CalcCamera()
+void Camera::CalcCamera()
 {
 	D3DXVECTOR3 cpos(0, 0, -550);
 
@@ -478,7 +474,7 @@ void CCamera::CalcCamera()
 	_up.z = out.z;
 }
 
-void CCamera::SetRotation(float deltaY, float deltaX)
+void Camera::SetRotation(float deltaY, float deltaX)
 {
 	_rotY += deltaY / 3;
 	_rotX += deltaX / 3;
@@ -486,14 +482,14 @@ void CCamera::SetRotation(float deltaY, float deltaX)
 	CalcCamera();
 }
 
-void CCamera::Zoom(const int zoom)
+void Camera::Zoom(const int zoom)
 {
 	_scale *= float(zoom > 0 ? 0.9 : 1.1);
 
 	CalcCamera();
 }
 
-void BuildCube(std::vector<CSimpleVertex>& v, float Width, float Height, float Depth, float x, float y, float z)
+void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth, float x, float y, float z)
 {
 	D3DVECTOR p[8] = {	{ x,       y+Height,        z},
 						{ x+Width, y+Height,        z},
@@ -505,9 +501,9 @@ void BuildCube(std::vector<CSimpleVertex>& v, float Width, float Height, float D
 						{ x+Width,        y,  z+Depth}};
 
 	//v.reserve(v.size() + 36);
-	v.insert(v.end(), 36, CSimpleVertex());
+	v.insert(v.end(), 36, SimpleVertex());
 
-	std::vector<CSimpleVertex>::iterator vp(v.end() - 36);
+	std::vector<SimpleVertex>::iterator vp(v.end() - 36);
 
 	// front
 	vp[ 0].pos=p[0];		vp[ 1].pos=p[1];		vp[ 2].pos=p[2];
@@ -529,7 +525,7 @@ void BuildCube(std::vector<CSimpleVertex>& v, float Width, float Height, float D
 	vp[33].pos=p[3];		vp[34].pos=p[5];		vp[35].pos=p[7];
 }
 
-void BuildCube(std::vector<CSimpleVertex>& v, float Width, float Height, float Depth)
+void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth)
 {
 	float x = -Width/2;
 	float y = -Height/2;

@@ -3,6 +3,13 @@
 #include "my_utils.h"
 #include "my_win.h"
 
+Icon::Icon(int iconID, bool is_large)
+	: _is_large(is_large)
+{
+	const int pixels = _is_large ? 48 : 16;
+	_hIcon = (HICON) ::LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(iconID), IMAGE_ICON, pixels, pixels, LR_SHARED);
+}
+
 std::wstring Window::GetText()
 {
 	const int BUFF_SIZE = 2048;		// should be enough, i guess...
@@ -94,6 +101,11 @@ LRESULT CALLBACK Dialog::DialogProcedure(HWND hwnd, UINT message, WPARAM wParam,
 
 	return FALSE;
 }
+
+void Dialog::SetIcon(const Icon& ic)
+{
+	SendMessage(_hWnd, WM_SETICON, ic.IsLarge() ? ICON_BIG : ICON_SMALL, (LPARAM) ic.GetHandle());
+} 
 
 bool Dialog::CreateDlg(int dlgID, HWND hWndParent)
 {
