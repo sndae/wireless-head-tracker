@@ -10,6 +10,8 @@ Icon::Icon(int iconID, bool is_large)
 	_hIcon = (HICON) ::LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(iconID), IMAGE_ICON, pixels, pixels, LR_SHARED);
 }
 
+// ***************************************************************************
+
 std::wstring Window::GetText()
 {
 	const int BUFF_SIZE = 2048;		// should be enough, i guess...
@@ -19,6 +21,41 @@ std::wstring Window::GetText()
 
 	return buff;
 }
+
+// ***************************************************************************
+
+bool SimpleFile::Open(const std::wstring& fname, bool for_write, bool trunc)
+{
+	Close();
+
+	_hFile = ::CreateFile(fname.c_str(),
+								for_write ? GENERIC_WRITE : GENERIC_READ,
+								FILE_SHARE_READ,
+								NULL,
+								for_write ? CREATE_ALWAYS : OPEN_EXISTING,
+								FILE_ATTRIBUTE_NORMAL,
+								NULL);
+
+	return _hFile != INVALID_HANDLE_VALUE;
+}
+
+int SimpleFile::Read(char* buff, const int num_bytes)
+{
+	DWORD num_bytes_read;
+	BOOL res = ::ReadFile(_hFile, buff, num_bytes, &num_bytes_read, NULL);
+
+	if (res == FALSE)
+		throw std::wstring(L"Unable to read input file.");
+
+	return num_bytes_read;
+}
+
+int SimpleFile::Write(char* buff, const int num_bytes)
+{
+	return 0;
+}
+
+// ***************************************************************************
 
 LRESULT CALLBACK Dialog::DialogProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -117,6 +154,8 @@ bool Dialog::CreateDlg(int dlgID, HWND hWndParent)
 
 	return hDlg != NULL;
 }
+
+// ***************************************************************************
 
 bool OpenSaveFileDialog::Run(const std::wstring& window_title, const Window& winOwner, bool runSave)
 {
