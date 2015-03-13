@@ -237,6 +237,36 @@ public:
 	}
 };
 
+// i never liked the std C++ stream library...
+class SimpleFile
+{
+protected:
+	HANDLE	_hFile;
+
+public:
+	SimpleFile()
+		: _hFile(INVALID_HANDLE_VALUE)
+	{}
+
+	~SimpleFile()
+	{
+		Close();
+	}
+
+	bool Open(const std::wstring& fname, bool for_write, bool trunc = false);
+
+	void Close()
+	{
+		if (_hFile != INVALID_HANDLE_VALUE)
+			::CloseHandle(_hFile);
+
+		_hFile = NULL;
+	}
+
+	int Read(char* buff, const int num_bytes);
+	int Write(char* buff, const int num_bytes);
+};
+
 class OpenSaveFileDialog
 {
 private:

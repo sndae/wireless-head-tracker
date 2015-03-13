@@ -152,7 +152,7 @@ void MagCalibDialog::Init3D()
 	_d3d_device.SetCulling(D3DCULL_NONE);
 	_d3d_device.DisableLight();
 
-	_coord_sys.Build(_d3d_device);
+	_coord_sys.Build();
 
 	// this one's not really necessary, but it won't hurt either
 	//_mags.reserve(2000);
@@ -177,7 +177,7 @@ void MagCalibDialog::OnTimer(int timerID)
 		if (_mag_set.find(mps) == _mag_set.end())
 		{
 			MagPoint mp;
-			mp.Build(_d3d_device, repMagData.mag[i].x, repMagData.mag[i].y, repMagData.mag[i].z);
+			mp.Build(repMagData.mag[i].x, repMagData.mag[i].y, repMagData.mag[i].z);
 
 			_mags.push_back(mp);
 
@@ -240,16 +240,41 @@ void MagCalibDialog::SaveData()
 
 	if (saveFile.GetSaveFile(L"Save magnetometer samples", *this))
 	{
-		std::ofstream outf(saveFile.GetFullFileName().c_str(), std::ios_base::trunc);
+		SimpleFile f;
 
-		if (outf.is_open())
+		if (f.Open(saveFile.GetFullFileName(), true, true))
 		{
+			char line[128];
 			for (std::vector<MagPoint>::iterator mi(_mags.begin()); mi != _mags.end(); ++mi)
-				outf << mi->x << ',' << mi->y << ',' << mi->z << std::endl;
+				sprintf_s(line, sizeof(line), "%i,%i,%i\n", mi->x, mi->y, mi->z);
+
 		} else {
 			MsgBox(L"Unable to open file " + saveFile.GetFullFileName(), L"Error", MB_OK | MB_ICONERROR);
 		}
 	}
+}
+
+// splits a string using the provided delimiter
+void split_record(const std::string& in_str, std::vector<std::string>& out_vector, const char delim)
+{
+	out_vector.clear();
+
+	std::string::const_iterator riter(in_str.begin());
+	std::string field;
+	while (riter != in_str.end())
+	{
+		if (*riter == delim)
+		{
+			out_vector.push_back(field);
+			field.clear();
+		} else {
+			field += *riter;
+		}
+
+		++riter;
+	}
+
+	out_vector.push_back(field);
 }
 
 void MagCalibDialog::LoadData()
@@ -261,50 +286,52 @@ void MagCalibDialog::LoadData()
 
 	if (openFile.GetOpenFile(L"Load magnetometer samples", *this))
 	{
-		std::ifstream inf(openFile.GetFullFileName().c_str());
+		SimpleFile f;
 
-		if (inf.is_open())
+		if (f.Open(openFile.GetFullFileName(), false))
 		{
+			// read the entire file into a string (yeah, nasty, i know...)
+			const int BUFF_SIZE = 1000;
+			char buff[BUFF_SIZE];
+			DWORD bytes_read;
+			std::string file_str;
+			do {
+				bytes_read = f.Read(buff, BUFF_SIZE - 1);
+				buff[bytes_read] = '\0';
+				file_str += buff;
+			} while (bytes_read == BUFF_SIZE - 1);
+
+			debug(file_str.size());
+
+			// parse and handle the lines, make points
+			mag_point_t mps;
+			MagPoint mp;
+
 			ClearSamples();
 
-			while (!inf.eof())
+			std::vector<std::string> lines, record;
+			split_record(file_str, lines, '\n');
+
+			for (std::vector<std::string>::iterator li(lines.begin()); li != lines.end(); ++li)
 			{
-				MagPoint mp;
-
-				std::string line;
-				std::getline(inf, line);
-
-				const char* pstart = line.c_str();
-				char* pend;
-
-				mag_point_t mps;
-
-				mps.x = (int16_t) strtol(pstart, &pend, 10);
-				if (pstart == pend)
-					break;
-				pstart = pend + 1;
-
-				mps.y = (int16_t) strtol(pstart, &pend, 10);
-				if (pstart == pend)
-					break;
-				pstart = pend + 1;
-
-				mps.z = (int16_t) strtol(pstart, NULL, 10);
-				if (pstart == pend)
-					break;
-
-				if (_mag_set.find(mps) == _mag_set.end())
+				split_record(*li, record, ',');
+				if (record.size() == 3)
 				{
-					_mag_set.insert(mps);
+					mps.x = atoi(record[0].c_str());
+					mps.y = atoi(record[1].c_str());
+					mps.z = atoi(record[2].c_str());
 
-					mp.Build(_d3d_device, mps.x, mps.y, mps.z);
-					_mags.push_back(mp);
+					if (_mag_set.find(mps) == _mag_set.end())
+					{
+						_mag_set.insert(mps);
+
+						mp.Build(mps.x, mps.y, mps.z);
+						_mags.push_back(mp);
+					}
+
+					++_num_samples;
 				}
 			}
-
-			_num_samples = _mags.size();
-		} else {
-			MsgBox(L"Unable to open file " + openFile.GetFullFileName(), L"Error", MB_OK | MB_ICONERROR);
 		}
 	}
 }

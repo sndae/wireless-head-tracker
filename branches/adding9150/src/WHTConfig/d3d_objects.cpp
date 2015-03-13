@@ -6,7 +6,7 @@
 #include "d3d.h"
 #include "d3d_objects.h"
 
-void CoordSys::Build(DeviceD3D& dev)
+void CoordSys::Build()
 {
 	_vertices.clear();
 
@@ -22,8 +22,10 @@ void CoordSys::Build(DeviceD3D& dev)
 	std::for_each(_vertices.begin() + vert_per_cube*2, _vertices.begin() + vert_per_cube*3, [] (SimpleVertex& v) { v.diffuse = D3DCOLOR_XRGB(80, 80, 150); } );
 }
 
-void MagPoint::Build(DeviceD3D& dev, int16_t newx, int16_t newy, int16_t newz)
+void MagPoint::Build(int16_t newx, int16_t newy, int16_t newz)
 {
+	_vertices.clear();
+
 	BuildCube(_vertices, 0.8f, 0.8f, 0.8f);
 
 	x = newx;
