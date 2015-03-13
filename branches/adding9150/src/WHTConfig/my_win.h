@@ -264,7 +264,7 @@ public:
 	}
 
 	int Read(char* buff, const int num_bytes);
-	int Write(char* buff, const int num_bytes);
+	void Write(char* buff, const int num_bytes);
 };
 
 class OpenSaveFileDialog

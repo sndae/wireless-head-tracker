@@ -246,7 +246,10 @@ void MagCalibDialog::SaveData()
 		{
 			char line[128];
 			for (std::vector<MagPoint>::iterator mi(_mags.begin()); mi != _mags.end(); ++mi)
+			{
 				sprintf_s(line, sizeof(line), "%i,%i,%i\n", mi->x, mi->y, mi->z);
+				f.Write(line, strlen(line));
+			}
 
 		} else {
 			MsgBox(L"Unable to open file " + saveFile.GetFullFileName(), L"Error", MB_OK | MB_ICONERROR);
