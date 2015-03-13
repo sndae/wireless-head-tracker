@@ -50,9 +50,13 @@ int SimpleFile::Read(char* buff, const int num_bytes)
 	return num_bytes_read;
 }
 
-int SimpleFile::Write(char* buff, const int num_bytes)
+void SimpleFile::Write(char* buff, const int num_bytes)
 {
-	return 0;
+	DWORD num_bytes_written;
+	BOOL res = ::WriteFile(_hFile, buff, num_bytes, &num_bytes_written, NULL);
+
+	if (res == FALSE  ||  num_bytes != num_bytes_written)
+		throw std::wstring(L"Unable to write output file.");
 }
 
 // ***************************************************************************
