@@ -11,6 +11,16 @@ public:
 };
 
 //
+// the eigen vectors
+//
+
+class EllipsoidAxes: public Object3D
+{
+public:
+	void Build();
+};
+
+//
 // one magnetometer measurement
 //
 

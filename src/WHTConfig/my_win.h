@@ -156,6 +156,7 @@ public:
 // but I will keep them anyway
 class Button: public Window		{};
 class Label: public Window		{};
+class EditBox: public Window	{};
 
 class Dialog: public Window
 {
