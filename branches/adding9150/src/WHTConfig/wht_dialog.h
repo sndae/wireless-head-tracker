@@ -17,27 +17,27 @@ private:
 	ProgressBar	_prg_axis_y;
 	ProgressBar	_prg_axis_z;
 
-	Window		_edt_fact_x;
-	Window		_edt_fact_y;
-	Window		_edt_fact_z;
+	EditBox		_edt_fact_x;
+	EditBox		_edt_fact_y;
+	EditBox		_edt_fact_z;
 
-	Window		_lbl_axis_num_x;
-	Window		_lbl_axis_num_y;
-	Window		_lbl_axis_num_z;
+	Label		_lbl_axis_num_x;
+	Label		_lbl_axis_num_y;
+	Label		_lbl_axis_num_z;
 
-	Window		_lbl_gyro_bias_x;
-	Window		_lbl_gyro_bias_y;
-	Window		_lbl_gyro_bias_z;
+	Label		_lbl_gyro_bias_x;
+	Label		_lbl_gyro_bias_y;
+	Label		_lbl_gyro_bias_z;
 
-	Window		_lbl_accel_bias_x;
-	Window		_lbl_accel_bias_y;
-	Window		_lbl_accel_bias_z;
+	Label		_lbl_accel_bias_x;
+	Label		_lbl_accel_bias_y;
+	Label		_lbl_accel_bias_z;
 
-	Window		_lbl_new_drift_comp;
-	Window		_lbl_applied_drift_comp;
-	Window		_lbl_packets_sum;
+	Label		_lbl_new_drift_comp;
+	Label		_lbl_applied_drift_comp;
+	Label		_lbl_packets_sum;
 
-	Window		_lbl_calib_status;
+	Label		_lbl_calib_status;
 
 	Button		_btn_connect;
 	Button		_btn_calibrate;

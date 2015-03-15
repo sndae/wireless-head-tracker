@@ -239,6 +239,9 @@ DeviceD3D::~DeviceD3D()
 
 bool DeviceD3D::IsValid()
 {
+	if (_pDevice == 0)
+		return false;
+
 	// Test the current state of the device
 	HRESULT rslt = _pDevice->TestCooperativeLevel();
 	if (FAILED(rslt))
@@ -441,7 +444,7 @@ Camera::Camera(DeviceD3D& d)
 
 void Camera::Reset()
 {
-	_rotX = 45;
+	_rotX = 22;
 	_rotY = 135;
 	_scale = 1;
 

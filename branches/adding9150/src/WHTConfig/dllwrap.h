@@ -1,47 +1,47 @@
 #pragma once
 
-class dll
+class Dll
 {
 private:
-	HMODULE	hDll;
+	HMODULE		_hDll;
 
 public:
-	dll()
-		: hDll(0)
+	Dll()
+		: _hDll(0)
 	{}
 
-	~dll()
+	~Dll()
 	{
-		release();
+		Release();
 	}
 
-	void release()
+	void Release()
 	{
-		if (hDll != 0)
+		if (_hDll != 0)
 		{
-			::FreeLibrary(hDll);
-			hDll = 0;
+			::FreeLibrary(_hDll);
+			_hDll = 0;
 		}
 	}
 
-	bool empty() const
+	bool IsEmpty() const
 	{
-		return hDll == 0;
+		return _hDll == 0;
 	}
 
-	bool load(const wchar_t* dll_name)
+	bool Load(const wchar_t* dll_name)
 	{
-		release();
+		Release();
 
-		hDll = ::LoadLibrary(dll_name);
+		_hDll = ::LoadLibrary(dll_name);
 		
-		return hDll != 0;
+		return _hDll != 0;
 	}
 
 	template <typename ProcType>
-	bool get_proc(ProcType& p, const char* proc_name)
+	bool GetProc(ProcType& p, const char* proc_name)
 	{
-		p = (ProcType) ::GetProcAddress(hDll, proc_name);
+		p = (ProcType) ::GetProcAddress(_hDll, proc_name);
 		return p != 0;
 	}
 };
