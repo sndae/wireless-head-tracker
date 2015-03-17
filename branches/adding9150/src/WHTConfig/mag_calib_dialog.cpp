@@ -76,7 +76,7 @@ void MagCalibDialog::OnSize(int width, int height, WPARAM wParam)
 	std::for_each(_mags.begin(), _mags.end(), [&](MagPoint& m) { m.Release(); } );
 
 	_coord_sys.Release();
-	_ellipsoid_axes.Release();
+	//_ellipsoid_axes.Release();
 	_d3d_device.Release();
 
 	_d3d_device.Init(_d3d, _d3d_window);
@@ -122,7 +122,7 @@ void MagCalibDialog::Render()
 
 	// render our objects
 	_coord_sys.Render(_d3d_device);
-	_ellipsoid_axes.Render(_d3d_device);
+	//_ellipsoid_axes.Render(_d3d_device);
 
 	std::for_each(_mags.begin(), _mags.end(), [&](MagPoint& m) {m.Render(_d3d_device); } );
 
@@ -146,7 +146,7 @@ void MagCalibDialog::Init3D()
 								D3DX_PI / 4,
 								(float) (r.right - r.left) / (r.bottom - r.top),
 								1.0,
-								10000.0);
+								100000.0);
 	
 	// Tell D3D to use our Projection matrix for the projection transformation stage
 	_d3d_device.SetProjectionTransform(matProjection);
@@ -155,7 +155,7 @@ void MagCalibDialog::Init3D()
 	_d3d_device.DisableLight();
 
 	_coord_sys.Build();
-	_ellipsoid_axes.Build();
+	//_ellipsoid_axes.Build();
 
 	// this one's not really necessary, but it won't hurt either
 	//_mags.reserve(2000);
@@ -163,6 +163,9 @@ void MagCalibDialog::Init3D()
 
 void MagCalibDialog::OnTimer(int timerID)
 {
+	if (!_dongle.IsOpen())
+		return;
+
 	// get raw the mag data
 	FeatRep_MagRawData repMagData;
 	repMagData.report_id = MAG_RAW_DATA_REPORT_ID;

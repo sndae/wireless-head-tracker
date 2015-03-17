@@ -1,8 +1,11 @@
 #pragma once
 
+#define _USE_MATH_DEFINES
+
 // C
 #include <stdint.h>
 #include <assert.h>
+#include <math.h>
 
 // C++
 #include <string>

@@ -526,7 +526,7 @@ void WHTDialog::ChangeConnectedStateUI()
 	_edt_fact_y.Enable(is_connected);
 	_edt_fact_z.Enable(is_connected);
 	_cmb_rf_power.Enable(is_connected);
-	_btn_mag_calibration.Enable(is_connected);
+	//_btn_mag_calibration.Enable(is_connected);
 
 	_btn_save_axes_setup.Enable(is_connected  &&  _isConfigChanged);
 	_btn_save_rf_power.Enable(is_connected  &&  _isPowerChanged);
