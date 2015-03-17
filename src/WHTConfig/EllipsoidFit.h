@@ -14,7 +14,7 @@ struct RealVector: public std::vector<double>
 	RealVector()
 	{}
 
-	RealVector(iterator first, iterator last)
+	RealVector(const_iterator first, const_iterator last)
 		: std::vector<double>(first, last)
 	{}
 
@@ -22,7 +22,7 @@ struct RealVector: public std::vector<double>
 		: std::vector<double>(n, val)
 	{}
 
-	RealVector getSubVector(int index, int n)
+	RealVector getSubVector(int index, int n) const
 	{
 		return RealVector(begin() + index, begin() + index + n);
 	}
@@ -55,7 +55,7 @@ struct RealMatrix: public std::vector<RealVector>
      * @throws org.apache.commons.math3.exception.OutOfRangeException if
      * the indices are not valid.
      */
-	RealMatrix getSubMatrix(int startRow, int endRow, int startColumn, int endColumn);
+	RealMatrix getSubMatrix(int startRow, int endRow, int startColumn, int endColumn) const;
 
     /**
      * Is this a square matrix?
@@ -146,7 +146,7 @@ struct RealMatrix: public std::vector<RealVector>
      * @return this*v
      * @throws IllegalArgumentException if columnDimension != v.size()
      */
-	RealVector operate(const RealVector& v);
+	RealVector operate(const RealVector& v) const;
 
     /**
      * Returns a {@link RealMatrix} with specified dimensions.
@@ -184,7 +184,7 @@ struct RealMatrix: public std::vector<RealVector>
      * @throws NumberIsTooSmallException if {@code endRow < startRow} or
      * {@code endColumn < startColumn}.
      */
-    void checkSubMatrixIndex(size_t startRow, size_t endRow, size_t startColumn, size_t endColumn)
+    void checkSubMatrixIndex(size_t startRow, size_t endRow, size_t startColumn, size_t endColumn) const
 	{
         checkRowIndex(startRow);
         checkRowIndex(endRow);
@@ -210,7 +210,7 @@ struct RealMatrix: public std::vector<RealVector>
      * @param row Row index to check.
      * @throws OutOfRangeException if {@code row} is not a valid index.
      */
-    void checkRowIndex(int row)
+    void checkRowIndex(int row) const
 	{
         if (row < 0  ||  row >= getRowDimension())
 		{
@@ -229,7 +229,7 @@ struct RealMatrix: public std::vector<RealVector>
      * @param column Column index to check.
      * @throws OutOfRangeException if {@code column} is not a valid index.
      */
-    void checkColumnIndex(int column)
+    void checkColumnIndex(int column) const
 	{
         if (column < 0 || column >= getColumnDimension())
 		{
@@ -693,11 +693,10 @@ public:
  */
 struct EllipsoidFit
 {
-	RealVector center;
-	RealVector radii;
-	RealVector evecs[3];
-
-	RealVector evals;
+	Point<double>	center;
+	Point<double>	radii;
+	Point<double>	eigen_vectors[3];
+	Point<double>	eigen_values;
 
 	/**
 	 * Solve the polynomial expression Ax^2 + By^2 + Cz^2 + 2Dxy + 2Exz + 2Fyz +
@@ -707,7 +706,7 @@ struct EllipsoidFit
 	 *            the points that will be fit to the polynomial expression.
 	 * @return the solution vector to the polynomial expression.
 	 */
-	RealVector solveSystem(const std::set<Point>& points);
+	RealVector solveSystem(const std::set<Point<int16_t>>& points);
 
 	/**
 	 * Create a matrix in the algebraic form of the polynomial Ax^2 + By^2 +
@@ -726,7 +725,7 @@ struct EllipsoidFit
 	 *            the algebraic from of the polynomial.
 	 * @return a vector containing the center of the ellipsoid.
 	 */
-	RealVector findCenter(RealMatrix& a);
+	void setCenter(const RealMatrix& a);
 
 	/**
 	 * Translate the algebraic form of the ellipsoid to the center.
@@ -737,14 +736,10 @@ struct EllipsoidFit
 	 *            the algebraic form of the polynomial.
 	 * @return the center translated form of the algebraic ellipsoid.
 	 */
-	RealMatrix translateToCenter(RealVector center, RealMatrix a);
+	RealMatrix translateToCenter(RealMatrix a);
 
-	/**
-	 * Find the radii of the ellipsoid in ascending order.
-	 * @param evals the eigenvalues of the ellipsoid.
-	 * @return the radii of the ellipsoid.
-	 */
-	RealVector findRadii();
+	// calculates the radii member
+	void setRadii();
 
 	/**
 	 * Fit points to the polynomial expression Ax^2 + By^2 + Cz^2 + 2Dxy + 2Exz
@@ -754,5 +749,5 @@ struct EllipsoidFit
 	 * @param points
 	 *            the points to be fit to the ellipsoid.
 	 */
-	void fitEllipsoid(const std::set<Point>& points);
+	void fitEllipsoid(const std::set<Point<int16_t>>& points);
 };

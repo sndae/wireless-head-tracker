@@ -2,7 +2,7 @@
 #pragma hdrstop
 
 #pragma comment(lib, "d3d9.lib")
-#pragma comment(lib, "d3dx9.lib")
+#pragma comment(lib, "d3dx9d.lib")
 
 #include "my_utils.h"
 #include "my_win.h"
@@ -352,25 +352,32 @@ void Object3D::Render(DeviceD3D& dev)
 		rslt = dev._pDevice->SetStreamSource(0, _vertex_buffer._pvb, 0, sizeof(SimpleVertex));
 		if (FAILED(rslt))		ThrowD3DException(rslt, L"SetStreamSource() failed");
 
-		rslt = dev._pDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, _vertices.size() / 3);
+		D3DPRIMITIVETYPE pt = _vertex_buffer.GetPrimitiveType();
+		UINT num_primitives = _vertices.size() / (pt == D3DPT_LINELIST ? 2 : 3);
+
+		rslt = dev._pDevice->DrawPrimitive(pt, 0, num_primitives);
 		if (FAILED(rslt))		ThrowD3DException(rslt, L"DrawPrimitive() failed");
 	}
 }
 
 void Object3D::MakeVertexBuffer(DeviceD3D& dev)
 {
-	// fill the normals
-	std::vector<SimpleVertex>::iterator first = _vertices.begin();
-	std::vector<SimpleVertex>::iterator last = _vertices.end();
-
-	assert((_vertices.size() % 3) == 0);
-
-	while (first != last)
+	// we don't need normals for lines
+	if (_vertex_buffer.GetPrimitiveType() == D3DPT_TRIANGLELIST)
 	{
-		D3DXVECTOR3 normal((first[2].pos - first[1].pos) * (first[0].pos - first[1].pos));
-		first[0].normal = first[1].normal = first[2].normal = normal;
+		// fill the normals
+		std::vector<SimpleVertex>::iterator first = _vertices.begin();
+		std::vector<SimpleVertex>::iterator last = _vertices.end();
 
-		first += 3;
+		assert((_vertices.size() % 3) == 0);
+
+		while (first != last)
+		{
+			D3DXVECTOR3 normal((first[2].pos - first[1].pos) * (first[0].pos - first[1].pos));
+			first[0].normal = first[1].normal = first[2].normal = normal;
+
+			first += 3;
+		}
 	}
 	
 	// alloc the vertex buffer
@@ -385,12 +392,14 @@ void Object3D::MakeVertexBuffer(DeviceD3D& dev)
 
 VertexBuffer::VertexBuffer()
 :	_pvb(0),
-	_vertex_count(0)
+	_vertex_count(0),
+	_primitive_type(D3DPT_TRIANGLELIST)
 {}
 
 VertexBuffer::VertexBuffer(const VertexBuffer& c)
 :	_pvb(c._pvb),
-	_vertex_count(c._vertex_count)
+	_vertex_count(c._vertex_count),
+	_primitive_type(c._primitive_type)
 {
 	if (_pvb)
 		_pvb->AddRef();
@@ -499,7 +508,7 @@ void Camera::Zoom(const int zoom)
 	CalcCamera();
 }
 
-void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth, float x, float y, float z)
+void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth, float x, float y, float z, D3DCOLOR col)
 {
 	D3DVECTOR p[8] = {	{ x,       y+Height,        z},
 						{ x+Width, y+Height,        z},
@@ -535,11 +544,11 @@ void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float De
 	vp[33].pos=p[3];		vp[34].pos=p[5];		vp[35].pos=p[7];
 }
 
-void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth)
+void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth, D3DCOLOR col)
 {
 	float x = -Width/2;
 	float y = -Height/2;
 	float z = -Depth/2;
 
-	BuildCube(v, Width, Height, Depth, x, y, z);
+	BuildCube(v, Width, Height, Depth, x, y, z, col);
 }

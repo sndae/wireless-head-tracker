@@ -181,7 +181,7 @@ void MagCalibDialog::OnTimer(int timerID)
 
 	for (int i = 0; i < repMagData.num_samples; ++i)
 	{
-		Point mps(repMagData.mag[i].x, repMagData.mag[i].y, repMagData.mag[i].z);
+		Point<int16_t> mps(repMagData.mag[i].x, repMagData.mag[i].y, repMagData.mag[i].z);
 
 		if (_mag_set.find(mps) == _mag_set.end())
 		{
@@ -292,7 +292,7 @@ void MagCalibDialog::LoadData()
 	OpenSaveFileDialog openFile;
 	openFile.AddFilter(L"CSV file (*.csv)", L"*.csv");
 	openFile.AddFilter(L"All files (*.*)", L"*.*");
-	openFile.SetDefaultFileName(L"magdata.csv");
+	//openFile.SetDefaultFileName(L"magdata.csv");
 
 	if (openFile.GetOpenFile(L"Load magnetometer samples", *this))
 	{
@@ -313,8 +313,6 @@ void MagCalibDialog::LoadData()
 				file_str += buff;
 			} while (bytes_read == BUFF_SIZE - 1);
 
-			debug(file_str.size());
-
 			// parse and handle the lines, make points
 			MagPoint mp;
 
@@ -328,7 +326,7 @@ void MagCalibDialog::LoadData()
 				split_record(*li, record, ',');
 				if (record.size() == 3)
 				{
-					Point mps(atoi(record[0].c_str()), atoi(record[1].c_str()), atoi(record[2].c_str()));
+					Point<int16_t> mps(atoi(record[0].c_str()), atoi(record[1].c_str()), atoi(record[2].c_str()));
 
 					if (_mag_set.find(mps) == _mag_set.end())
 					{
@@ -347,9 +345,16 @@ void MagCalibDialog::LoadData()
 
 void MagCalibDialog::CalcEllipsoidFit()
 {
+	if (_mag_set.size() < 1000)
+	{
+		MsgBox(L"Please record more points.", L"Error", MB_OK | MB_ICONERROR);
+		return;
+	}
+
 	WaitCursor wc;
 
 	// get the points
-	EllipsoidFit ef;
-	ef.fitEllipsoid(_mag_set);
+	_ellipsoid_fit.fitEllipsoid(_mag_set);
+
+	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.eigen_vectors);
 }

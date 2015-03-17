@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Point.h"
+#include "EllipsoidFit.h"
 
 class MagCalibDialog: public Dialog
 {
@@ -21,11 +22,13 @@ private:
 	Camera		_camera;
 
 	CoordSys			_coord_sys;		// the coordinate axes
-	//EllipsoidAxes		_ellipsoid_axes;
+	EllipsoidAxes		_ellipsoid_axes;
 
-	int						_num_samples;	// total samples received
-	std::set<Point>			_mag_set;		// used for avoiding duplicates
-	std::vector<MagPoint>	_mags;			// the magnetometer measurement points
+	int							_num_samples;	// total samples received
+	std::set<Point<int16_t>>	_mag_set;		// used for avoiding duplicates
+	std::vector<MagPoint>		_mags;			// the magnetometer measurement points
+
+	EllipsoidFit				_ellipsoid_fit;
 
 	int			_last_x, _last_y;			// used to calculate mouse movement delta
 	bool		_is_dragging;

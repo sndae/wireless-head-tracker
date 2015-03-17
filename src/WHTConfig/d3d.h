@@ -86,7 +86,8 @@ class VertexBuffer
 private:
 	IDirect3DVertexBuffer9*		_pvb;
 
-	size_t		_vertex_count;
+	size_t				_vertex_count;
+	D3DPRIMITIVETYPE	_primitive_type;
 
 public:
 	VertexBuffer();
@@ -100,6 +101,16 @@ public:
 	bool IsEmpty() const
 	{
 		return _pvb == 0;
+	}
+
+	void SetPrimitiveType(D3DPRIMITIVETYPE pt)
+	{
+		_primitive_type = pt;
+	}
+
+	D3DPRIMITIVETYPE GetPrimitiveType() const
+	{
+		return _primitive_type;
 	}
 
 	void Alloc(DeviceD3D& dev, const int vcount);
@@ -120,6 +131,17 @@ struct SimpleVertex
 	D3DXVECTOR3	pos;
 	D3DXVECTOR3	normal;
 	D3DCOLOR	diffuse;
+
+	SimpleVertex()
+	{}
+
+	SimpleVertex(float x, float y, float z, D3DCOLOR col)
+	{
+		pos.x = x;
+		pos.y = y;
+		pos.z = z;
+		diffuse = col;
+	}
 
 	// used to transform the vertex with STL (for_each)
 	struct transform_t
@@ -198,10 +220,10 @@ public:
 };
 
 // builds a cube of given dimensions around (0,0,0)
-void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth);
+void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth, D3DCOLOR col);
 
 // builds a cube of given dimensions at given coordinates
-void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth, float x, float y, float z);
+void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth, float x, float y, float z, D3DCOLOR col);
 
 // returns the angle between 2 NORMALIZED vectors
 inline float GetAngle(const D3DXVECTOR3& v1, const D3DXVECTOR3& v2)
