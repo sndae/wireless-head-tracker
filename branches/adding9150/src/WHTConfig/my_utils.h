@@ -8,8 +8,8 @@ std::wstring flt2str(const float f);
 
 inline void debug(const wchar_t* str)
 {
-	::OutputDebugStringW(str);
-	::OutputDebugStringW(L"\n");
+	::OutputDebugString(str);
+	::OutputDebugString(L"\n");
 }
 
 inline void debug(const std::wstring& str)
@@ -20,4 +20,9 @@ inline void debug(const std::wstring& str)
 inline void debug(const int i)
 {
 	debug(int2str(i));
+}
+
+inline void debugms()
+{
+	debug(::GetTickCount());
 }
