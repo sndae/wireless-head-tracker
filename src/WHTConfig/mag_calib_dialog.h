@@ -30,7 +30,7 @@ private:
 	Camera		_camera;
 
 	CoordSys			_coord_sys;		// the coordinate axes
-	EllipsoidAxes		_ellipsoid_axes;
+	//EllipsoidAxes		_ellipsoid_axes;
 
 	int						_num_samples;	// total samples received
 	std::set<mag_point_t>	_mag_set;		// used for avoiding duplicates

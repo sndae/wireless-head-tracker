@@ -462,8 +462,8 @@ void Camera::CalcCamera()
 	D3DXVECTOR3 cpos(0, 0, -550);
 
 	D3DXMATRIX mroty, mrotx, mscale, mfinal;
-	D3DXMatrixRotationY(&mroty, float(_rotY/180*3.1416926));
-	D3DXMatrixRotationX(&mrotx, float(_rotX/180*3.1416926));
+	D3DXMatrixRotationY(&mroty, float(_rotY/180*M_PI));
+	D3DXMatrixRotationX(&mrotx, float(_rotX/180*M_PI));
 	D3DXMatrixScaling(&mscale, _scale, _scale, _scale);
 
 	mfinal = mrotx * mroty * mscale;
