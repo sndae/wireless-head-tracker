@@ -1,14 +1,15 @@
 #pragma once
 
+template <class T>
 struct Point
 {
-	int16_t		x, y, z;
+	T		x, y, z;
 
 	Point()
 		: x(0), y(0), z(0)
 	{}
 
-	Point(int16_t nx, int16_t ny, int16_t nz)
+	Point(T nx, T ny, T nz)
 		: x(nx), y(ny), z(nz)
 	{}
 
@@ -17,4 +18,3 @@ struct Point
 		return x == lhs.x ? (y == lhs.y ? z < lhs.z : y < lhs.y) : x < lhs.x;
 	}
 };
-

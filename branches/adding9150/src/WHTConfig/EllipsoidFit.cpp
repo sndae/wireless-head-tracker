@@ -35,7 +35,7 @@ const double TINY = 1.6033346880071782E-291;
  * @throws org.apache.commons.math3.exception.OutOfRangeException if
  * the indices are not valid.
  */
-RealMatrix RealMatrix::getSubMatrix(int startRow, int endRow, int startColumn, int endColumn)
+RealMatrix RealMatrix::getSubMatrix(int startRow, int endRow, int startColumn, int endColumn) const
 {
 	checkSubMatrixIndex(startRow, endRow, startColumn, endColumn);
 
@@ -181,7 +181,7 @@ void RealMatrix::setSubMatrix(const RealMatrix& subMatrix, int row, int column)
  * @return this*v
  * @throws IllegalArgumentException if columnDimension != v.size()
  */
-RealVector RealMatrix::operate(const RealVector& v)
+RealVector RealMatrix::operate(const RealVector& v) const
 {
     int nRows = getRowDimension();
     int nCols = getColumnDimension();
@@ -1024,7 +1024,7 @@ RealMatrix TriDiagonalTransformer::getQT()
  *            the points that will be fit to the polynomial expression.
  * @return the solution vector to the polynomial expression.
  */
-RealVector EllipsoidFit::solveSystem(const std::set<Point>& points)
+RealVector EllipsoidFit::solveSystem(const std::set<Point<int16_t>>& points)
 {
 	// determine the number of points
 	int numPoints = points.size();
@@ -1035,7 +1035,7 @@ RealVector EllipsoidFit::solveSystem(const std::set<Point>& points)
 
 	// Fit the ellipsoid in the form of
 	// Ax^2 + By^2 + Cz^2 + 2Dxy + 2Exz + 2Fyz + 2Gx + 2Hy + 2Iz
-	std::set<Point>::iterator pi(points.begin());
+	std::set<Point<int16_t>>::iterator pi(points.begin());
 	for (int i = 0; i < numPoints; i++)
 	{
 		double xx = pow((double) pi->x, 2);
@@ -1127,7 +1127,7 @@ RealMatrix EllipsoidFit::formAlgebraicMatrix(const RealVector& v)
  *            the algebraic from of the polynomial.
  * @return a vector containing the center of the ellipsoid.
  */
-RealVector EllipsoidFit::findCenter(RealMatrix& a)
+void EllipsoidFit::setCenter(const RealMatrix& a)
 {
 	RealMatrix subA = a.getSubMatrix(0, 2, 0, 2);
 
@@ -1141,7 +1141,11 @@ RealVector EllipsoidFit::findCenter(RealMatrix& a)
 	DecompositionSolver solver = SingularValueDecomposition(subA).getSolver();
 	RealMatrix subAi = solver.getInverse();
 
-	return subAi.operate(subV);
+	RealVector op = subAi.operate(subV);
+
+	center.x = op[0];
+	center.y = op[1];
+	center.z = op[2];
 }
 
 /**
@@ -1153,14 +1157,16 @@ RealVector EllipsoidFit::findCenter(RealMatrix& a)
  *            the algebraic form of the polynomial.
  * @return the center translated form of the algebraic ellipsoid.
  */
-RealMatrix EllipsoidFit::translateToCenter(RealVector center, RealMatrix a)
+RealMatrix EllipsoidFit::translateToCenter(RealMatrix a)
 {
 	// Form the corresponding translation matrix.
 	RealMatrix t = RealMatrix::createRealIdentityMatrix(4);
 
 	RealMatrix centerMatrix(1, 3);	// RealMatrix centerMatrix = new Array2DRowRealMatrix(1, 3);
 
-	centerMatrix[0] = center;	//centerMatrix.setRowVector(0, center);
+	centerMatrix[0][0] = center.x;
+	centerMatrix[0][1] = center.y;
+	centerMatrix[0][2] = center.z;
 
 	t.setSubMatrix(centerMatrix, 3, 0);
 
@@ -1170,20 +1176,11 @@ RealMatrix EllipsoidFit::translateToCenter(RealVector center, RealMatrix a)
 	return r;
 }
 
-/**
- * Find the radii of the ellipsoid in ascending order.
- * @param evals the eigenvalues of the ellipsoid.
- * @return the radii of the ellipsoid.
- */
-RealVector EllipsoidFit::findRadii()
+void EllipsoidFit::setRadii()
 {
-	RealVector radii(evals.size(), 0.0);
-
-	// radii[i] = sqrt(1/eval[i]);
-	for (size_t i = 0; i < evals.size(); i++)
-		radii[i] = sqrt(1 / evals[i]);		//radii.setEntry(i, Math.sqrt(1 / evals[i]));
-		
-	return radii;
+	radii.x = sqrt(1 / eigen_values.x);
+	radii.y = sqrt(1 / eigen_values.y);
+	radii.z = sqrt(1 / eigen_values.z);
 }
 
 /**
@@ -1194,7 +1191,7 @@ RealVector EllipsoidFit::findRadii()
  * @param points
  *            the points to be fit to the ellipsoid.
  */
-void EllipsoidFit::fitEllipsoid(const std::set<Point>& points)
+void EllipsoidFit::fitEllipsoid(const std::set<Point<int16_t>>& points)
 {
 	// Fit the points to Ax^2 + By^2 + Cz^2 + 2Dxy + 2Exz
 	// + 2Fyz + 2Gx + 2Hy + 2Iz = 1 and solve the system.
@@ -1205,27 +1202,36 @@ void EllipsoidFit::fitEllipsoid(const std::set<Point>& points)
 	RealMatrix a = formAlgebraicMatrix(v);
 
 	// Find the center of the ellipsoid.
-	center = findCenter(a);
+	setCenter(a);
 
 	// Translate the algebraic form of the ellipsoid to the center.
-	RealMatrix r = translateToCenter(center, a);
+	RealMatrix r = translateToCenter(a);
 
 	// Generate a submatrix of r.
 	RealMatrix subr = r.getSubMatrix(0, 2, 0, 2);
 
 	// subr[i][j] = subr[i][j] / -r[3][3]).
 	double divr = -r[3][3];
-	for (int i = 0; i < subr.getRowDimension(); i++)
-		for (int j = 0; j < subr.getRowDimension(); j++)
+	int i, j;
+	for (i = 0; i < subr.getRowDimension(); i++)
+		for (j = 0; j < subr.getRowDimension(); j++)
 			subr[i][j] /= divr;		// subr.setEntry(i, j, subr.getEntry(i, j) / divr);
 
 	// Get the eigenvalues and eigenvectors.
 	EigenDecomposition ed(subr, 0);
-	evals = ed.getRealEigenvalues();
-	evecs[0] = ed.getEigenvector(0);
-	evecs[1] = ed.getEigenvector(1);
-	evecs[2] = ed.getEigenvector(2);
+	RealVector& ev = ed.getRealEigenvalues();
+	eigen_values.x = ev[0];
+	eigen_values.y = ev[1];
+	eigen_values.z = ev[2];
+
+	for (i = 0; i < 3; ++i)
+	{
+		RealVector& evecs = ed.getEigenvector(i);
+		eigen_vectors[i].x = evecs[0];
+		eigen_vectors[i].y = evecs[1];
+		eigen_vectors[i].z = evecs[2];
+	}
 
 	// Find the radii of the ellipsoid.
-	radii = findRadii();
+	setRadii();
 }
