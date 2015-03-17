@@ -3,17 +3,18 @@
 #define _USE_MATH_DEFINES
 
 // C
-#include <stdint.h>
-#include <assert.h>
-#include <math.h>
+#include <cstdint>
+#include <cassert>
+#include <cmath>
 
 // C++
 #include <string>
 #include <vector>
-#include <set>
 #include <algorithm>
+#include <set>
 
 // Windows
+#define NOMINMAX
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>

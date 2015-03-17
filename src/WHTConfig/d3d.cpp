@@ -459,7 +459,7 @@ void Camera::RefreshPos()
 
 void Camera::CalcCamera()
 {
-	D3DXVECTOR3 cpos(0, 0, -550);
+	D3DXVECTOR3 cpos(0, 0, -750);
 
 	D3DXMATRIX mroty, mrotx, mscale, mfinal;
 	D3DXMatrixRotationY(&mroty, float(_rotY/180*M_PI));
