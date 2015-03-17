@@ -143,6 +143,12 @@ struct SimpleVertex
 		diffuse = col;
 	}
 
+	SimpleVertex(const D3DXVECTOR3& p, D3DCOLOR col)
+	{
+		pos = p;
+		diffuse = col;
+	}
+
 	// used to transform the vertex with STL (for_each)
 	struct transform_t
 	{
@@ -181,6 +187,12 @@ protected:
 public:
 
 	virtual void Render(DeviceD3D& dev);
+
+	void clear()
+	{
+		Release();
+		_vertices.clear();
+	}
 
 	void Release()
 	{

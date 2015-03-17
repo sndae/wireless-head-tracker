@@ -65,6 +65,8 @@ void MagCalibDialog::ClearSamples()
 {
 	_mags.clear();
 	_mag_set.clear();
+	_ellipsoid_axes.clear();
+
 	_num_samples = 0;
 }
 
@@ -78,7 +80,7 @@ void MagCalibDialog::OnSize(int width, int height, WPARAM wParam)
 	std::for_each(_mags.begin(), _mags.end(), [&](MagPoint& m) { m.Release(); } );
 
 	_coord_sys.Release();
-	//_ellipsoid_axes.Release();
+	_ellipsoid_axes.Release();
 	_d3d_device.Release();
 
 	_d3d_device.Init(_d3d, _d3d_window);
@@ -124,7 +126,7 @@ void MagCalibDialog::Render()
 
 	// render our objects
 	_coord_sys.Render(_d3d_device);
-	//_ellipsoid_axes.Render(_d3d_device);
+	_ellipsoid_axes.Render(_d3d_device);
 
 	std::for_each(_mags.begin(), _mags.end(), [&](MagPoint& m) {m.Render(_d3d_device); } );
 
@@ -353,8 +355,9 @@ void MagCalibDialog::CalcEllipsoidFit()
 
 	WaitCursor wc;
 
-	// get the points
+	// try to make an ellipsoid out of the points
 	_ellipsoid_fit.fitEllipsoid(_mag_set);
 
+	// draw the ellipsoid axes
 	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.eigen_vectors);
 }

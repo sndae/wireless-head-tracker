@@ -11,26 +11,53 @@ void CoordSys::Build()
 	_vertices.clear();
 
 	// x
-	_vertices.push_back(SimpleVertex(1000, 0, 0, D3DCOLOR_XRGB(150, 80, 80)));
-	_vertices.push_back(SimpleVertex(-1000, 0, 0, D3DCOLOR_XRGB(150, 80, 80)));
+	_vertices.push_back(SimpleVertex(1000, 0, 0, D3DCOLOR_XRGB(230, 80, 80)));
+	_vertices.push_back(SimpleVertex(-1000, 0, 0, D3DCOLOR_XRGB(60, 80, 80)));
 
 	// y
-	_vertices.push_back(SimpleVertex(0, 1000, 0, D3DCOLOR_XRGB(80, 150, 80)));
-	_vertices.push_back(SimpleVertex(0, -1000, 0, D3DCOLOR_XRGB(80, 150, 80)));
+	_vertices.push_back(SimpleVertex(0, 1000, 0, D3DCOLOR_XRGB(80, 230, 80)));
+	_vertices.push_back(SimpleVertex(0, -1000, 0, D3DCOLOR_XRGB(80, 60, 80)));
 
 	// z
-	_vertices.push_back(SimpleVertex(0, 0, 1000, D3DCOLOR_XRGB(80, 80, 150)));
-	_vertices.push_back(SimpleVertex(0, 0, -1000, D3DCOLOR_XRGB(80, 80, 150)));
+	_vertices.push_back(SimpleVertex(0, 0, 1000, D3DCOLOR_XRGB(80, 80, 230)));
+	_vertices.push_back(SimpleVertex(0, 0, -1000, D3DCOLOR_XRGB(80, 80, 60)));
 }
 
 void EllipsoidAxes::Build(const Point<double>& center, const Point<double>& radii, const Point<double> eigen_vectors[3])
 {
 	_vertices.clear();
 
+	D3DXVECTOR3 vx((float) eigen_vectors[0].x, (float) eigen_vectors[0].y, (float) eigen_vectors[0].z);
+	D3DXVECTOR3 vy((float) eigen_vectors[1].x, (float) eigen_vectors[1].y, (float) eigen_vectors[1].z);
+	D3DXVECTOR3 vz((float) eigen_vectors[2].x, (float) eigen_vectors[2].y, (float) eigen_vectors[2].z);
+
+	float angleX = GetAngle(vx, D3DXVECTOR3(1, 0, 0));
+	float angleY = GetAngle(vy, D3DXVECTOR3(0, 1, 0));
+	float angleZ = GetAngle(vz, D3DXVECTOR3(0, 0, 1));
+
+	vx = vx * (float) radii.x;
+	vy = vy * (float) radii.y;
+	vz = vz * (float) radii.z;
+
+	_vertices.push_back(SimpleVertex(-vx, D3DCOLOR_XRGB(255, 200, 200)));
+	_vertices.push_back(SimpleVertex(vx, D3DCOLOR_XRGB(255, 200, 200)));
+
+	_vertices.push_back(SimpleVertex(-vy, D3DCOLOR_XRGB(200, 255, 200)));
+	_vertices.push_back(SimpleVertex(vy, D3DCOLOR_XRGB(200, 255, 200)));
+
+	_vertices.push_back(SimpleVertex(-vz, D3DCOLOR_XRGB(200, 200, 255)));
+	_vertices.push_back(SimpleVertex(vz, D3DCOLOR_XRGB(200, 200, 255)));
+
+	D3DXMATRIX translate;
+	D3DXMatrixTranslation(&translate, (float) center.x, (float) center.y, (float) center.z);
+
+	std::for_each(_vertices.begin(), _vertices.end(), SimpleVertex::transform_t(translate));
+
 	/*
-	BuildCube(_vertices, 2, 2, 2, 0.2f * f1, -0.65f * f1, -0.74f * f1, D3DCOLOR_XRGB(250, 80, 80));
-	BuildCube(_vertices, 2, 2, 2, 0.24f * f2, -0.7f * f2, 0.68f * f2, D3DCOLOR_XRGB(80, 250, 80));
-	BuildCube(_vertices, 2, 2, 2, 0.95f * f3, 0.31f * f3, -0.02f * f3, D3DCOLOR_XRGB(80, 80, 250));
+	D3DXMATRIX rotx, roty, rotz;
+	D3DXMatrixRotationX(&rotx, -angleX);
+	D3DXMatrixRotationY(&roty, -angleY);
+	D3DXMatrixRotationZ(&rotz, -angleZ);
 	*/
 }
 

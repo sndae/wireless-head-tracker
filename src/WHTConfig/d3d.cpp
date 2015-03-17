@@ -2,7 +2,7 @@
 #pragma hdrstop
 
 #pragma comment(lib, "d3d9.lib")
-#pragma comment(lib, "d3dx9d.lib")
+#pragma comment(lib, "d3dx9.lib")
 
 #include "my_utils.h"
 #include "my_win.h"
@@ -542,6 +542,8 @@ void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float De
 	// right
 	vp[30].pos=p[1];		vp[31].pos=p[5];		vp[32].pos=p[3];
 	vp[33].pos=p[3];		vp[34].pos=p[5];		vp[35].pos=p[7];
+
+	std::for_each(vp, v.end(), [&](SimpleVertex& v) { v.diffuse = col; } );
 }
 
 void BuildCube(std::vector<SimpleVertex>& v, float Width, float Height, float Depth, D3DCOLOR col)
