@@ -12,6 +12,8 @@
 #include "wht_dongle.h"
 #include "mag_calib_dialog.h"
 
+#include "EllipsoidFit.h"
+
 MagCalibDialog::MagCalibDialog(WHTDongle& dngl)
 :	_icon_large(IDI_MAGNET, true),
 	_icon_small(IDI_MAGNET, false),
@@ -163,6 +165,10 @@ void MagCalibDialog::Init3D()
 
 void MagCalibDialog::OnTimer(int timerID)
 {
+	// update the counters
+	_lbl_num_points.SetText((int) _mags.size());
+	_lbl_num_samples.SetText(_num_samples);
+
 	if (!_dongle.IsOpen())
 		return;
 
@@ -175,10 +181,7 @@ void MagCalibDialog::OnTimer(int timerID)
 
 	for (int i = 0; i < repMagData.num_samples; ++i)
 	{
-		mag_point_t mps;
-		mps.x = repMagData.mag[i].x;
-		mps.y = repMagData.mag[i].y;
-		mps.z = repMagData.mag[i].z;
+		Point mps(repMagData.mag[i].x, repMagData.mag[i].y, repMagData.mag[i].z);
 
 		if (_mag_set.find(mps) == _mag_set.end())
 		{
@@ -190,10 +193,6 @@ void MagCalibDialog::OnTimer(int timerID)
 			_mag_set.insert(mps);
 		}
 	}
-
-	// update the counters
-	_lbl_num_points.SetText((int) _mags.size());
-	_lbl_num_samples.SetText(_num_samples);
 }
 
 void MagCalibDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
@@ -206,6 +205,8 @@ void MagCalibDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		SaveData();
 	else if (ctrlID == IDC_BTN_LOAD)
 		LoadData();
+	else if (ctrlID == IDC_BTN_CALC)
+		CalcEllipsoidFit();
 }
 
 void MagCalibDialog::OnLButtonDown(int x, int y, WPARAM wParam)
@@ -315,7 +316,6 @@ void MagCalibDialog::LoadData()
 			debug(file_str.size());
 
 			// parse and handle the lines, make points
-			mag_point_t mps;
 			MagPoint mp;
 
 			ClearSamples();
@@ -328,9 +328,7 @@ void MagCalibDialog::LoadData()
 				split_record(*li, record, ',');
 				if (record.size() == 3)
 				{
-					mps.x = atoi(record[0].c_str());
-					mps.y = atoi(record[1].c_str());
-					mps.z = atoi(record[2].c_str());
+					Point mps(atoi(record[0].c_str()), atoi(record[1].c_str()), atoi(record[2].c_str()));
 
 					if (_mag_set.find(mps) == _mag_set.end())
 					{
@@ -345,4 +343,13 @@ void MagCalibDialog::LoadData()
 			}
 		}
 	}
+}
+
+void MagCalibDialog::CalcEllipsoidFit()
+{
+	WaitCursor wc;
+
+	// get the points
+	EllipsoidFit ef;
+	ef.fitEllipsoid(_mag_set);
 }

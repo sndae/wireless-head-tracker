@@ -1,15 +1,6 @@
 #pragma once
 
-// we use this to avoid adding duplicate points
-struct mag_point_t
-{
-	int16_t		x, y, z;
-
-	bool operator < (const mag_point_t& lhs) const
-	{
-		return x == lhs.x ? (y == lhs.y ? z < lhs.z : y < lhs.y) : x < lhs.x;
-	}
-};
+#include "Point.h"
 
 class MagCalibDialog: public Dialog
 {
@@ -33,7 +24,7 @@ private:
 	//EllipsoidAxes		_ellipsoid_axes;
 
 	int						_num_samples;	// total samples received
-	std::set<mag_point_t>	_mag_set;		// used for avoiding duplicates
+	std::set<Point>			_mag_set;		// used for avoiding duplicates
 	std::vector<MagPoint>	_mags;			// the magnetometer measurement points
 
 	int			_last_x, _last_y;			// used to calculate mouse movement delta
@@ -46,6 +37,7 @@ private:
 	void ClearSamples();
 	void SaveData();
 	void LoadData();
+	void CalcEllipsoidFit();
 
 public:
 
