@@ -291,10 +291,16 @@ void split_record(const std::string& in_str, std::vector<std::string>& out_vecto
 
 void MagCalibDialog::LoadData()
 {
+#if _DEBUG
+	std::wstring fname(L"C:\\my_opensource\\wht_adding9150\\src\\WHTConfig\\samples\\tracker4.csv");
+	{
+		WaitCursor wc;
+		SimpleFile f;
+		if (f.Open(fname, false))
+#else
 	OpenSaveFileDialog openFile;
 	openFile.AddFilter(L"CSV file (*.csv)", L"*.csv");
 	openFile.AddFilter(L"All files (*.*)", L"*.*");
-	//openFile.SetDefaultFileName(L"magdata.csv");
 
 	if (openFile.GetOpenFile(L"Load magnetometer samples", *this))
 	{
@@ -303,6 +309,7 @@ void MagCalibDialog::LoadData()
 		SimpleFile f;
 
 		if (f.Open(openFile.GetFullFileName(), false))
+#endif
 		{
 			// read the entire file into a string (yeah, nasty, i know...)
 			const int BUFF_SIZE = 1000;
@@ -347,6 +354,8 @@ void MagCalibDialog::LoadData()
 
 void MagCalibDialog::CalcEllipsoidFit()
 {
+	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.eigen_vectors);
+	/*
 	if (_mag_set.size() < 1000)
 	{
 		MsgBox(L"Please record more points.", L"Error", MB_OK | MB_ICONERROR);
@@ -360,4 +369,5 @@ void MagCalibDialog::CalcEllipsoidFit()
 
 	// draw the ellipsoid axes
 	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.eigen_vectors);
+	*/
 }
