@@ -29,7 +29,7 @@ public:
 		_vertex_buffer.SetPrimitiveType(D3DPT_LINELIST);
 	}
 
-	void Build(const Point<double>& center, const Point<double>& radii, const Point<double> eigen_vectors[3]);
+	void Build(const Point<double>& center, const double radii[3], double eigen_vectors[3][3], double eigen_values[3]);
 };
 
 //

@@ -354,8 +354,8 @@ void MagCalibDialog::LoadData()
 
 void MagCalibDialog::CalcEllipsoidFit()
 {
-	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.eigen_vectors);
-	/*
+	//_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.eigen_vectors, _ellipsoid_fit.eigen_values);
+
 	if (_mag_set.size() < 1000)
 	{
 		MsgBox(L"Please record more points.", L"Error", MB_OK | MB_ICONERROR);
@@ -368,6 +368,5 @@ void MagCalibDialog::CalcEllipsoidFit()
 	_ellipsoid_fit.fitEllipsoid(_mag_set);
 
 	// draw the ellipsoid axes
-	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.eigen_vectors);
-	*/
+	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.evecs, _ellipsoid_fit.evals);
 }
