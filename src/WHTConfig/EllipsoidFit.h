@@ -694,9 +694,9 @@ public:
 struct EllipsoidFit
 {
 	Point<double>	center;
-	Point<double>	radii;
-	Point<double>	eigen_vectors[3];
-	Point<double>	eigen_values;
+	double			radii[3];
+	double			evecs[3][3];
+	double			evals[3];
 
 	/**
 	 * Solve the polynomial expression Ax^2 + By^2 + Cz^2 + 2Dxy + 2Exz + 2Fyz +

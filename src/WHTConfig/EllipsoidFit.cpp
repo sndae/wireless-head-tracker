@@ -1178,9 +1178,8 @@ RealMatrix EllipsoidFit::translateToCenter(RealMatrix a)
 
 void EllipsoidFit::setRadii()
 {
-	radii.x = sqrt(1 / eigen_values.x);
-	radii.y = sqrt(1 / eigen_values.y);
-	radii.z = sqrt(1 / eigen_values.z);
+	for (int i = 0; i < 3; ++i)
+		radii[i] = sqrt(1 / evals[i]);
 }
 
 /**
@@ -1220,16 +1219,14 @@ void EllipsoidFit::fitEllipsoid(const std::set<Point<int16_t>>& points)
 	// Get the eigenvalues and eigenvectors.
 	EigenDecomposition ed(subr, 0);
 	RealVector& ev = ed.getRealEigenvalues();
-	eigen_values.x = ev[0];
-	eigen_values.y = ev[1];
-	eigen_values.z = ev[2];
+	for (i = 0; i < 3; ++i)
+		evals[i] = ev[i];
 
 	for (i = 0; i < 3; ++i)
 	{
-		RealVector& evecs = ed.getEigenvector(i);
-		eigen_vectors[i].x = evecs[0];
-		eigen_vectors[i].y = evecs[1];
-		eigen_vectors[i].z = evecs[2];
+		RealVector& ev = ed.getEigenvector(i);
+		for (j = 0; j < 3; ++j)
+			evecs[i][j] = ev[j];
 	}
 
 	// Find the radii of the ellipsoid.
