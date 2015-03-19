@@ -29,17 +29,18 @@ public:
 		_vertex_buffer.SetPrimitiveType(D3DPT_LINELIST);
 	}
 
-	void Build(const Point<double>& center, const double radii[3], double eigen_vectors[3][3], double eigen_values[3]);
+	void Build(const Point<double>& center, const double radii[3], double evecs[3][3]);
 };
 
 //
 // one magnetometer measurement
 //
 
-class MagPoint: public Object3D, Point<int16_t>
+class MagPoint: public Object3D
 {
 public:
-	int16_t		x, y, z;
+	Point<int16_t>	point;
 
-	void Build(int16_t newx, int16_t newy, int16_t newz);
+	void Build(const Point<int16_t>& p);
+	void BuildCalibrated(const Point<int16_t>& p, const Point<double>& center, const double calibMatrix[3][3]);
 };

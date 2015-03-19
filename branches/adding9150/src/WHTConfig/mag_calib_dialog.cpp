@@ -20,7 +20,8 @@ MagCalibDialog::MagCalibDialog(WHTDongle& dngl)
 	_camera(_d3d_device),
 	_is_dragging(false),
 	_dongle(dngl),
-	_num_samples(0)
+	_num_samples(0),
+	_is_valid(false)
 {}
 
 void MagCalibDialog::OnInit()
@@ -68,6 +69,7 @@ void MagCalibDialog::ClearSamples()
 	_ellipsoid_axes.clear();
 
 	_num_samples = 0;
+	//_is_valid = true;
 }
 
 void MagCalibDialog::OnSize(int width, int height, WPARAM wParam)
@@ -188,7 +190,7 @@ void MagCalibDialog::OnTimer(int timerID)
 		if (_mag_set.find(mps) == _mag_set.end())
 		{
 			MagPoint mp;
-			mp.Build(repMagData.mag[i].x, repMagData.mag[i].y, repMagData.mag[i].z);
+			mp.Build(mps);
 
 			_mags.push_back(mp);
 
@@ -256,7 +258,7 @@ void MagCalibDialog::SaveData()
 			char line[128];
 			for (std::vector<MagPoint>::iterator mi(_mags.begin()); mi != _mags.end(); ++mi)
 			{
-				sprintf_s(line, sizeof(line), "%i,%i,%i\n", mi->x, mi->y, mi->z);
+				sprintf_s(line, sizeof(line), "%i,%i,%i\n", mi->point.x, mi->point.y, mi->point.z);
 				f.Write(line, strlen(line));
 			}
 
@@ -292,7 +294,7 @@ void split_record(const std::string& in_str, std::vector<std::string>& out_vecto
 void MagCalibDialog::LoadData()
 {
 #if _DEBUG
-	std::wstring fname(L"C:\\my_opensource\\wht_adding9150\\src\\WHTConfig\\samples\\tracker4.csv");
+	std::wstring fname(L"C:\\my_opensource\\wht_adding9150\\src\\WHTConfig\\samples\\my_tracker.csv");
 	{
 		WaitCursor wc;
 		SimpleFile f;
@@ -341,7 +343,7 @@ void MagCalibDialog::LoadData()
 					{
 						_mag_set.insert(mps);
 
-						mp.Build(mps.x, mps.y, mps.z);
+						mp.Build(mps);
 						_mags.push_back(mp);
 					}
 
@@ -354,9 +356,7 @@ void MagCalibDialog::LoadData()
 
 void MagCalibDialog::CalcEllipsoidFit()
 {
-	//_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.eigen_vectors, _ellipsoid_fit.eigen_values);
-
-	if (_mag_set.size() < 1000)
+	if (_mag_set.size() < 500)
 	{
 		MsgBox(L"Please record more points.", L"Error", MB_OK | MB_ICONERROR);
 		return;
@@ -366,7 +366,41 @@ void MagCalibDialog::CalcEllipsoidFit()
 
 	// try to make an ellipsoid out of the points
 	_ellipsoid_fit.fitEllipsoid(_mag_set);
+	_ellipsoid_fit.calcMatrix();
 
 	// draw the ellipsoid axes
-	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.evecs, _ellipsoid_fit.evals);
+	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.evecs);
+
+	_is_valid = true;
+
+	/*
+	// make the calibrated points
+	D3DXMATRIX rotscale;
+	D3DXMATRIX translate;
+
+	D3DXMatrixIdentity(&rotscale);
+	rotscale._11 = (float) _ellipsoid_fit.calibMatrix[0][0];
+	rotscale._12 = (float) _ellipsoid_fit.calibMatrix[0][1];
+	rotscale._13 = (float) _ellipsoid_fit.calibMatrix[0][2];
+
+	rotscale._21 = (float) _ellipsoid_fit.calibMatrix[1][0];
+	rotscale._22 = (float) _ellipsoid_fit.calibMatrix[1][1];
+	rotscale._23 = (float) _ellipsoid_fit.calibMatrix[1][2];
+
+	rotscale._31 = (float) _ellipsoid_fit.calibMatrix[2][0];
+	rotscale._32 = (float) _ellipsoid_fit.calibMatrix[2][1];
+	rotscale._33 = (float) _ellipsoid_fit.calibMatrix[2][2];
+
+	D3DXMatrixTranslation(&translate,	(float) _ellipsoid_fit.center.x,
+										(float) _ellipsoid_fit.center.y,
+										(float) _ellipsoid_fit.center.z);
+										*/
+
+
+	for (std::set<Point<int16_t>>::const_iterator piter(_mag_set.begin()); piter != _mag_set.end(); ++piter)
+	{
+		MagPoint mp;
+		mp.BuildCalibrated(*piter, _ellipsoid_fit.center, _ellipsoid_fit.calibMatrix);
+		_mags.push_back(mp);
+	}
 }

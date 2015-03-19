@@ -29,6 +29,7 @@ private:
 	std::vector<MagPoint>		_mags;			// the magnetometer measurement points
 
 	EllipsoidFit				_ellipsoid_fit;
+	bool						_is_valid;		// true if the members of _ellipsoid_fit are valid
 
 	int			_last_x, _last_y;			// used to calculate mouse movement delta
 	bool		_is_dragging;
