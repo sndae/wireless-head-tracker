@@ -62,18 +62,6 @@ RealMatrix RealMatrix::transpose() const
 		for (int r = 0; r < nRows; r++)
 			out[c][r] = (*this)[r][c];
 
-	/*
-    walkInOptimizedOrder(new DefaultRealMatrixPreservingVisitor() {
-
-        // {@inheritDoc}
-        @Override
-        public void visit(final int row, final int column, final double value) {
-            out.setEntry(column, row, value);
-        }
-
-    });
-	*/
-
     return out;
 }
 
@@ -1231,4 +1219,66 @@ void EllipsoidFit::fitEllipsoid(const std::set<Point<int16_t>>& points)
 
 	// Find the radii of the ellipsoid.
 	setRadii();
+}
+
+/**
+ * puts the radii in the correct order, and calculates a matrix which puts the
+ * magnetometer measurements on a sphere
+ * This peace of code is written by Petar Pavlovic, found on:
+ * http://diydrones.com/forum/topics/magnetometer-soft-and-hard-iron-calibration?commentId=705844%3AComment%3A1511340
+ */
+void EllipsoidFit::calcMatrix()
+{
+	int or[3];
+	int i,j,k;
+		
+	or[0] = 0;  // orientation vector, has info which radii is which
+	for (i = 1; i < 3; ++i) 
+		if (fabs(evecs[0][or[0]]) < fabs(evecs[0][i]))
+			or[0] = i;
+	
+	or[1] = 0;
+	for(i = 1; i < 3; ++i) 
+		if (fabs(evecs[1][or[1]]) < fabs(evecs[1][i]))
+			or[1] = i;
+
+	or[2] = 0;
+	for(i = 1; i < 3; ++i) 
+		if (fabs(evecs[2][or[2]]) < fabs(evecs[2][i]))
+			or[2] = i;
+
+	// get eigenvectors, eigenvalues and the radii in correct order
+	double evc[3][3];
+	double rad[3];
+	double evl[3];
+	for(i = 0; i < 3; ++i)
+	{
+		evc[or[0]][i] = evecs[0][i];
+		evc[or[1]][i] = evecs[1][i];
+		evc[or[2]][i] = evecs[2][i];
+
+		rad[or[i]] = radii[i];
+		evl[or[i]] = evals[i];
+	}
+
+	// calculates the transformation matrix
+	for (i = 0; i < 3; ++i)
+	{
+		for (j = 0; j < 3; ++j)
+		{
+			calibMatrix[i][j] = 0;
+			for(k = 0; k < 3; ++k)
+				calibMatrix[i][j] += evc[k][i] * evc[k][j] / rad[k];
+		}
+	}
+
+	// copy the values back into the member variables
+	for (i = 0; i < 3; ++i)
+	{
+		radii[i] = rad[i];
+		evl[i] = evl[i];
+
+		for (j = 0; j < 3; ++j)
+			evecs[i][j] = evc[i][j];
+	}
 }

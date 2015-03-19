@@ -698,6 +698,9 @@ struct EllipsoidFit
 	double			evecs[3][3];
 	double			evals[3];
 
+	// the matrix which transforms raw magnetometer readings onto a unit sphere
+	double			calibMatrix[3][3];
+
 	/**
 	 * Solve the polynomial expression Ax^2 + By^2 + Cz^2 + 2Dxy + 2Exz + 2Fyz +
 	 * 2Gx + 2Hy + 2Iz from the provided points.
@@ -750,4 +753,10 @@ struct EllipsoidFit
 	 *            the points to be fit to the ellipsoid.
 	 */
 	void fitEllipsoid(const std::set<Point<int16_t>>& points);
+
+	/**
+	 * puts the radii in the correct order, and calculates a matrix which puts the
+	 * magnetometer measurements on a sphere
+	 */
+	void calcMatrix();
 };
