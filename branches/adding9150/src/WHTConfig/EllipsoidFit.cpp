@@ -1219,6 +1219,9 @@ void EllipsoidFit::fitEllipsoid(const std::set<Point<int16_t>>& points)
 
 	// Find the radii of the ellipsoid.
 	setRadii();
+
+	// find the calibration transformation matrix
+	calcMatrix();
 }
 
 /**
@@ -1246,6 +1249,10 @@ void EllipsoidFit::calcMatrix()
 	for(i = 1; i < 3; ++i) 
 		if (fabs(evecs[2][or[2]]) < fabs(evecs[2][i]))
 			or[2] = i;
+
+	or[0] = 0;
+	or[1] = 1;
+	or[2] = 2;
 
 	// get eigenvectors, eigenvalues and the radii in correct order
 	double evc[3][3];

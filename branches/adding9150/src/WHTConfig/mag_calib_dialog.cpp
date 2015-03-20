@@ -21,7 +21,7 @@ MagCalibDialog::MagCalibDialog(WHTDongle& dngl)
 	_is_dragging(false),
 	_dongle(dngl),
 	_num_samples(0),
-	_is_valid(false)
+	_is_ellipsoid_fit_valid(false)
 {}
 
 void MagCalibDialog::OnInit()
@@ -73,7 +73,7 @@ void MagCalibDialog::ClearSamples()
 	_vb_mag_points[1].back().Alloc(_d3d_device, NUM_VERTICES_PER_VBUFFER);
 
 	_num_samples = 0;
-	_is_valid = false;
+	_is_ellipsoid_fit_valid = false;
 }
 
 void MagCalibDialog::OnSize(int width, int height, WPARAM wParam)
@@ -86,7 +86,8 @@ void MagCalibDialog::OnSize(int width, int height, WPARAM wParam)
 	_vb_mag_points[0].clear();
 	_vb_mag_points[1].clear();
 
-	_line_vertex_buffer.Release();	// for the lines - coordinate system and the ellipsoid axes
+	_vb_coord_sys.Release();
+	_vb_ellipsoid_axes.Release();
 
 	_d3d_device.Release();
 	_d3d_device.Init(_d3d, _d3d_window);
@@ -131,10 +132,10 @@ void MagCalibDialog::Render()
 	_camera.RefreshPos();
 
 	// render our line based objects (the coordinate axes and the ellipsoid axes)
-	_d3d_device.DrawVertices(_line_vertex_buffer, D3DPT_LINELIST);
+	_d3d_device.DrawVertices(_vb_coord_sys, D3DPT_LINELIST);
 
-	//_coord_sys.Render(_d3d_device);
-	//_ellipsoid_axes.Render(_d3d_device);
+	if (_is_ellipsoid_fit_valid)
+		_d3d_device.DrawVertices(_vb_ellipsoid_axes, D3DPT_LINELIST);
 
 	// render our triangle based objects
 
@@ -173,7 +174,7 @@ void MagCalibDialog::Init3D()
 	_d3d_device.DisableLight();
 
 	// create the vertex buffers for the lines
-	_line_vertex_buffer.Alloc(_d3d_device, 32);
+	_vb_ellipsoid_axes.Alloc(_d3d_device, 32);
 
 	// and 3D points for the cubes
 	_vb_mag_points[0].push_back(VertexBuffer());
@@ -189,9 +190,10 @@ void MagCalibDialog::Init3D()
 
 	// add the coordinate system to the vertex buffer
 	_coord_sys.Build();
-	_line_vertex_buffer.Lock();
-	_line_vertex_buffer.AddObject(_coord_sys);
-	_line_vertex_buffer.Unlock();
+	_vb_coord_sys.Alloc(_d3d_device, 32);
+	_vb_coord_sys.Lock();
+	_vb_coord_sys.AddObject(_coord_sys);
+	_vb_coord_sys.Unlock();
 }
 
 void MagCalibDialog::OnTimer(int timerID)
@@ -218,7 +220,7 @@ void MagCalibDialog::OnTimer(int timerID)
 			_mag_set.insert(mps);
 
 			AddPoint(mps, true);
-			if (_is_valid)
+			if (_is_ellipsoid_fit_valid)
 				AddPoint(mps, false);
 		}
 	}
@@ -345,13 +347,15 @@ void MagCalibDialog::AddPoint(const Point<int16_t>& p, bool is_raw)
 
 void MagCalibDialog::LoadData()
 {
+/*
 #if _DEBUG
-	std::wstring fname(L"C:\\my_opensource\\wht_adding9150\\src\\WHTConfig\\samples\\my_tracker.csv");
+	std::wstring fname(L"C:\\my_opensource\\wht_adding9150\\src\\WHTConfig\\samples\\tracker2.csv");
 	{
 		WaitCursor wc;
 		SimpleFile f;
 		if (f.Open(fname, false))
 #else
+*/
 	OpenSaveFileDialog openFile;
 	openFile.AddFilter(L"CSV file (*.csv)", L"*.csv");
 	openFile.AddFilter(L"All files (*.*)", L"*.*");
@@ -363,10 +367,10 @@ void MagCalibDialog::LoadData()
 		SimpleFile f;
 
 		if (f.Open(openFile.GetFullFileName(), false))
-#endif
+//#endif
 		{
 			// ellipsoid fit becomes invalid
-			_is_valid = false;
+			_is_ellipsoid_fit_valid = false;
 
 			// read the entire file into a string (yeah, nasty, i know...)
 			const int BUFF_SIZE = 1000;
@@ -418,10 +422,13 @@ void MagCalibDialog::CalcEllipsoidFit()
 
 	// try to make an ellipsoid out of the points
 	_ellipsoid_fit.fitEllipsoid(_mag_set);
-	_ellipsoid_fit.calcMatrix();
 
 	// draw the ellipsoid axes
 	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.evecs);
+
+	_vb_ellipsoid_axes.Lock();
+	_vb_ellipsoid_axes.AddObject(_ellipsoid_axes);
+	_vb_ellipsoid_axes.Unlock();
 
 	// clear the calibrated vertex buffer
 	_vb_mag_points[1].clear();
@@ -432,5 +439,5 @@ void MagCalibDialog::CalcEllipsoidFit()
 	for (std::set<Point<int16_t>>::const_iterator piter(_mag_set.begin()); piter != _mag_set.end(); ++piter)
 		AddPoint(*piter, false);
 
-	_is_valid = true;
+	_is_ellipsoid_fit_valid = true;
 }

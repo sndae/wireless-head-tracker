@@ -26,6 +26,7 @@ void CoordSys::Build()
 void EllipsoidAxes::Build(const Point<double>& center, const double radii[3], double evecs[3][3])
 {
 	// create the ellipsoid principal axes
+	D3DXVECTOR3 vs(0, 0, 0);
 	D3DXVECTOR3 vx((float) evecs[0][0], (float) evecs[0][1], (float) evecs[0][2]);
 	D3DXVECTOR3 vy((float) evecs[1][0], (float) evecs[1][1], (float) evecs[1][2]);
 	D3DXVECTOR3 vz((float) evecs[2][0], (float) evecs[2][1], (float) evecs[2][2]);
@@ -34,13 +35,13 @@ void EllipsoidAxes::Build(const Point<double>& center, const double radii[3], do
 	vy = vy * (float) radii[1];
 	vz = vz * (float) radii[2];
 
-	_vertices.push_back(SimpleVertex(-vx, D3DCOLOR_XRGB(255, 200, 200)));
+	_vertices.push_back(SimpleVertex(vs, D3DCOLOR_XRGB(255, 200, 200)));
 	_vertices.push_back(SimpleVertex(vx, D3DCOLOR_XRGB(255, 200, 200)));
 
-	_vertices.push_back(SimpleVertex(-vy, D3DCOLOR_XRGB(200, 255, 200)));
+	_vertices.push_back(SimpleVertex(vs, D3DCOLOR_XRGB(200, 255, 200)));
 	_vertices.push_back(SimpleVertex(vy, D3DCOLOR_XRGB(200, 255, 200)));
 
-	_vertices.push_back(SimpleVertex(-vz, D3DCOLOR_XRGB(200, 200, 255)));
+	_vertices.push_back(SimpleVertex(vs, D3DCOLOR_XRGB(200, 200, 255)));
 	_vertices.push_back(SimpleVertex(vz, D3DCOLOR_XRGB(200, 200, 255)));
 
 	// move them to the ellipsoid center
@@ -91,10 +92,10 @@ void MagPoint::BuildCalibrated(const Point<int16_t>& p, const Point<double>& cen
 	rotscale._32 = (float) calibMatrix[2][1];
 	rotscale._33 = (float) calibMatrix[2][2];
 
-	D3DXMATRIX scale100;
-	D3DXMatrixScaling(&scale100, 500, 500, 500);
+	D3DXMATRIX scale;
+	D3DXMatrixScaling(&scale, 500, 500, 500);
 
-	D3DXMATRIX result = rotscale * scale100;
+	D3DXMATRIX result = rotscale * scale;
 
 	std::for_each(_vertices.begin(), _vertices.end(), SimpleVertex::transform_t(result));
 }
