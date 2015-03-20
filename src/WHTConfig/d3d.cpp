@@ -467,6 +467,9 @@ void VertexBuffer::Lock()
 		return;
 	}
 
+	if (_pvb == 0)
+		ThrowD3DException(0, L"VertexBuffer->Lock(), but buffer not allocated");
+
 	// lock
 	LPVOID ret_val;
 	HRESULT rslt = _pvb->Lock(0, _vcapacity * sizeof(SimpleVertex), &ret_val, 0);

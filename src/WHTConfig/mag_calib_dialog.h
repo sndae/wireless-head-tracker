@@ -26,7 +26,8 @@ private:
 
 	// these are the vertex buffers for the three ttypes of objects
 	std::vector<VertexBuffer>	_vb_mag_points[2];		// for the raw and calibrated mag measurement points
-	VertexBuffer				_line_vertex_buffer;	// for the lines - coordinate system and the ellipsoid axes
+	VertexBuffer				_vb_coord_sys;			// for the lines - coordinate system and the ellipsoid axes
+	VertexBuffer				_vb_ellipsoid_axes;		// for the lines - coordinate system and the ellipsoid axes
 
 	// the D3D objects
 	CoordSys					_coord_sys;		// the coordinate axes
@@ -36,7 +37,7 @@ private:
 	std::set<Point<int16_t>>	_mag_set;		// used for avoiding duplicates
 
 	EllipsoidFit				_ellipsoid_fit;
-	bool						_is_valid;		// true if the members of _ellipsoid_fit are valid
+	bool						_is_ellipsoid_fit_valid;		// true if the members of _ellipsoid_fit are valid
 
 	int			_last_x, _last_y;				// used to calculate mouse movement delta
 	bool		_is_dragging;

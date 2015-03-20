@@ -43,7 +43,6 @@
 #define IDC_BTN_CLEAR_POINTS            1039
 #define IDC_BTN_RESET_CAMERA            1040
 #define IDC_LBL_NUM_POINTS              1041
-#define IDC_LBL_NUM_SAMPLES             1042
 #define IDC_BTN_CALC                    1043
 #define IDC_BTN_SAVE                    1044
 #define IDC_BTN_LOAD                    1045
