@@ -33,7 +33,6 @@ void MagCalibDialog::OnInit()
 	_btn_reset_camera.SetHandle(GetCtrl(IDC_BTN_RESET_CAMERA));
 
 	_lbl_num_points.SetHandle(GetCtrl(IDC_LBL_NUM_POINTS));
-	_lbl_num_samples.SetHandle(GetCtrl(IDC_LBL_NUM_SAMPLES));
 
 	_d3d_window.SetHandle(GetCtrl(IDC_D3D));
 	
@@ -55,21 +54,26 @@ void MagCalibDialog::OnDestroy()
 {
 	_hWnd = 0;
 
-	// release all our D3D objects except the Direct3D
-	_d3d_device.Release();
-	_coord_sys.Release();
-
 	ClearSamples();
 }
 
 void MagCalibDialog::ClearSamples()
 {
-	_mags.clear();
 	_mag_set.clear();
-	_ellipsoid_axes.clear();
+
+	// clear the vertex buffers
+	_vb_mag_points[0].clear();
+	_vb_mag_points[1].clear();
+
+	// and default empty vertex buffers
+	_vb_mag_points[0].push_back(VertexBuffer());
+	_vb_mag_points[0].back().Alloc(_d3d_device, NUM_VERTICES_PER_VBUFFER);
+
+	_vb_mag_points[1].push_back(VertexBuffer());
+	_vb_mag_points[1].back().Alloc(_d3d_device, NUM_VERTICES_PER_VBUFFER);
 
 	_num_samples = 0;
-	//_is_valid = true;
+	_is_valid = false;
 }
 
 void MagCalibDialog::OnSize(int width, int height, WPARAM wParam)
@@ -79,14 +83,14 @@ void MagCalibDialog::OnSize(int width, int height, WPARAM wParam)
 	UpdateD3DSize();
 
 	// re-init Direct3D
-	std::for_each(_mags.begin(), _mags.end(), [&](MagPoint& m) { m.Release(); } );
+	_vb_mag_points[0].clear();
+	_vb_mag_points[1].clear();
 
-	_coord_sys.Release();
-	_ellipsoid_axes.Release();
+	_line_vertex_buffer.Release();	// for the lines - coordinate system and the ellipsoid axes
+
 	_d3d_device.Release();
-
 	_d3d_device.Init(_d3d, _d3d_window);
-	
+
 	Init3D();
 }
 
@@ -126,11 +130,19 @@ void MagCalibDialog::Render()
 	// set the current view transformation
 	_camera.RefreshPos();
 
-	// render our objects
-	_coord_sys.Render(_d3d_device);
-	_ellipsoid_axes.Render(_d3d_device);
+	// render our line based objects (the coordinate axes and the ellipsoid axes)
+	_d3d_device.DrawVertices(_line_vertex_buffer, D3DPT_LINELIST);
 
-	std::for_each(_mags.begin(), _mags.end(), [&](MagPoint& m) {m.Render(_d3d_device); } );
+	//_coord_sys.Render(_d3d_device);
+	//_ellipsoid_axes.Render(_d3d_device);
+
+	// render our triangle based objects
+
+	// the raw mag
+	std::for_each(_vb_mag_points[0].begin(), _vb_mag_points[0].end(), [&] (VertexBuffer& vb) { _d3d_device.DrawVertices(vb, D3DPT_TRIANGLELIST); } );
+
+	// the calibrated mag
+	std::for_each(_vb_mag_points[1].begin(), _vb_mag_points[1].end(), [&] (VertexBuffer& vb) { _d3d_device.DrawVertices(vb, D3DPT_TRIANGLELIST); } );
 
 	_d3d_device.EndScene();
 
@@ -160,18 +172,32 @@ void MagCalibDialog::Init3D()
 	_d3d_device.SetCulling(D3DCULL_NONE);
 	_d3d_device.DisableLight();
 
-	_coord_sys.Build();
-	//_ellipsoid_axes.Build();
+	// create the vertex buffers for the lines
+	_line_vertex_buffer.Alloc(_d3d_device, 32);
 
-	// this one's not really necessary, but it won't hurt either
-	//_mags.reserve(2000);
+	// and 3D points for the cubes
+	_vb_mag_points[0].push_back(VertexBuffer());
+	_vb_mag_points[0].back().Alloc(_d3d_device, NUM_VERTICES_PER_VBUFFER);
+
+	_vb_mag_points[1].push_back(VertexBuffer());
+	_vb_mag_points[1].back().Alloc(_d3d_device, NUM_VERTICES_PER_VBUFFER);
+
+	// re-create the raw mag points
+	std::for_each(_mag_set.begin(), _mag_set.end(), [&] (const Point<int16_t>& p) { AddPoint(p, true); } );
+	// and the calibrated points too
+	std::for_each(_mag_set.begin(), _mag_set.end(), [&] (const Point<int16_t>& p) { AddPoint(p, false); } );
+
+	// add the coordinate system to the vertex buffer
+	_coord_sys.Build();
+	_line_vertex_buffer.Lock();
+	_line_vertex_buffer.AddObject(_coord_sys);
+	_line_vertex_buffer.Unlock();
 }
 
 void MagCalibDialog::OnTimer(int timerID)
 {
 	// update the counters
-	_lbl_num_points.SetText((int) _mags.size());
-	_lbl_num_samples.SetText(_num_samples);
+	_lbl_num_points.SetText((int) _mag_set.size());
 
 	if (!_dongle.IsOpen())
 		return;
@@ -189,12 +215,11 @@ void MagCalibDialog::OnTimer(int timerID)
 
 		if (_mag_set.find(mps) == _mag_set.end())
 		{
-			MagPoint mp;
-			mp.Build(mps);
-
-			_mags.push_back(mp);
-
 			_mag_set.insert(mps);
+
+			AddPoint(mps, true);
+			if (_is_valid)
+				AddPoint(mps, false);
 		}
 	}
 }
@@ -256,9 +281,9 @@ void MagCalibDialog::SaveData()
 		if (f.Open(saveFile.GetFullFileName(), true, true))
 		{
 			char line[128];
-			for (std::vector<MagPoint>::iterator mi(_mags.begin()); mi != _mags.end(); ++mi)
+			for (std::set<Point<int16_t>>::iterator mi(_mag_set.begin()); mi != _mag_set.end(); ++mi)
 			{
-				sprintf_s(line, sizeof(line), "%i,%i,%i\n", mi->point.x, mi->point.y, mi->point.z);
+				sprintf_s(line, sizeof(line), "%i,%i,%i\n", mi->x, mi->y, mi->z);
 				f.Write(line, strlen(line));
 			}
 
@@ -291,6 +316,33 @@ void split_record(const std::string& in_str, std::vector<std::string>& out_vecto
 	out_vector.push_back(field);
 }
 
+void MagCalibDialog::AddPoint(const Point<int16_t>& p, bool is_raw)
+{
+	const size_t ndx = is_raw ? 0 : 1;
+
+	// enough space in the last vertex buffer?
+	if (_vb_mag_points[ndx].back().Capacity() - _vb_mag_points[ndx].back().Size() < NUM_VERTICES_PER_CUBE)
+	{
+		// unlock the last buffer and make a new one
+		if (_vb_mag_points[ndx].back().IsLocked())
+			_vb_mag_points[ndx].back().Unlock();
+
+		_vb_mag_points[ndx].push_back(VertexBuffer());
+		_vb_mag_points[ndx].back().Alloc(_d3d_device, NUM_VERTICES_PER_VBUFFER);
+	}
+
+	if (!_vb_mag_points[ndx].back().IsLocked())
+		_vb_mag_points[ndx].back().Lock();
+
+	MagPoint mp;
+	if (is_raw)
+		mp.Build(p);
+	else
+		mp.BuildCalibrated(p, _ellipsoid_fit.center, _ellipsoid_fit.calibMatrix);
+
+	_vb_mag_points[ndx].back().AddObject(mp);
+}
+
 void MagCalibDialog::LoadData()
 {
 #if _DEBUG
@@ -313,6 +365,9 @@ void MagCalibDialog::LoadData()
 		if (f.Open(openFile.GetFullFileName(), false))
 #endif
 		{
+			// ellipsoid fit becomes invalid
+			_is_valid = false;
+
 			// read the entire file into a string (yeah, nasty, i know...)
 			const int BUFF_SIZE = 1000;
 			char buff[BUFF_SIZE];
@@ -325,7 +380,6 @@ void MagCalibDialog::LoadData()
 			} while (bytes_read == BUFF_SIZE - 1);
 
 			// parse and handle the lines, make points
-			MagPoint mp;
 
 			ClearSamples();
 
@@ -342,9 +396,7 @@ void MagCalibDialog::LoadData()
 					if (_mag_set.find(mps) == _mag_set.end())
 					{
 						_mag_set.insert(mps);
-
-						mp.Build(mps);
-						_mags.push_back(mp);
+						AddPoint(mps, true);
 					}
 
 					++_num_samples;
@@ -371,36 +423,14 @@ void MagCalibDialog::CalcEllipsoidFit()
 	// draw the ellipsoid axes
 	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.evecs);
 
-	_is_valid = true;
+	// clear the calibrated vertex buffer
+	_vb_mag_points[1].clear();
+	_vb_mag_points[1].push_back(VertexBuffer());
+	_vb_mag_points[1].back().Alloc(_d3d_device, NUM_VERTICES_PER_VBUFFER);
 
-	/*
-	// make the calibrated points
-	D3DXMATRIX rotscale;
-	D3DXMATRIX translate;
-
-	D3DXMatrixIdentity(&rotscale);
-	rotscale._11 = (float) _ellipsoid_fit.calibMatrix[0][0];
-	rotscale._12 = (float) _ellipsoid_fit.calibMatrix[0][1];
-	rotscale._13 = (float) _ellipsoid_fit.calibMatrix[0][2];
-
-	rotscale._21 = (float) _ellipsoid_fit.calibMatrix[1][0];
-	rotscale._22 = (float) _ellipsoid_fit.calibMatrix[1][1];
-	rotscale._23 = (float) _ellipsoid_fit.calibMatrix[1][2];
-
-	rotscale._31 = (float) _ellipsoid_fit.calibMatrix[2][0];
-	rotscale._32 = (float) _ellipsoid_fit.calibMatrix[2][1];
-	rotscale._33 = (float) _ellipsoid_fit.calibMatrix[2][2];
-
-	D3DXMatrixTranslation(&translate,	(float) _ellipsoid_fit.center.x,
-										(float) _ellipsoid_fit.center.y,
-										(float) _ellipsoid_fit.center.z);
-										*/
-
-
+	// draw the calibrated points
 	for (std::set<Point<int16_t>>::const_iterator piter(_mag_set.begin()); piter != _mag_set.end(); ++piter)
-	{
-		MagPoint mp;
-		mp.BuildCalibrated(*piter, _ellipsoid_fit.center, _ellipsoid_fit.calibMatrix);
-		_mags.push_back(mp);
-	}
+		AddPoint(*piter, false);
+
+	_is_valid = true;
 }

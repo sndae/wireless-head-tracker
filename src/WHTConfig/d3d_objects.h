@@ -9,31 +9,21 @@
 class CoordSys : public Object3D
 {
 public:
-	CoordSys()
-	{
-		_vertex_buffer.SetPrimitiveType(D3DPT_LINELIST);
-	}
-
 	void Build();
 };
 
 //
-// the eigen vectors
+// the ellipsoid axes calculated from the eigen vectors
 //
 
 class EllipsoidAxes: public Object3D
 {
 public:
-	EllipsoidAxes()
-	{
-		_vertex_buffer.SetPrimitiveType(D3DPT_LINELIST);
-	}
-
 	void Build(const Point<double>& center, const double radii[3], double evecs[3][3]);
 };
 
 //
-// one magnetometer measurement
+// one magnetometer measurement - raw or calibrated, only the colour is different
 //
 
 class MagPoint: public Object3D
