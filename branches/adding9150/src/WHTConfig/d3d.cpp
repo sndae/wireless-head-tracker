@@ -322,15 +322,14 @@ void DeviceD3D::SetViewport(D3DVIEWPORT9& viewport)
 
 IDirect3DVertexBuffer9* DeviceD3D::CreateVertexBuffer(const int vcount)
 {
-	IDirect3DVertexBuffer9* ret_val;
-
 	if (_pDevice == 0)
 		ThrowD3DException(0, L"Device not initilized while creating VertexBuffer");
 
+	IDirect3DVertexBuffer9* ret_val;
 	HRESULT rslt = _pDevice->CreateVertexBuffer(	vcount * sizeof(SimpleVertex),
 													D3DUSAGE_WRITEONLY,
 													SimpleVertex::fvf_id,
-													D3DPOOL_MANAGED,
+													D3DPOOL_DEFAULT,	//D3DPOOL_MANAGED,
 													&ret_val,
 													0);
 
@@ -340,6 +339,25 @@ IDirect3DVertexBuffer9* DeviceD3D::CreateVertexBuffer(const int vcount)
 	return ret_val;
 }
 
+void DeviceD3D::DrawVertices(VertexBuffer& vbuff, D3DPRIMITIVETYPE primitive_type)
+{
+	if (_pDevice == 0)
+		ThrowD3DException(0, L"Device not initilized while creating VertexBuffer");
+
+	if (vbuff.IsEmpty())
+		return;
+
+	HRESULT rslt = _pDevice->SetStreamSource(0, vbuff._pvb, 0, sizeof(SimpleVertex));
+	if (FAILED(rslt))		ThrowD3DException(rslt, L"SetStreamSource() failed");
+
+	UINT num_primitives = vbuff._vsize / (primitive_type == D3DPT_LINELIST ? 2 : 3);
+
+	rslt = _pDevice->DrawPrimitive(primitive_type, 0, num_primitives);
+	if (FAILED(rslt))		ThrowD3DException(rslt, L"DrawPrimitive() failed");
+}
+
+
+/*
 void Object3D::Render(DeviceD3D& dev)
 {
 	HRESULT rslt;
@@ -389,61 +407,107 @@ void Object3D::MakeVertexBuffer(DeviceD3D& dev)
 	// give the block back to D3D
 	_vertex_buffer.Unlock();
 }
+*/
+
+// ****************************************************************************************************************
 
 VertexBuffer::VertexBuffer()
 :	_pvb(0),
-	_vertex_count(0),
-	_primitive_type(D3DPT_TRIANGLELIST)
+	_pVertex(0),
+	_vsize(0),
+	_vcapacity(0)
 {}
 
 VertexBuffer::VertexBuffer(const VertexBuffer& c)
 :	_pvb(c._pvb),
-	_vertex_count(c._vertex_count),
-	_primitive_type(c._primitive_type)
+	_pVertex(c._pVertex),
+	_vsize(c._vsize),
+	_vcapacity(c._vcapacity)
 {
 	if (_pvb)
 		_pvb->AddRef();
 }
 
-void VertexBuffer::Alloc(DeviceD3D& dev, const int vcount)
+void VertexBuffer::Alloc(DeviceD3D& dev, const size_t vcap)
 {
-	assert(vcount != 0);
-
-	_vertex_count = vcount;
+	if (vcap == 0)
+		ThrowD3DException(0, L"VertexBuffer->Lock() failed");
 
 	// release the buffer if we already have one
-	if (_pvb)
-	{
-		int ref_cnt = _pvb->Release();
-		assert(ref_cnt == 0);
-	}
+	Release();
 
-	_pvb = dev.CreateVertexBuffer(vcount);
+	_pvb = dev.CreateVertexBuffer(vcap);
+
+	_vcapacity = vcap;
 }
 
 void VertexBuffer::Release()
 {
-	if (_pvb)
-		_pvb->Release();
+	// is the buffer locked?
+	if (_pVertex)
+		Unlock();
 
+	if (_pvb)
+	{
+		int ref_cnt = _pvb->Release();
+		// assert(ref_cnt == 0);
+	}
+
+	_vcapacity = 0;
+	_vsize = 0;
 	_pvb = 0;
 }
 
-char* VertexBuffer::Lock()
+void VertexBuffer::Lock()
 {
+	// are we already locked?
+	if (_pVertex)
+	{
+		assert(false);
+		return;
+	}
+
+	// lock
 	LPVOID ret_val;
-	HRESULT rslt = _pvb->Lock(0, _vertex_count * sizeof(SimpleVertex), &ret_val, 0);
-	if (FAILED(rslt))		ThrowD3DException(rslt, L"dev->Lock() failed");
-		
-	return (char*) ret_val;
+	HRESULT rslt = _pvb->Lock(0, _vcapacity * sizeof(SimpleVertex), &ret_val, 0);
+	if (FAILED(rslt))		ThrowD3DException(rslt, L"VertexBuffer->Lock() failed");
+
+	// set the vertex pointer pointer
+	_pVertex = (SimpleVertex*) ret_val;
 }
 
 void VertexBuffer::Unlock()
 {
 	HRESULT rslt = _pvb->Unlock();
+	if (FAILED(rslt))		ThrowD3DException(rslt, L"VertexBuffer->Unlock() failed");
 
-	if (FAILED(rslt))		ThrowD3DException(rslt, L"dev->CreateVertexBuffer() failed");
+	_pVertex = 0;
 }
+
+bool VertexBuffer::AddObject(const Object3D& obj)
+{
+	if (_pVertex == 0)
+		ThrowD3DException(0, L"VertexBuffer::AddObject() on unlocked buffer");
+
+	// number of vertices to add to the buffer
+	size_t vert2add = obj.GetVertices().size();
+
+	// do we have enough room in the buffer?
+	if (_vcapacity - _vsize < vert2add)
+		return false;
+
+	// copy the vertices
+	// I would rather use std::copy() here, but VC++ starts panicking and spits out a C4996
+	// so, I'll just do the ugly thing, and solve the problem :)
+	memcpy(_pVertex + _vsize, &obj.GetVertices().front(), sizeof(SimpleVertex) * vert2add);
+
+	// adjust the number of vertices we have
+	_vsize += vert2add;
+
+	return true;
+}
+
+// ****************************************************************************************************************
 
 Camera::Camera(DeviceD3D& d)
 :	_dev(d)

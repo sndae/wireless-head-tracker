@@ -30,9 +30,10 @@ public:
 // device
 //
 
+class VertexBuffer;
+
 class DeviceD3D
 {
-	friend class Object3D;
 private:
 	IDirect3DDevice9*		_pDevice;
 
@@ -74,51 +75,9 @@ public:
 
 	IDirect3DSurface9* GetBackBuffer();
 	IDirect3DVertexBuffer9* CreateVertexBuffer(const int vcount);
+	void DrawVertices(VertexBuffer& vbuff, D3DPRIMITIVETYPE primitive_type);
 };
 
-//
-// the vertex buffer -- every CD3DObject has one embedded
-//
-
-class VertexBuffer
-{
-	friend class Object3D;
-private:
-	IDirect3DVertexBuffer9*		_pvb;
-
-	size_t				_vertex_count;
-	D3DPRIMITIVETYPE	_primitive_type;
-
-public:
-	VertexBuffer();
-	VertexBuffer(const VertexBuffer& c);
-
-	~VertexBuffer()
-	{
-		Release();
-	}
-
-	bool IsEmpty() const
-	{
-		return _pvb == 0;
-	}
-
-	void SetPrimitiveType(D3DPRIMITIVETYPE pt)
-	{
-		_primitive_type = pt;
-	}
-
-	D3DPRIMITIVETYPE GetPrimitiveType() const
-	{
-		return _primitive_type;
-	}
-
-	void Alloc(DeviceD3D& dev, const int vcount);
-	char* Lock();
-	void Unlock();
-
-	void Release();
-};
 
 //
 // the only vertex format we'll be using
@@ -168,7 +127,6 @@ struct SimpleVertex
 	};
 };
 
-
 //
 // base class for the objects we'll have in the scene
 //
@@ -179,25 +137,67 @@ protected:
 	// this holds the vertices for the object
 	std::vector<SimpleVertex>	_vertices;
 
-	// this is the vertex buffer for the object
-	VertexBuffer				_vertex_buffer;
-
-	void MakeVertexBuffer(DeviceD3D& dev);
-
 public:
-
-	virtual void Render(DeviceD3D& dev);
 
 	void clear()
 	{
-		Release();
 		_vertices.clear();
 	}
 
-	void Release()
+	const std::vector<SimpleVertex>& GetVertices() const
 	{
-		_vertex_buffer.Release();
+		return _vertices;
 	}
+};
+
+
+
+//
+// the vertex buffer -- every CD3DObject has one embedded
+//
+
+class VertexBuffer
+{
+	friend class DeviceD3D;
+private:
+	// interface pointer
+	IDirect3DVertexBuffer9*		_pvb;
+
+	// while the buffer is locked, this is the pointer to the first locked vertex
+	SimpleVertex*				_pVertex;
+
+	size_t	_vsize;
+	size_t	_vcapacity;
+
+public:
+	VertexBuffer();
+	VertexBuffer(const VertexBuffer& c);
+
+	~VertexBuffer()
+	{
+		Release();
+	}
+
+	bool IsEmpty() const
+	{
+		return _pvb == 0  ||  _vsize == 0;
+	}
+
+	bool IsLocked() const
+	{
+		return _pVertex != 0;
+	}
+
+	void Alloc(DeviceD3D& dev, const size_t vcount);
+	void Lock();
+	void Unlock();
+
+	size_t Size() const			{ return _vsize; }
+	size_t Capacity() const		{ return _vcapacity; }
+
+	void Release();
+
+	bool AddObject(const Object3D& obj);
 };
 
 

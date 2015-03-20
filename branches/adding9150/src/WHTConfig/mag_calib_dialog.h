@@ -10,7 +10,6 @@ private:
 	Button		_btn_reset_camera;
 
 	Window		_lbl_num_points;
-	Window		_lbl_num_samples;
 
 	Window		_d3d_window;
 
@@ -21,20 +20,31 @@ private:
 	DeviceD3D	_d3d_device;
 	Camera		_camera;
 
-	CoordSys			_coord_sys;		// the coordinate axes
-	EllipsoidAxes		_ellipsoid_axes;
+	// how many cubes do we store in one vertex buffer?
+	enum { NUM_VERTICES_PER_CUBE = 36};
+	enum { NUM_VERTICES_PER_VBUFFER = 256 * NUM_VERTICES_PER_CUBE};
+
+	// these are the vertex buffers for the three ttypes of objects
+	std::vector<VertexBuffer>	_vb_mag_points[2];		// for the raw and calibrated mag measurement points
+	VertexBuffer				_line_vertex_buffer;	// for the lines - coordinate system and the ellipsoid axes
+
+	// the D3D objects
+	CoordSys					_coord_sys;		// the coordinate axes
+	EllipsoidAxes				_ellipsoid_axes;
 
 	int							_num_samples;	// total samples received
 	std::set<Point<int16_t>>	_mag_set;		// used for avoiding duplicates
-	std::vector<MagPoint>		_mags;			// the magnetometer measurement points
 
 	EllipsoidFit				_ellipsoid_fit;
 	bool						_is_valid;		// true if the members of _ellipsoid_fit are valid
 
-	int			_last_x, _last_y;			// used to calculate mouse movement delta
+	int			_last_x, _last_y;				// used to calculate mouse movement delta
 	bool		_is_dragging;
 
 	WHTDongle&	_dongle;
+
+	// adds the point to the set if needed, and creates a 3D cube with
+	void AddPoint(const Point<int16_t>& p, const bool is_raw);
 
 	void UpdateD3DSize();
 
