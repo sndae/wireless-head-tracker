@@ -18,7 +18,7 @@ bool should_recenter = true;
 int32_t sample_cnt;
 int32_t yaw_value;
 
-FeatRep_MagRawData mag_data_samples;
+FeatRep_RawMagSamples raw_mag_samples;
 
 // these are indexes of the euler[] and center[] arrays
 #define YAW		0
@@ -125,24 +125,11 @@ bool do_center(int16_t* euler)
 		is_center_valid = true;
 	}
 
-#if DBG_MODE
-	if (log_now)
-	{
-		dprintf("smpl=%ld\n", sample_cnt);
-		dprintf("cntr=%d,%d,%d\n", center[0], center[1], center[2]);
-	}
-#endif	
-	
 	// correct the euler angles
 	if (is_center_valid)
 		for (i = 0; i < 3; ++i)
 			euler[i] -= center[i];
 
-#if DBG_MODE
-	if (log_now)
-		dprintf("acnt=%d,%d,%d\n", euler[0], euler[1], euler[2]);
-#endif
-		
 	return is_center_valid;
 }
 
@@ -152,14 +139,6 @@ void do_drift(int16_t* euler, const FeatRep_DongleSettings __xdata * pSettings)
 	int16_t compensate = (sample_cnt * pSettings->drift_per_1k) >> 10;
 
 	euler[YAW] -= compensate;
-
-#if DBG_MODE
-	if (log_now)
-	{
-		dprintf("drftcmp=%d\n", compensate);
-		dprintf("yaw=%d\n", euler[YAW]);
-	}
-#endif
 }
 
 // do the axis response
@@ -185,11 +164,6 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 		}
 	}
 	
-#if DBG_MODE
-	if (log_now)
-		dprintf("exp=%d,%d,%d\n", euler[0], euler[1], euler[2]);
-#endif
-	
 	// apply the axis factors
 	for (i = 0; i < 3; ++i)
 	{
@@ -202,11 +176,6 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 		else
 			euler[i] = (int16_t) new_val;
 	}
-	
-#if DBG_MODE
-	if (log_now)
-		dprintf("fact=%d,%d,%d\n", euler[0], euler[1], euler[2]);
-#endif
 }
 
 int16_t calc_mag_heading(int16_t* mag, int16_t* euler)
@@ -235,7 +204,7 @@ int16_t calc_mag_heading(int16_t* mag, int16_t* euler)
 // 10 seconds on 50Hz samples rate
 #define CALIB_MAG_HEADING_OFFSET_SAMPLES	200
 
-void do_mag(int16_t* mag, int16_t* euler)
+void do_mag(int16_t* mag, int16_t* euler, const FeatRep_DongleSettings __xdata * pSettings)
 {
 	static int16_t consec_count = 0;
 	static bool behind = false;
@@ -244,49 +213,45 @@ void do_mag(int16_t* mag, int16_t* euler)
 	static int16_t mag_correction = 0;
 	
 	int16_t mag_heading, mag_delta;
-
-	/*
-	{
-		static int16_t magmin[3] = {32767, 32767, 32767};
-		static int16_t magmax[3] = {-32768, -32768, -32768};
-		uint8_t i;
-		bool changed = false;
-		
-		for (i = 0; i < 3; ++i)
-		{
-			if (magmin[i] > mag[i])		magmin[i] = mag[i], changed = true;
-			if (magmax[i] < mag[i])		magmax[i] = mag[i], changed = true;
-		}
-
-		if (changed)
-		{
-			dputs("--------------");
-			for (i = 0; i < 3; ++i)
-				dprintf("%d  %5d  %5d  %5d\n", i, magmin[i], magmax[i], (magmin[i] + magmax[i]) / 2);
-		}
-	}
-	*/
+	int16_t mag_calibrated[3];
+	int32_t tcalib;
+	uint8_t i, j;
 	
-	if (mag_data_samples.num_samples < 10)
+	// collect the raw mag samples
+	if (raw_mag_samples.num_samples < MAX_RAW_MAG_SAMPLES)
 	{
-		mag_data_samples.mag[mag_data_samples.num_samples].x = mag[0];
-		mag_data_samples.mag[mag_data_samples.num_samples].y = mag[1];
-		mag_data_samples.mag[mag_data_samples.num_samples].z = mag[2];
+		raw_mag_samples.mag[raw_mag_samples.num_samples].x = mag[0];
+		raw_mag_samples.mag[raw_mag_samples.num_samples].y = mag[1];
+		raw_mag_samples.mag[raw_mag_samples.num_samples].z = mag[2];
 
-		mag_data_samples.num_samples++;
+		raw_mag_samples.num_samples++;
 	}
 	
-	mag[0] -= -20;		// hard-coded for now
-	mag[1] -= -14;
-	mag[2] -= -105;
+	//
+	// apply the mag calibration
+	//
+
+	// first the offset
+	for (i = 0; i < 3; i++)
+		mag[i] -= pSettings->mag_offset[i];
+	
+	// now the matrix
+	for (i = 0; i < 3; i++)
+	{
+		tcalib = 0;
+		for (j = 0; j < 3; j++)
+			tcalib += mul_16x16(pSettings->mag_matrix[i][j], mag[j]);
+
+		mag_calibrated[i] = (tcalib >> MAG_MATRIX_SCALE_BITS);
+	}
 	
 	// apply the correction
 	euler[YAW] -= mag_correction;
 	
-	mag_heading = calc_mag_heading(mag, euler);
+	mag_heading = calc_mag_heading(mag_calibrated, euler);
 	mag_delta = mag_heading - euler[YAW];
-
-	// have we accumulated enough samples for a magnetic heading offset?
+	
+	// do we have enough samples for a magnetic heading offset?
 	if (mag_head_off_cnt < CALIB_MAG_HEADING_OFFSET_SAMPLES)
 	{
 		++mag_head_off_cnt;
@@ -296,7 +261,7 @@ void do_mag(int16_t* mag, int16_t* euler)
 		if (mag_head_off_cnt == CALIB_MAG_HEADING_OFFSET_SAMPLES)
 		{
 			mag_heading_offset /= CALIB_MAG_HEADING_OFFSET_SAMPLES;
-			dprintf("mag_heading_offset=%ld\n", mag_heading_offset);
+			dprintf("mho=%ld\n", mag_heading_offset);
 		} else {
 			return;
 		}
@@ -328,12 +293,8 @@ void do_mag(int16_t* mag, int16_t* euler)
 
 	mag_correction += (int16_t) (mul_16x16(consec_count, abs(consec_count)) / 80);
 
-	if (dbgEmpty())
-		dprintf("delta=%6d  corr=%6d  conscnt=%4d\n", mag_delta, mag_correction, consec_count);
-	
-	//euler[0] = ;
-	//euler[1] = mag_heading;
-	//euler[2] = mag_delta;
+	//if (dbgEmpty())
+	//	dprintf("delta=%6d  corr=%6d  conscnt=%4d\n", mag_delta, mag_correction, consec_count);
 	
 	// Also tweak the overall drift compensation.
 	// DMP still suffers from 'warm-up' issues and this helps greatly.
@@ -358,11 +319,6 @@ void do_auto_center(int16_t* euler, uint8_t autocenter)
 	// apply the current auto-centering
 	euler[YAW] += autocenter_correction;
 	
-#if DBG_MODE
-	if (log_now)
-		dprintf("ac=%d\nyaw=%d\n", autocenter_correction, euler[YAW]);
-#endif
-		
 	if (abs(euler[YAW]) < yaw_limit					// if we're looking ahead, give or take
 			&&  abs(euler[YAW] - last_yaw) < 300	// and not moving
 			&&  abs(euler[PITCH]) < 1000)			// and pitch is levelish
@@ -397,30 +353,14 @@ bool process_packet(mpu_packet_t* pckt)
 	
 	int16_t euler[3];		// the resulting angles
 
-#if DBG_MODE
-	log_now	= dbgEmpty();
-	if (log_now)
-	{
-		dprintf("------- %d\n", cnt_dropped);
-		cnt_dropped = 0;
-	} else {
-		++cnt_dropped;
-	}
-#endif
-
 	quat2euler(pckt->quat, euler);	// convert quaternions to euler angles
 	
-#if DBG_MODE
-	if (log_now)
-		dprintf("raw=%d,%d,%d\n", euler[0], euler[1], euler[2]);
-#endif	
-
 	if (pckt->flags & FLAG_RECENTER)
 		recenter();
 
 	// magnetometer
 	if (pckt->flags & FLAG_COMPASS_VALID)
-		do_mag(pckt->compass, euler);
+		do_mag(pckt->compass, euler, pSettings);
 
 	// calc and/or apply the centering offset
 	if (!do_center(euler))
@@ -439,11 +379,6 @@ bool process_packet(mpu_packet_t* pckt)
 	// do the axis response transformations
 	do_response(euler, pSettings);
 
-#if DBG_MODE
-	if (log_now)
-		dprintf("final=%d,%d,%d\n", euler[0], euler[1], euler[2]);
-#endif	
-	
 	// copy the data into the USB report
 	usb_joystick_report.x = euler[YAW];
 	usb_joystick_report.y = euler[ROLL];

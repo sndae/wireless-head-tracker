@@ -29,22 +29,15 @@ __xdata FeatRep_DongleSettings default_settings =
 
 	{12, 12, 12},		// factors
 	
-	0.0,	// x_drift_comp
-};
-
-/*
-__xdata FeatRep_DongleSettings default_settings =
-{
-	0,		// report_id		is_empty
+	0,		// x_drift_comp
 	
-	0,		// autocenter - medium
-	1,		// is_linear - exponential
-
-	{1, 1, 1},		// factors
-	
-	0.0,	// x_drift_comp
+	{21, 14,-15},					// mag offset
+	{
+		{24376,  -596,  146},		// mag calibration identity matrix
+		{ -596, 25259,  155},
+		{  146,   155,25879}
+	}
 };
-*/
 
 void flash_page_erase(uint8_t pn)
 {

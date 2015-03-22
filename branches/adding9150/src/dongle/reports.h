@@ -1,6 +1,7 @@
 #ifndef REPORTS_H
 #define REPORTS_H
 
+// we need to tell the compiler to pack the struct members as close as possible
 #ifdef _MSC_VER
 # pragma pack(push)
 # pragma pack(1)
@@ -32,19 +33,25 @@ void reset_joystick_report(void);
 
 #define DONGLE_SETTINGS_REPORT_ID			2
 
+#define MAG_MATRIX_SCALE_BITS			12
+
 // data direction: dongle <-> PC
 typedef struct
 {
-	uint8_t		report_id;		// == AXIS_CONFIG_REPORT_ID
+	uint8_t		report_id;		// == DONGLE_SETTINGS_REPORT_ID
 
 	uint8_t		autocenter;		// 0 to 3 for autocenter values
-	uint8_t		is_linear;
+	uint8_t		is_linear;		// linear or exponential
 
 	// axis factors
 	int16_t		fact[3];
 
 	// drift compensation per 1024 samples
 	int16_t		drift_per_1k;
+	
+	// magnetometer calibration
+	int16_t		mag_offset[3];
+	int16_t		mag_matrix[3][3];
 
 } FeatRep_DongleSettings;
 
@@ -129,7 +136,7 @@ typedef struct
 // *****************************************************************
 // *****************************************************************
 
-#define MAG_RAW_DATA_REPORT_ID		6
+#define RAW_MAG_REPORT_ID		6
 
 // direction: dongle -> PC
 typedef struct
@@ -139,14 +146,16 @@ typedef struct
 	int16_t		z;
 } mag_sample_t;
 
+#define MAX_RAW_MAG_SAMPLES		10
+
 typedef struct
 {
-	uint8_t			report_id;		// == MAG_RAW_DATA_REPORT_ID
+	uint8_t			report_id;		// == RAW_MAG_REPORT_ID
 	
 	uint8_t			num_samples;
-	mag_sample_t	mag[10];
+	mag_sample_t	mag[MAX_RAW_MAG_SAMPLES];
 
-} FeatRep_MagRawData;
+} FeatRep_RawMagSamples;
 
 // *****************************************************************
 // *****************************************************************

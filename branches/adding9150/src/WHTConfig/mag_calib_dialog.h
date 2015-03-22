@@ -33,8 +33,7 @@ private:
 	CoordSys					_coord_sys;		// the coordinate axes
 	EllipsoidAxes				_ellipsoid_axes;
 
-	int							_num_samples;	// total samples received
-	std::set<Point<int16_t>>	_mag_set;		// used for avoiding duplicates
+	std::set<Point<int16_t>>	_mag_set;		// store for the mag points
 
 	EllipsoidFit				_ellipsoid_fit;
 	bool						_is_ellipsoid_fit_valid;		// true if the members of _ellipsoid_fit are valid
@@ -46,6 +45,7 @@ private:
 
 	// adds the point to the set if needed, and creates a 3D cube with
 	void AddPoint(const Point<int16_t>& p, const bool is_raw);
+	void UnlockVertexBuffers();
 
 	void UpdateD3DSize();
 

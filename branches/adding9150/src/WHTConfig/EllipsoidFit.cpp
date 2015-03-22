@@ -1085,7 +1085,7 @@ RealMatrix EllipsoidFit::formAlgebraicMatrix(const RealVector& v)
 	// [ Ax^2 2Dxy 2Exz 2Gx ]
 	// [ 2Dxy By^2 2Fyz 2Hy ]
 	// [ 2Exz 2Fyz Cz^2 2Iz ]
-	// [ 2Gx 2Hy 2Iz -1 ] ]
+	// [ 2Gx  2Hy  2Iz  -1  ]
 	RealMatrix a(4, RealVector(4, 0.0));
 
 	a[0][0] = v[0];
@@ -1220,20 +1220,19 @@ void EllipsoidFit::fitEllipsoid(const std::set<Point<int16_t>>& points)
 	// Find the radii of the ellipsoid.
 	setRadii();
 
-	// find the calibration transformation matrix
-	calcMatrix();
+	// fix the radii/eigenvectors order
+	//fixOrder();
 }
 
 /**
- * puts the radii in the correct order, and calculates a matrix which puts the
- * magnetometer measurements on a sphere
+ * Puts the radii and evals in the correct order (most of the time)
  * This peace of code is written by Petar Pavlovic, found on:
  * http://diydrones.com/forum/topics/magnetometer-soft-and-hard-iron-calibration?commentId=705844%3AComment%3A1511340
  */
-void EllipsoidFit::calcMatrix()
+void EllipsoidFit::fixOrder()
 {
 	int or[3];
-	int i,j,k;
+	int i,j;
 		
 	or[0] = 0;  // orientation vector, has info which radii is which
 	for (i = 1; i < 3; ++i) 
@@ -1250,9 +1249,9 @@ void EllipsoidFit::calcMatrix()
 		if (fabs(evecs[2][or[2]]) < fabs(evecs[2][i]))
 			or[2] = i;
 
-	or[0] = 0;
-	or[1] = 1;
-	or[2] = 2;
+	// did we find what we needed?
+	if (or[0] == or[1]  ||  or[1] == or[2]  ||  or[0] == or[2])
+		return;
 
 	// get eigenvectors, eigenvalues and the radii in correct order
 	double evc[3][3];
@@ -1268,24 +1267,37 @@ void EllipsoidFit::calcMatrix()
 		evl[or[i]] = evals[i];
 	}
 
+	// copy the values back into the member variables
+	for (i = 0; i < 3; ++i)
+	{
+		radii[i] = rad[i];
+		evals[i] = evl[i];
+
+		for (j = 0; j < 3; ++j)
+			evecs[i][j] = evc[i][j];
+	}
+}
+
+/**
+ * calculates a matrix which puts the magnetometer measurements on a sphere
+ * This peace of code is written by Petar Pavlovic, found on:
+ * http://diydrones.com/forum/topics/magnetometer-soft-and-hard-iron-calibration?commentId=705844%3AComment%3A1511340
+ */
+void EllipsoidFit::calcCalibMatrix(double scale)
+{
+	int i, j, k;
+
 	// calculates the transformation matrix
 	for (i = 0; i < 3; ++i)
 	{
 		for (j = 0; j < 3; ++j)
 		{
 			calibMatrix[i][j] = 0;
-			for(k = 0; k < 3; ++k)
-				calibMatrix[i][j] += evc[k][i] * evc[k][j] / rad[k];
+			for (k = 0; k < 3; ++k)
+				calibMatrix[i][j] += evecs[k][i] * evecs[k][j] / radii[k];
+
+			// scale the matrix
+			calibMatrix[i][j] *= scale;
 		}
-	}
-
-	// copy the values back into the member variables
-	for (i = 0; i < 3; ++i)
-	{
-		radii[i] = rad[i];
-		evl[i] = evl[i];
-
-		for (j = 0; j < 3; ++j)
-			evecs[i][j] = evc[i][j];
 	}
 }

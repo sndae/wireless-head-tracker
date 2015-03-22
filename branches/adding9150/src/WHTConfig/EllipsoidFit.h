@@ -755,8 +755,12 @@ struct EllipsoidFit
 	void fitEllipsoid(const std::set<Point<int16_t>>& points);
 
 	/**
-	 * puts the radii in the correct order, and calculates a matrix which puts the
-	 * magnetometer measurements on a sphere
+	 * puts the radii and evals in the correct order
 	 */
-	void calcMatrix();
+	void fixOrder();
+
+	/**
+	 * calculates a matrix which puts the magnetometer measurements on a sphere
+	 */
+	void calcCalibMatrix(double scale);
 };

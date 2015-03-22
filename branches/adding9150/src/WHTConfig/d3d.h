@@ -102,6 +102,13 @@ struct SimpleVertex
 		diffuse = col;
 	}
 
+	SimpleVertex(float x, float y, float z)
+	{
+		pos.x = x;
+		pos.y = y;
+		pos.z = z;
+	}
+
 	SimpleVertex(const D3DXVECTOR3& p, D3DCOLOR col)
 	{
 		pos = p;
@@ -186,6 +193,11 @@ public:
 	bool IsLocked() const
 	{
 		return _pVertex != 0;
+	}
+
+	void Clear()
+	{
+		_vsize = 0;
 	}
 
 	void Alloc(DeviceD3D& dev, const size_t vcount);
