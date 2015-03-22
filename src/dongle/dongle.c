@@ -148,16 +148,16 @@ void on_get_report(void)
 		// send the data
 		in0bc = sizeof(FeatRep_Status);
 
-	} else if (usbReqHidGetSetReport.reportID == MAG_RAW_DATA_REPORT_ID) {
+	} else if (usbReqHidGetSetReport.reportID == RAW_MAG_REPORT_ID) {
 	
 		// copy the raw data to the USB buffer
-		mag_data_samples.report_id = MAG_RAW_DATA_REPORT_ID;
-		memcpy(in0buf, &mag_data_samples, sizeof(mag_data_samples));
+		raw_mag_samples.report_id = RAW_MAG_REPORT_ID;
+		memcpy(in0buf, &raw_mag_samples, sizeof(raw_mag_samples));
 
 		// send the data on it's way
-		in0bc = sizeof(mag_data_samples);
+		in0bc = sizeof(raw_mag_samples);
 		
-		mag_data_samples.num_samples = 0;
+		raw_mag_samples.num_samples = 0;
 	}
 }
 
@@ -181,7 +181,7 @@ void main(void)
 	memset(total_packets, 0, sizeof(total_packets));
 	curr_packets = total_packets_ndx = 0;
 	
-	mag_data_samples.num_samples = 0;
+	raw_mag_samples.num_samples = 0;
 
 	LED_off();
 	

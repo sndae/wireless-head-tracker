@@ -19,7 +19,7 @@ public:
 class EllipsoidAxes: public Object3D
 {
 public:
-	void Build(const Point<double>& center, const double radii[3], double evecs[3][3]);
+	void Build(const Point<double>& center, const double radii[3], const double evecs[3][3]);
 };
 
 //
@@ -30,6 +30,8 @@ class MagPoint: public Object3D
 {
 public:
 	Point<int16_t>	point;
+
+	enum { CALIBRATED_SCALE = 1000 };
 
 	void Build(const Point<int16_t>& p);
 	void BuildCalibrated(const Point<int16_t>& p, const Point<double>& center, const double calibMatrix[3][3]);
