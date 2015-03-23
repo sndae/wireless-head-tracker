@@ -20,15 +20,13 @@ int32_t yaw_value;
 
 FeatRep_RawMagSamples raw_mag_samples;
 
+// we store this here to avoid passing it as an argument to the functions all the time
+const __xdata FeatRep_DongleSettings* pSettings;
+
 // these are indexes of the euler[] and center[] arrays
 #define YAW		0
 #define ROLL	1
 #define PITCH	2
-
-#if DBG_MODE
-bool log_now = false;
-uint8_t cnt_dropped = 0;
-#endif
 
 void save_x_drift_comp(void)
 {
@@ -50,7 +48,7 @@ void recenter(void)
 }
 
 // convert the raw quaternions from the sensors into Euler angles
-void quat2euler(int16_t* quat, int16_t* euler)
+void quat2euler(__xdata int16_t* quat, __xdata int16_t* euler)
 {
 	int16_t qw, qx, qy, qz;
 	int32_t qww, qxx, qyy, qzz;
@@ -84,7 +82,7 @@ void quat2euler(int16_t* quat, int16_t* euler)
 
 // calculates and applies recentering offsets
 // returns false if we are in the process of calulating new offsets and the euler are not valid
-bool do_center(int16_t* euler)
+bool do_center(__xdata int16_t* euler)
 {
 	static int16_t center[3];
 	static int16_t wrap_bias[3];
@@ -134,7 +132,7 @@ bool do_center(int16_t* euler)
 }
 
 // applies the yaw drift
-void do_drift(int16_t* euler, const FeatRep_DongleSettings __xdata * pSettings)
+void do_drift(__xdata int16_t* euler)
 {
 	int16_t compensate = (sample_cnt * pSettings->drift_per_1k) >> 10;
 
@@ -142,7 +140,7 @@ void do_drift(int16_t* euler, const FeatRep_DongleSettings __xdata * pSettings)
 }
 
 // do the axis response
-void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings)
+void do_response(__xdata int16_t* euler)
 {
 	uint8_t i;
 
@@ -178,7 +176,7 @@ void do_response(int16_t* euler, const FeatRep_DongleSettings __xdata* pSettings
 	}
 }
 
-int16_t calc_mag_heading(int16_t* mag, int16_t* euler)
+int16_t calc_mag_heading(__xdata int16_t* mag, __xdata int16_t* euler)
 {
 	// this is a tilt compensated heading calculation. read more here:
 	// http://www.st.com/web/en/resource/technical/document/application_note/CD00269797.pdf
@@ -204,7 +202,7 @@ int16_t calc_mag_heading(int16_t* mag, int16_t* euler)
 // 10 seconds on 50Hz samples rate
 #define CALIB_MAG_HEADING_OFFSET_SAMPLES	200
 
-void do_mag(int16_t* mag, int16_t* euler, const FeatRep_DongleSettings __xdata * pSettings)
+void do_mag(__xdata int16_t* mag, __xdata int16_t* euler)
 {
 	static int16_t consec_count = 0;
 	static bool behind = false;
@@ -303,7 +301,7 @@ void do_mag(int16_t* mag, int16_t* euler, const FeatRep_DongleSettings __xdata *
 
 #define SAMPLES_FOR_AUTOCENTER_BITS		6
 
-void do_auto_center(int16_t* euler, uint8_t autocenter)
+void do_auto_center(__xdata int16_t* euler, uint8_t autocenter)
 {
 	static int16_t ticks_in_zone = 0;
 	static int16_t last_yaw = 0;
@@ -345,14 +343,14 @@ void do_auto_center(int16_t* euler, uint8_t autocenter)
 	}
 }
 
-bool process_packet(mpu_packet_t* pckt)
+bool process_packet(__xdata mpu_packet_t* pckt)
 {
-	// we're getting the settings pointer here and pass it on to the functions below
-	// because get_dongle_settings() isn't really a trivial function
-	const FeatRep_DongleSettings __xdata* pSettings = get_dongle_settings();
-	
-	int16_t euler[3];		// the resulting angles
+	// the resulting angles
+	int16_t euler[3];
 
+	// we're getting the settings pointer here
+	pSettings = get_dongle_settings();
+	
 	quat2euler(pckt->quat, euler);	// convert quaternions to euler angles
 	
 	if (pckt->flags & FLAG_RECENTER)
@@ -360,14 +358,14 @@ bool process_packet(mpu_packet_t* pckt)
 
 	// magnetometer
 	if (pckt->flags & FLAG_COMPASS_VALID)
-		do_mag(pckt->compass, euler, pSettings);
+		do_mag(pckt->compass, euler);
 
 	// calc and/or apply the centering offset
 	if (!do_center(euler))
 		return false;
 	
 	// apply the drift compensations
-	do_drift(euler, pSettings);
+	do_drift(euler);
 
 	// save the current yaw angle after drift compensation and before auto-centering
 	yaw_value = euler[YAW];
@@ -377,7 +375,7 @@ bool process_packet(mpu_packet_t* pckt)
 		do_auto_center(euler, pSettings->autocenter);
 
 	// do the axis response transformations
-	do_response(euler, pSettings);
+	do_response(euler);
 
 	// copy the data into the USB report
 	usb_joystick_report.x = euler[YAW];
