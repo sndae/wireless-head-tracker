@@ -81,7 +81,7 @@ void quat2euler(__xdata int16_t* quat, __xdata int16_t* euler)
 #define SAMPLES_FOR_RECENTER	8
 
 // calculates and applies recentering offsets
-// returns false if we are in the process of calulating new offsets and the euler are not valid
+// returns false if we are in the process of calulating new offsets and the euler angles are not valid
 bool do_center(__xdata int16_t* euler)
 {
 	static int16_t center[3];
@@ -180,14 +180,15 @@ int16_t calc_mag_heading(__xdata int16_t* mag, __xdata int16_t* euler)
 {
 	// this is a tilt compensated heading calculation. read more here:
 	// http://www.st.com/web/en/resource/technical/document/application_note/CD00269797.pdf
+	// "Using LSM303DLH for a tilt compensated electronic compass"
 
 	int32_t Xh, Yh;
 	int16_t sinroll, cosroll;
 	int16_t sinpitch, cospitch;
 	int16_t sinroll_pitch;
 
-	isincos_cord(euler[1], &cosroll, &sinroll);
-	isincos_cord(euler[2], &cospitch, &sinpitch);
+	isincos_cord(euler[ROLL], &cosroll, &sinroll);
+	isincos_cord(euler[PITCH], &cospitch, &sinpitch);
 	
 	Xh = mul_16x16(mag[0], cospitch) + mul_16x16(mag[2], sinpitch);
 	
@@ -199,7 +200,6 @@ int16_t calc_mag_heading(__xdata int16_t* mag, __xdata int16_t* euler)
 	return -iatan2_cord(Yh, Xh);
 }
 
-// 10 seconds on 50Hz samples rate
 #define CALIB_MAG_HEADING_OFFSET_SAMPLES	200
 
 void do_mag(__xdata int16_t* mag, __xdata int16_t* euler)
@@ -266,6 +266,10 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler)
 	}
 	
 	mag_delta -= mag_heading_offset;	// apply the heading offset
+	
+	// debug
+	//euler[ROLL] = mag_heading;
+	//euler[PITCH] = mag_delta;
 	
 	// EDtracker quote:
 	//
@@ -348,7 +352,7 @@ bool process_packet(__xdata mpu_packet_t* pckt)
 	// the resulting angles
 	int16_t euler[3];
 
-	// we're getting the settings pointer here
+	// we're getting the settings pointer here, and use it in some of the functions above
 	pSettings = get_dongle_settings();
 	
 	quat2euler(pckt->quat, euler);	// convert quaternions to euler angles
@@ -360,6 +364,7 @@ bool process_packet(__xdata mpu_packet_t* pckt)
 	if (pckt->flags & FLAG_COMPASS_VALID)
 		do_mag(pckt->compass, euler);
 
+	/*
 	// calc and/or apply the centering offset
 	if (!do_center(euler))
 		return false;
@@ -376,6 +381,7 @@ bool process_packet(__xdata mpu_packet_t* pckt)
 
 	// do the axis response transformations
 	do_response(euler);
+	*/
 
 	// copy the data into the USB report
 	usb_joystick_report.x = euler[YAW];

@@ -53,6 +53,7 @@ private:
 	void SaveData();
 	void LoadData();
 	void CalcEllipsoidFit();
+	void ClearCalibPoints();
 
 public:
 

@@ -46,6 +46,7 @@
 #define IDC_BTN_CALC                    1043
 #define IDC_BTN_SAVE                    1044
 #define IDC_BTN_LOAD                    1045
+#define IDC_BTN_CLEAR_CALIBRATED_POINTS 1046
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

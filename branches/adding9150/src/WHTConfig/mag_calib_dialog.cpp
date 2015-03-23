@@ -260,6 +260,10 @@ void MagCalibDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		LoadData();
 	else if (ctrlID == IDC_BTN_CALC)
 		CalcEllipsoidFit();
+	else if (ctrlID == IDC_BTN_CLEAR_CALIBRATED_POINTS)
+		ClearCalibPoints();
+	else if (ctrlID == IDC_BTN_CALC)
+		CalcEllipsoidFit();
 }
 
 void MagCalibDialog::OnLButtonDown(int x, int y, WPARAM wParam)
@@ -429,6 +433,14 @@ void MagCalibDialog::LoadData()
 	}
 }
 
+void MagCalibDialog::ClearCalibPoints()
+{
+	// and default empty vertex buffers
+	_vb_mag_points[1].clear();
+	_vb_mag_points[1].push_back(VertexBuffer());
+	_vb_mag_points[1].back().Alloc(_d3d_device, NUM_VERTICES_PER_VBUFFER);
+}
+
 void MagCalibDialog::CalcEllipsoidFit()
 {
 	if (_mag_set.size() < 500)
@@ -443,26 +455,27 @@ void MagCalibDialog::CalcEllipsoidFit()
 	_ellipsoid_fit.fitEllipsoid(_mag_set);
 	_ellipsoid_fit.calcCalibMatrix(MagPoint::CALIBRATED_SCALE);
 
-	debug(L"-----------------------");
+	// save the offsets and the matrix
+	FeatRep_DongleSettings rep;
 
-	debug(int2str(int(_ellipsoid_fit.center.x)) + L"," + int2str(int(_ellipsoid_fit.center.y)) + L"," + int2str(int(_ellipsoid_fit.center.z)));
+	// get the current settings
+	_dongle.GetFeatureReport(rep);
 
-	// scale the matrix for fixed point calc
-	std::wstring line;
+	// set the offsets
+	rep.mag_offset[0] = int16_t(_ellipsoid_fit.center.x + 0.5);
+	rep.mag_offset[1] = int16_t(_ellipsoid_fit.center.y + 0.5);
+	rep.mag_offset[2] = int16_t(_ellipsoid_fit.center.z + 0.5);
+
+	// scale the matrix for fixed point calc and then save
 	for (int i = 0; i < 3; ++i)
 	{
-		line.clear();
-
 		for (int j = 0; j < 3; ++j)
-		{
-			if (j)
-				line += L",";
-
-			line += int2str(int(_ellipsoid_fit.calibMatrix[i][j] * (1 << MAG_MATRIX_SCALE_BITS)));
-		}
-
-		debug(line);
+			rep.mag_matrix[i][j] = int16_t(_ellipsoid_fit.calibMatrix[i][j] * (1 << MAG_MATRIX_SCALE_BITS) + 0.5);
 	}
+
+	// send it back to the dongle
+	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
+	_dongle.SetFeatureReport(rep);
 
 	// draw the ellipsoid axes
 	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.evecs);
