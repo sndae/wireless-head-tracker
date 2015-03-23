@@ -73,11 +73,13 @@ enum head_tracker_commands_t
 	CMD_INC_DRIFT_COMP			= 5,
 	CMD_DEC_DRIFT_COMP			= 6,
 	
+	/*
 	// these are sent from the config program, through the dongle to the tracker
 	CMD_RF_PWR_LOWEST			= 7,
 	CMD_RF_PWR_LOWER			= 8,
 	CMD_RF_PWR_HIGHER			= 9,
 	CMD_RF_PWR_HIGHEST			= 10,
+	*/
 };
 
 // direction: PC -> dongle

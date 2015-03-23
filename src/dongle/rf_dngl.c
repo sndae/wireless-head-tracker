@@ -1,12 +1,12 @@
 #include <string.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-
-#include <compiler_mcs51.h>
 
 #include "rf_protocol.h"
 #include "nRF24L.h"
 #include "hw_defs.h"
+#include "nrfdbg.h"
 
 void rf_dngl_init(void)
 {
@@ -17,7 +17,7 @@ void rf_dngl_init(void)
 
 	nRF_WriteReg(EN_AA, vENAA_P0);			// enable auto acknowledge
 	nRF_WriteReg(SETUP_RETR, vARD_250us);	// ARD=250us, ARC=disabled
-	nRF_WriteReg(RF_SETUP, vRF_DR_2MBPS		// data rate
+	nRF_WriteReg(RF_SETUP, NRF_DATA_RATE	// data rate
 						| vRF_PWR_0DBM);	// output power
 
 	nRF_WriteReg(FEATURE, vEN_DPL | vEN_ACK_PAY);	// enable dynamic payload length and ACK payload

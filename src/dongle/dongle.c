@@ -43,7 +43,7 @@ void on_set_report(void)
 
 		uint8_t command = out0buf[1];
 	
-		if (command == CMD_CALIBRATE  ||  command >= CMD_RF_PWR_LOWEST && command <= CMD_RF_PWR_HIGHEST)
+		if (command == CMD_CALIBRATE)
 		{
 			// tell the head tracker to execute command
 			rf_dngl_queue_ack_payload(&command, 1);
@@ -116,7 +116,6 @@ void on_get_report(void)
 				pReport->accel_bias[0] = tracker_settings.accel_bias[0];
 				pReport->accel_bias[1] = tracker_settings.accel_bias[1];
 				pReport->accel_bias[2] = tracker_settings.accel_bias[2];
-				pReport->rf_power = tracker_settings.rf_power;
 
 				break;
 			}
@@ -164,7 +163,7 @@ void on_get_report(void)
 void main(void)
 {
 	bool joystick_report_ready = false;
-	__xdata mpu_packet_t packet;
+	__xdata tracker_readings_packet_t packet;
 	uint8_t last_timer_capture;
 	uint8_t total_packets_ndx;
 	uint8_t curr_packets;

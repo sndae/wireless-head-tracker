@@ -16,27 +16,27 @@
 #define DATA1_ADDR		((FeatRep_DongleSettings __xdata *) 0x7e00)
 #define DATA1_PAGE_NUM	63
 
-#define DATA_PAGE_SIZE			0x200
+#define DATA_PAGE_SIZE		0x200
 // how many settings blocks can we store in the two pages
-#define BLOCKS_CAPACITY			((DATA_PAGE_SIZE*2) / sizeof(FeatRep_DongleSettings))
+#define BLOCKS_CAPACITY		((DATA_PAGE_SIZE*2) / sizeof(FeatRep_DongleSettings))
 
 __xdata FeatRep_DongleSettings default_settings =
 {
 	0,		// report_id		is_empty
 	
 	0,		// autocenter - none
-	1,		// is_linear - exponential
+	0,		// is_linear - exponential
 
-	{1, 1, 1},		// factors
+	{12, 12, 12},	// axis factors
 	
-	0,		// x_drift_comp
+	0,				// x_drift_comp
 	
-	{-21,11,-89},
-	
-	{							// mag offset
-		{23503,-499,449},		// mag calibration identity matrix
-		{-499,24477,320},
-		{449,320,24473},
+	{0, 0, 0},		// mag offset
+	{
+		// mag calibration identity matrix
+		{(1<<MAG_MATRIX_SCALE_BITS),                          0,                          0},
+		{                         0, (1<<MAG_MATRIX_SCALE_BITS),                          0},
+		{                         0,                          0, (1<<MAG_MATRIX_SCALE_BITS)},
 	}
 };
 

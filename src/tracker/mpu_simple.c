@@ -9,6 +9,7 @@
 #include "i2c.h"
 #include "tracker.h"
 #include "mpu_regs.h"
+#include "mpu_simple.h"
 #include "mpu_dmp_firmware.h"
 #include "rf_protocol.h"
 #include "tracker_settings.h"
@@ -324,7 +325,7 @@ bool mpu_read_fifo_packet(uint8_t* buffer)
 	return chunk_bytes == FIFO_BUFFER_CAPACITY;
 }
 
-bool dmp_read_fifo(mpu_packet_t* pckt)
+bool dmp_read_fifo(mpu_readings_t* pckt)
 {
 	uint8_t fifo_data[FIFO_BUFFER_CAPACITY];
 	uint8_t i;
@@ -333,7 +334,7 @@ bool dmp_read_fifo(mpu_packet_t* pckt)
 		return false;
 
 	// we're truncating the lower 16 bits of the quaternions. only the higher 16 bits are really
-	// used in the calculations, so there's no point to drag the entire 32 bit integer around.
+	// used in the calculations, so there's no point in dragging the entire 32 bit integer around.
 	for (i = 0; i < 4; i++)
 		pckt->quat[i] = (fifo_data[i*4] << 8) | fifo_data[1 + i*4];
 
@@ -363,8 +364,11 @@ int16_t mpu_read_temperature(void)
 	return (int16_t)(350 + ((((buff[0] << 8) | buff[1]) + TEMP_OFFSET) / TEMP_SENS));
 }
 
-void mpu_read_compass(mpu_packet_t* pckt)
+void mpu_read_compass(mpu_readings_t* pckt)
 {
+	// we're pessimistic
+	pckt->has_mag = 0;
+	
 	// read the compass data if we are running on a MPU-9150
 	if (is_mpu9150)
 	{
@@ -378,11 +382,11 @@ void mpu_read_compass(mpu_packet_t* pckt)
 		for (i = 0; i < 3; i++)
 		{
 			int32_t data = (buff[2 + i*2] << 8) | buff[1 + i*2];
-			pckt->compass[i] = (data * mag_sens_adj[i]) >> 8;
+			pckt->mag[i] = (data * mag_sens_adj[i]) >> 8;
 		}
 		
 		// compass data is valid
-		pckt->flags |= FLAG_COMPASS_VALID;
+		pckt->has_mag = 0xff;
 	}
 }
 
@@ -510,7 +514,7 @@ void mpu_calibrate_bias(void)
 {
 	uint8_t scnt;
 	int8_t accel_step = 10;
-	mpu_packet_t pckt;
+	mpu_readings_t rd;
 	tracker_settings_t new_settings;
 
 	LED_RED = 0;
@@ -523,7 +527,6 @@ void mpu_calibrate_bias(void)
 
 	// init the new settings struct
 	memset(&new_settings, 0, sizeof(new_settings));
-	new_settings.rf_power = get_tracker_settings()->rf_power;
 
 	// read the current accel bias
 	mpu_read_accel_bias(new_settings.accel_bias);
@@ -545,43 +548,43 @@ void mpu_calibrate_bias(void)
 		if (scnt == 40)
 			accel_step = 2;
 
-		dmp_read_fifo(&pckt);
+		dmp_read_fifo(&rd);
 
 		if (dbgEmpty())
 			dprintf("g %6d %6d %6d  a %6d %6d %6d\n",
-						pckt.gyro[0], pckt.gyro[1], pckt.gyro[2],
-						pckt.accel[0], pckt.accel[1], pckt.accel[2]);
+						rd.gyro[0], rd.gyro[1], rd.gyro[2],
+						rd.accel[0], rd.accel[1], rd.accel[2]);
 
 		// accel
-		if (pckt.accel[0] >= 1)
+		if (rd.accel[0] >= 1)
 			new_settings.accel_bias[0] -= accel_step;
-		else if (pckt.accel[0] <= -1)
+		else if (rd.accel[0] <= -1)
 			new_settings.accel_bias[0] += accel_step;
 
-		if (pckt.accel[1] >= 1)
+		if (rd.accel[1] >= 1)
 			new_settings.accel_bias[1] -= accel_step;
-		else if (pckt.accel[1] <= -1)
+		else if (rd.accel[1] <= -1)
 			new_settings.accel_bias[1] += accel_step;
 
-		if (pckt.accel[2] > 0x4000)
+		if (rd.accel[2] > 0x4000)
 			new_settings.accel_bias[2] -= accel_step;
-		else if (pckt.accel[2] < 0x4000)
+		else if (rd.accel[2] < 0x4000)
 			new_settings.accel_bias[2] += accel_step;
 
 		// gyro
-		if (pckt.gyro[0] > 1)
+		if (rd.gyro[0] > 1)
 			new_settings.gyro_bias[0]--;
-		else if (pckt.gyro[0] < -1)
+		else if (rd.gyro[0] < -1)
 			new_settings.gyro_bias[0]++;
 
-		if (pckt.gyro[1] > 1)
+		if (rd.gyro[1] > 1)
 			new_settings.gyro_bias[1]--;
-		else if (pckt.gyro[1] < -1)
+		else if (rd.gyro[1] < -1)
 			new_settings.gyro_bias[1]++;
 
-		if (pckt.gyro[2] > 1)
+		if (rd.gyro[2] > 1)
 			new_settings.gyro_bias[2]--;
-		else if (pckt.gyro[2] < -1)
+		else if (rd.gyro[2] < -1)
 			new_settings.gyro_bias[2]++;
 
 		// push the biases back to the MPU

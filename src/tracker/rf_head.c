@@ -51,12 +51,15 @@ void rf_head_init(void)
 bool rf_head_send_message(const void* buff, const uint8_t num_bytes)
 {
 	bool is_sent;
-	uint8_t status, setup = vRF_DR_2MBPS;
+	uint8_t status, setup;
 
 	// wait for XOSC16M to start
 	while ((CLKLFCTRL & 0x08) == 0)
 		;
 
+	setup = NRF_DATA_RATE | vRF_PWR_0DBM;
+	
+	/*
 	// read the power from the settings and add the data rate to it
 	switch (get_tracker_settings()->rf_power)
 	{
@@ -65,6 +68,7 @@ bool rf_head_send_message(const void* buff, const uint8_t num_bytes)
 	case CMD_RF_PWR_HIGHER:		setup = vRF_DR_2MBPS | vRF_PWR_M6DBM;		break;
 	case CMD_RF_PWR_HIGHEST:	setup = vRF_DR_2MBPS | vRF_PWR_0DBM;		break;
 	}
+	*/
 		
 	nRF_WriteReg(RF_SETUP, setup);
 
