@@ -24,18 +24,19 @@ __xdata FeatRep_DongleSettings default_settings =
 {
 	0,		// report_id		is_empty
 	
-	2,		// autocenter - medium
-	0,		// is_linear - exponential
+	0,		// autocenter - none
+	1,		// is_linear - exponential
 
-	{12, 12, 12},		// factors
+	{1, 1, 1},		// factors
 	
 	0,		// x_drift_comp
 	
-	{21, 14,-15},					// mag offset
-	{
-		{24376,  -596,  146},		// mag calibration identity matrix
-		{ -596, 25259,  155},
-		{  146,   155,25879}
+	{-21,11,-89},
+	
+	{							// mag offset
+		{23503,-499,449},		// mag calibration identity matrix
+		{-499,24477,320},
+		{449,320,24473},
 	}
 };
 

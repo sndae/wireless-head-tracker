@@ -484,6 +484,10 @@ void WHTDialog::SendConfigToDevice()
 {
 	FeatRep_DongleSettings rep;
 
+	// get the current settings
+	_dongle.GetFeatureReport(rep);
+
+	// change the values we are interested in
 	rep.is_linear = _cmb_axis_response.GetSelection();
 	rep.autocenter = _cmb_autocenter.GetSelection();
 
@@ -491,6 +495,7 @@ void WHTDialog::SendConfigToDevice()
 	rep.fact[1] = _edt_fact_y.GetInt();
 	rep.fact[2] = _edt_fact_z.GetInt();
 
+	// send it back to the dongle
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	_dongle.SetFeatureReport(rep);
 }
