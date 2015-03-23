@@ -55,7 +55,7 @@ private:
 
 	bool		_isConfigChanged;
 	bool		_autoConnect;
-	bool		_isPowerChanged;
+	//bool		_isPowerChanged;
 	bool		_ignoreNotifications;
 	bool		_isTrackerFound;
 	int			_readCalibrationCnt;

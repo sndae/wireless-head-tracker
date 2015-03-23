@@ -104,11 +104,6 @@ __xdata tracker_settings_t default_settings =
 	0,				// is_calibrated
 	{0, 0, 0},		// gyro_bias
 	{0, 0, 0},		// accel_bias
-
-	CMD_RF_PWR_HIGHER,	// rf_power		// vRF_PWR_M18DBM
-										// vRF_PWR_M12DBM
-										// vRF_PWR_M6DBM
-										// vRF_PWR_0DBM
 };
 
 const tracker_settings_t __xdata * get_tracker_settings(void)

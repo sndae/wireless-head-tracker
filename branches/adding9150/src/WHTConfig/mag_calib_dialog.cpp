@@ -375,7 +375,7 @@ void MagCalibDialog::LoadData()
 {
 /*
 #if _DEBUG
-	std::wstring fname(L"C:\\my_opensource\\wht_adding9150\\src\\WHTConfig\\samples\\tracker2.csv");
+	std::wstring fname(L"..\\samples\\tracker2.csv");
 	{
 		WaitCursor wc;
 		SimpleFile f;
@@ -459,6 +459,7 @@ void MagCalibDialog::CalcEllipsoidFit()
 	FeatRep_DongleSettings rep;
 
 	// get the current settings
+	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	_dongle.GetFeatureReport(rep);
 
 	// set the offsets

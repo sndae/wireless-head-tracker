@@ -22,7 +22,6 @@ WHTDialog::WHTDialog()
 	_icon_small(IDI_ICON, false),
 	_autoConnect(true),
 	_isConfigChanged(false),
-	_isPowerChanged(false),
 	_isTrackerFound(false),
 	_ignoreNotifications(false),
 	_readCalibrationCnt(0),
@@ -146,7 +145,6 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		{
 			_dongle.Close();
 			_isConfigChanged = false;
-			_isPowerChanged = false;
 			_isTrackerFound = false;
 			ChangeConnectedStateUI();
 		
@@ -216,7 +214,7 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 			ChangeConnectedStateUI();
 		}
 
-	} else if (ctrlID == IDC_CMB_RF_POWER) {
+	/*} else if (ctrlID == IDC_CMB_RF_POWER) {
 
 		// if the selection of the combo box has changed
 		if (notifyID == CBN_SELCHANGE  &&  	!_ignoreNotifications)
@@ -242,7 +240,7 @@ void WHTDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 
 		_isPowerChanged = false;
 		ChangeConnectedStateUI();
-
+		*/
 	} else if (ctrlID == IDC_BTN_MAG_CALIBRATION) {
 		
 		if (_mag_calig_dlg.IsValid())
@@ -456,26 +454,6 @@ void WHTDialog::ReadTrackerSettings()
 		_lbl_accel_bias_y.SetText(rep.accel_bias[1]);
 		_lbl_accel_bias_z.SetText(rep.accel_bias[2]);
 
-		// refresh if the value is not changed
-		if (!_isPowerChanged)
-		{
-			_ignoreNotifications = true;
-
-			size_t sel;
-			if (rep.rf_power == CMD_RF_PWR_LOWEST)
-				sel = 0;
-			else if (rep.rf_power == CMD_RF_PWR_LOWER)
-				sel = 1;
-			else if (rep.rf_power == CMD_RF_PWR_HIGHER)
-				sel = 2;
-			else if (rep.rf_power == CMD_RF_PWR_HIGHEST)
-				sel = 3;
-
-			_cmb_rf_power.SetSelection(sel);
-
-			_ignoreNotifications = false;
-		}
-
 		_isTrackerFound = true;
 	}
 }
@@ -534,5 +512,4 @@ void WHTDialog::ChangeConnectedStateUI()
 	//_btn_mag_calibration.Enable(is_connected);
 
 	_btn_save_axes_setup.Enable(is_connected  &&  _isConfigChanged);
-	_btn_save_rf_power.Enable(is_connected  &&  _isPowerChanged);
 }

@@ -202,7 +202,7 @@ int16_t calc_mag_heading(__xdata int16_t* mag, __xdata int16_t* euler)
 
 #define CALIB_MAG_HEADING_OFFSET_SAMPLES	200
 
-void do_mag(__xdata int16_t* mag, __xdata int16_t* euler)
+void do_mag(__xdata int16_t* mag, __xdata int16_t* euler, bool should_reset)
 {
 	static int16_t consec_count = 0;
 	static bool behind = false;
@@ -224,7 +224,7 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler)
 
 		raw_mag_samples.num_samples++;
 	}
-	
+
 	//
 	// apply the mag calibration
 	//
@@ -243,7 +243,10 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler)
 		mag_calibrated[i] = (tcalib >> MAG_MATRIX_SCALE_BITS);
 	}
 	
-	// apply the correction
+	if (should_reset)
+		consec_count = mag_head_off_cnt = mag_heading_offset = mag_correction = 0;
+	
+	// apply the correction calculated from the previous iterations
 	euler[YAW] -= mag_correction;
 	
 	mag_heading = calc_mag_heading(mag_calibrated, euler);
@@ -268,8 +271,8 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler)
 	mag_delta -= mag_heading_offset;	// apply the heading offset
 	
 	// debug
-	//euler[ROLL] = mag_heading;
-	//euler[PITCH] = mag_delta;
+	euler[ROLL] = mag_heading;
+	euler[PITCH] = mag_delta;
 	
 	// EDtracker quote:
 	//
@@ -295,8 +298,8 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler)
 
 	mag_correction += (int16_t) (mul_16x16(consec_count, abs(consec_count)) / 80);
 
-	//if (dbgEmpty())
-	//	dprintf("delta=%6d  corr=%6d  conscnt=%4d\n", mag_delta, mag_correction, consec_count);
+	if (dbgEmpty())
+		dprintf("delta=%6d  corr=%6d  conscnt=%4d\n", mag_delta, mag_correction, consec_count);
 	
 	// Also tweak the overall drift compensation.
 	// DMP still suffers from 'warm-up' issues and this helps greatly.
@@ -347,10 +350,22 @@ void do_auto_center(__xdata int16_t* euler, uint8_t autocenter)
 	}
 }
 
-bool process_packet(__xdata mpu_packet_t* pckt)
+bool process_packet(__xdata tracker_readings_packet_t* pckt)
 {
 	// the resulting angles
 	int16_t euler[3];
+	
+	// the last packet counter received
+	static int16_t last_pckt_cnt = 0;
+
+	bool should_reset = (pckt->pckt_cnt - last_pckt_cnt > 10);
+	last_pckt_cnt = pckt->pckt_cnt;
+	
+	euler[YAW] = pckt->pckt_cnt;
+	
+	// recenter if we noticed a glitch in the packet counter field
+	if (should_reset)
+		should_recenter = true;
 
 	// we're getting the settings pointer here, and use it in some of the functions above
 	pSettings = get_dongle_settings();
@@ -360,11 +375,12 @@ bool process_packet(__xdata mpu_packet_t* pckt)
 	if (pckt->flags & FLAG_RECENTER)
 		recenter();
 
-	// magnetometer
-	if (pckt->flags & FLAG_COMPASS_VALID)
-		do_mag(pckt->compass, euler);
-
 	/*
+	// magnetometer
+	if (pckt->flags & FLAG_MAG_VALID)
+		do_mag(pckt->mag, euler, should_reset);
+	*/
+
 	// calc and/or apply the centering offset
 	if (!do_center(euler))
 		return false;
@@ -381,7 +397,6 @@ bool process_packet(__xdata mpu_packet_t* pckt)
 
 	// do the axis response transformations
 	do_response(euler);
-	*/
 
 	// copy the data into the USB report
 	usb_joystick_report.x = euler[YAW];

@@ -12,10 +12,12 @@ typedef struct
 	int16_t		gyro_bias[3];
 	int16_t		accel_bias[3];
 
+	/*
 	uint8_t		rf_power;		// vRF_PWR_M18DBM
 								// vRF_PWR_M12DBM
 								// vRF_PWR_M6DBM
 								// vRF_PWR_0DBM
+								*/
 } tracker_settings_t;
 
 const tracker_settings_t __xdata * get_tracker_settings(void);

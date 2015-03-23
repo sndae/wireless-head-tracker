@@ -151,7 +151,7 @@ uint16_t get_battery_voltage(void)
 #define LED_PCKT_TOTAL		150
 #define LED_PCKT_LED_ON		2
 
-#define VOLTAGE_READ_EVERY		50
+#define VOLTAGE_READ_EVERY	50
 
 int main(void)
 {
@@ -160,8 +160,11 @@ int main(void)
 	uint8_t voltage_counter = 0, temperature_counter = 0;
 	
 	bool read_result;
-	mpu_packet_t pckt;
+	tracker_readings_packet_t pckt;
+	mpu_readings_t mpu_rd;
 
+	pckt.pckt_cnt = 0;
+	
 	hw_init();
 	
 	for (;;)
@@ -178,14 +181,27 @@ int main(void)
 		pckt.flags = 0;
 			
 		// read all the packets in the MPU fifo
-		read_result = dmp_read_fifo(&pckt);
+		read_result = dmp_read_fifo(&mpu_rd);
 		
 		if (read_result)
 		{
 			pckt.flags |= (RECENTER_BTN == 0 ? FLAG_RECENTER : 0);
+
+			// copy the quaternions
+			memcpy(pckt.quat, mpu_rd.quat, sizeof(pckt.quat));
+			
+			// increase packet counter
+			pckt.pckt_cnt++;
 			
 			// add the compass data if we have it
-			mpu_read_compass(&pckt);
+			mpu_read_compass(&mpu_rd);
+			
+			// set the magnetometer
+			if (mpu_rd.has_mag)
+			{
+				pckt.flags |= FLAG_MAG_VALID;
+				memcpy(pckt.mag, mpu_rd.mag, sizeof(pckt.mag));
+			}
 			
 			// read the temperature
 			pckt.temperature = mpu_read_temperature();
@@ -224,21 +240,9 @@ int main(void)
 			if (rf_head_read_ack_payload(&ack, 1))
 			{
 				if (ack == CMD_CALIBRATE)
-				{
 					mpu_calibrate_bias();
-					
-				} else if (ack == CMD_READ_TRACKER_SETTINGS) {
-				
+				else if (ack == CMD_READ_TRACKER_SETTINGS)
 					rf_head_send_message(get_tracker_settings(), sizeof(tracker_settings_t));
-
-				} else if (ack >= CMD_RF_PWR_LOWEST  &&  ack <= CMD_RF_PWR_HIGHEST) {
-				
-					tracker_settings_t new_settings;
-					memcpy(&new_settings, get_tracker_settings(), sizeof(tracker_settings_t));
-					new_settings.rf_power = ack;
-					
-					save_tracker_settings(&new_settings);
-				}
 			}
 		}
 	}
