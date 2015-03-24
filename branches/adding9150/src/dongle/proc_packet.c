@@ -225,6 +225,7 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler, bool should_reset)
 		raw_mag_samples.num_samples++;
 	}
 
+	/*
 	//
 	// apply the mag calibration
 	//
@@ -300,6 +301,7 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler, bool should_reset)
 
 	if (dbgEmpty())
 		dprintf("delta=%6d  corr=%6d  conscnt=%4d\n", mag_delta, mag_correction, consec_count);
+	*/
 	
 	// Also tweak the overall drift compensation.
 	// DMP still suffers from 'warm-up' issues and this helps greatly.
@@ -375,11 +377,9 @@ bool process_packet(__xdata tracker_readings_packet_t* pckt)
 	if (pckt->flags & FLAG_RECENTER)
 		recenter();
 
-	/*
 	// magnetometer
 	if (pckt->flags & FLAG_MAG_VALID)
 		do_mag(pckt->mag, euler, should_reset);
-	*/
 
 	// calc and/or apply the centering offset
 	if (!do_center(euler))

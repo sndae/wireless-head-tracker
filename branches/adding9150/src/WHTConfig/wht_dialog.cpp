@@ -36,7 +36,6 @@ void WHTDialog::OnInit()
 	// setup our controls
 	_cmb_axis_response.SetHandle(GetCtrl(IDC_CMB_AXIS_RESPONSE));
 	_cmb_autocenter.SetHandle(GetCtrl(IDC_CMB_AUTOCENTER));
-	_cmb_rf_power.SetHandle(GetCtrl(IDC_CMB_RF_POWER));
 
 	_prg_axis_x.SetHandle(GetCtrl(IDC_PRG_AXIS_X));
 	_prg_axis_y.SetHandle(GetCtrl(IDC_PRG_AXIS_Y));
@@ -69,7 +68,6 @@ void WHTDialog::OnInit()
 	_btn_save_drift_comp.SetHandle(GetCtrl(IDC_BTN_SAVE_DRIFT_COMP));
 	_btn_plus.SetHandle(GetCtrl(IDC_BTN_PLUS));
 	_btn_minus.SetHandle(GetCtrl(IDC_BTN_MINUS));
-	_btn_save_rf_power.SetHandle(GetCtrl(IDC_BTN_SAVE_RF_POWER));
 	_btn_save_axes_setup.SetHandle(GetCtrl(IDC_BTN_SAVE_AXES_SETUP));
 	_btn_mag_calibration.SetHandle(GetCtrl(IDC_BTN_MAG_CALIBRATION));
 
@@ -88,11 +86,6 @@ void WHTDialog::OnInit()
 	_cmb_autocenter.AddString(L"Light");
 	_cmb_autocenter.AddString(L"Medium");
 	_cmb_autocenter.AddString(L"Heavy");
-
-	_cmb_rf_power.AddString(L"Lowest");
-	_cmb_rf_power.AddString(L"Lower");
-	_cmb_rf_power.AddString(L"Higher");
-	_cmb_rf_power.AddString(L"Highest");
 
 	// disable the controls since we're not connected to the dongle yet
 	ChangeConnectedStateUI();
@@ -433,8 +426,6 @@ void WHTDialog::ReadTrackerSettings()
 	_lbl_accel_bias_y.ClearText();
 	_lbl_accel_bias_z.ClearText();
 
-	_cmb_rf_power.SetSelection(-1);		// deselect
-
 	FeatRep_TrackerSettings rep;
 	rep.report_id = TRACKER_SETTINGS_REPORT_ID;
 	_dongle.GetFeatureReport(rep);
@@ -508,7 +499,7 @@ void WHTDialog::ChangeConnectedStateUI()
 	_edt_fact_x.Enable(is_connected);
 	_edt_fact_y.Enable(is_connected);
 	_edt_fact_z.Enable(is_connected);
-	_cmb_rf_power.Enable(is_connected);
+
 	//_btn_mag_calibration.Enable(is_connected);
 
 	_btn_save_axes_setup.Enable(is_connected  &&  _isConfigChanged);

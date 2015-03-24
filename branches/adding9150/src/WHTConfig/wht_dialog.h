@@ -11,7 +11,6 @@ private:
 
 	ComboBox	_cmb_axis_response;
 	ComboBox	_cmb_autocenter;
-	ComboBox	_cmb_rf_power;
 
 	ProgressBar	_prg_axis_x;
 	ProgressBar	_prg_axis_y;
@@ -45,7 +44,6 @@ private:
 	Button		_btn_save_drift_comp;
 	Button		_btn_plus;
 	Button		_btn_minus;
-	Button		_btn_save_rf_power;
 	Button		_btn_save_axes_setup;
 	Button		_btn_mag_calibration;
 
