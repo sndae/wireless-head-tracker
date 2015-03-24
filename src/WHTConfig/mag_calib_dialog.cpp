@@ -18,9 +18,7 @@ MagCalibDialog::MagCalibDialog(WHTDongle& dngl)
 :	_icon_large(IDI_MAGNET, true),
 	_icon_small(IDI_MAGNET, false),
 	_camera(_d3d_device),
-	_is_dragging(false),
-	_dongle(dngl),
-	_is_ellipsoid_fit_valid(false)
+	_dongle(dngl)
 {}
 
 void MagCalibDialog::OnInit()
@@ -28,14 +26,34 @@ void MagCalibDialog::OnInit()
 	SetIcon(_icon_small);
 	SetIcon(_icon_large);
 
-	_btn_clear_points.SetHandle(GetCtrl(IDC_BTN_CLEAR_POINTS));
-	_btn_reset_camera.SetHandle(GetCtrl(IDC_BTN_RESET_CAMERA));
+	_is_dragging = false;
+	_is_collecting_raw_samples = false;
+	_is_ellipsoid_fit_valid = false;
 
 	_lbl_num_points.SetHandle(GetCtrl(IDC_LBL_NUM_POINTS));
+	_btn_load_raw_points.SetHandle(GetCtrl(IDC_BTN_LOAD_RAW_POINTS));
+	_btn_save_raw_points.SetHandle(GetCtrl(IDC_BTN_SAVE_RAW_POINTS));
+	_btn_start_sampling.SetHandle(GetCtrl(IDC_BTN_START_SAMPLING));
+	_btn_stop_sampling.SetHandle(GetCtrl(IDC_BTN_STOP_SAMPLING));
+	_btn_clear_all_points.SetHandle(GetCtrl(IDC_BTN_CLEAR_ALL_POINTS));
+	_btn_clear_calibrated_points.SetHandle(GetCtrl(IDC_BTN_CLEAR_CALIBRATED_POINTS));
+	_btn_calc_calibration.SetHandle(GetCtrl(IDC_BTN_CALC_CALIBRATION));
+	_btn_save_calibration.SetHandle(GetCtrl(IDC_BTN_SAVE_CALIBRATION));
 
 	_d3d_window.SetHandle(GetCtrl(IDC_D3D));
+
+	RefreshControls();
 	
-	UpdateD3DSize();
+	// set the device adapter name in the title
+	SetText("Magnetometer calibration on " + _d3d.GetAdapterName());
+
+	// remember the size of the D3D window relative to the size of the window
+	RECT dlgrect, dxrect;
+	GetRect(dlgrect);
+	_d3d_window.GetRect(dxrect);
+
+	_d3d_width_diff = dlgrect.right - dlgrect.left - dxrect.right + dxrect.left;
+	_d3d_height_diff = dlgrect.bottom - dlgrect.top - dxrect.bottom + dxrect.top;
 
 	// init the Direct3D device
 	_d3d_device.Init(_d3d, _d3d_window);
@@ -88,9 +106,14 @@ void MagCalibDialog::OnSize(int width, int height, WPARAM wParam)
 	_vb_ellipsoid_axes.Release();
 
 	_d3d_device.Release();
-	_d3d_device.Init(_d3d, _d3d_window);
 
-	Init3D();
+	// init d3d if we're not minimized
+	if (wParam != SIZE_MINIMIZED)
+	{
+		_d3d_device.Init(_d3d, _d3d_window);
+
+		Init3D();
+	}
 }
 
 void MagCalibDialog::UpdateD3DSize()
@@ -102,8 +125,8 @@ void MagCalibDialog::UpdateD3DSize()
 	dlgw = dlgrect.right - dlgrect.left;
 	dlgh = dlgrect.bottom - dlgrect.top;
 
-	dxw = dlgw - 30;
-	dxh = dlgh - 87;
+	dxw = dlgw - _d3d_width_diff;
+	dxh = dlgh - _d3d_height_diff;
 
 	// set the D3D window size
 	::SetWindowPos(_d3d_window.GetHandle(), HWND_TOP, 0, 0, dxw, dxh, SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOOWNERZORDER);
@@ -173,13 +196,14 @@ void MagCalibDialog::Init3D()
 	D3DXMATRIX matProjection;
 	ZeroMemory(&matProjection, sizeof(matProjection));
 
-	RECT r;
-	GetRect(r);
+	// we need the aspect ratio of the window to calculate the perspective
+	RECT dxrect;
+	_d3d_window.GetRect(dxrect);
 
 	// Use D3DX to create a left handed cartesian Field Of View transform
 	D3DXMatrixPerspectiveFovLH(	&matProjection,
 								D3DX_PI / 4,
-								(float) (r.right - r.left) / (r.bottom - r.top),
+								(float) (dxrect.right - dxrect.left) / (dxrect.bottom - dxrect.top),
 								1.0,
 								100000.0);
 	
@@ -220,50 +244,97 @@ void MagCalibDialog::Init3D()
 	}
 }
 
+void MagCalibDialog::RefreshControls()
+{
+	// check if the num points counter needs updating to avoid flickering, then update it
+	std::wstring num_str(_lbl_num_points.GetText());
+	if (num_str.empty()  ||  _wtoi(num_str.c_str()) != _mag_set.size())
+		_lbl_num_points.SetText((int) _mag_set.size());
+
+	_btn_calc_calibration.Enable(_mag_set.size() >= 500);
+
+	if (_dongle.IsOpen())
+	{
+		_btn_start_sampling.Enable(!_is_collecting_raw_samples);
+		_btn_stop_sampling.Enable(_is_collecting_raw_samples);
+
+		_btn_save_calibration.Enable(_is_ellipsoid_fit_valid);
+	} else {
+		_btn_start_sampling.Enable(false);
+		_btn_stop_sampling.Enable(false);
+		_btn_save_calibration.Enable(false);
+	}
+}
+
 void MagCalibDialog::OnTimer(int timerID)
 {
-	// update the counters
-	_lbl_num_points.SetText((int) _mag_set.size());
+	RefreshControls();
 
 	if (!_dongle.IsOpen())
 		return;
 
 	// get raw the mag data
-	FeatRep_RawMagSamples repMagSamples;
-	repMagSamples.report_id = RAW_MAG_REPORT_ID;
-	_dongle.GetFeatureReport(repMagSamples);
-
-	for (int i = 0; i < repMagSamples.num_samples; ++i)
+	if (_is_collecting_raw_samples)
 	{
-		Point<int16_t> mps(repMagSamples.mag[i].x, repMagSamples.mag[i].y, repMagSamples.mag[i].z);
+		FeatRep_RawMagSamples repMagSamples;
 
-		if (_mag_set.find(mps) == _mag_set.end())
+		repMagSamples.report_id = RAW_MAG_REPORT_ID;
+		_dongle.GetFeatureReport(repMagSamples);
+
+		for (int i = 0; i < repMagSamples.num_samples; ++i)
 		{
-			_mag_set.insert(mps);
+			Point<int16_t> mps(repMagSamples.mag[i].x, repMagSamples.mag[i].y, repMagSamples.mag[i].z);
 
-			AddPoint(mps, true);
-			if (_is_ellipsoid_fit_valid)
-				AddPoint(mps, false);
+			if (_mag_set.find(mps) == _mag_set.end())
+			{
+				_mag_set.insert(mps);
+
+				AddPoint(mps, true);
+				if (_is_ellipsoid_fit_valid)
+					AddPoint(mps, false);
+			}
 		}
 	}
 }
 
+void MagCalibDialog::StartSampling()
+{
+	_is_collecting_raw_samples = true;
+	RefreshControls();
+
+	// we need to change the focus away from a disabled control,
+	// or else we are not going to receive mousewheel notifications
+	_btn_stop_sampling.SetFocus();
+}
+
+void MagCalibDialog::StopSampling()
+{
+	_is_collecting_raw_samples = false;
+	RefreshControls();
+
+	// we need to change the focus away from a disabled control,
+	// or else we are not going to receive mousewheel notifications
+	_btn_start_sampling.SetFocus();
+}
+
 void MagCalibDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 {
-	if (ctrlID == IDC_BTN_CLEAR_POINTS)
+	if (ctrlID == IDC_BTN_CLEAR_ALL_POINTS)
 		ClearSamples();
 	else if (ctrlID == IDC_BTN_RESET_CAMERA)
 		_camera.Reset();
-	else if (ctrlID == IDC_BTN_SAVE)
+	else if (ctrlID == IDC_BTN_SAVE_RAW_POINTS)
 		SaveData();
-	else if (ctrlID == IDC_BTN_LOAD)
+	else if (ctrlID == IDC_BTN_LOAD_RAW_POINTS)
 		LoadData();
-	else if (ctrlID == IDC_BTN_CALC)
+	else if (ctrlID == IDC_BTN_CALC_CALIBRATION)
 		CalcEllipsoidFit();
 	else if (ctrlID == IDC_BTN_CLEAR_CALIBRATED_POINTS)
 		ClearCalibPoints();
-	else if (ctrlID == IDC_BTN_CALC)
-		CalcEllipsoidFit();
+	else if (ctrlID == IDC_BTN_START_SAMPLING)
+		StartSampling();
+	else if (ctrlID == IDC_BTN_STOP_SAMPLING)
+		StopSampling();
 }
 
 void MagCalibDialog::OnLButtonDown(int x, int y, WPARAM wParam)
@@ -346,6 +417,9 @@ void split_record(const std::string& in_str, std::vector<std::string>& out_vecto
 
 void MagCalibDialog::AddPoint(const Point<int16_t>& p, bool is_raw)
 {
+	if (!_d3d_device.IsValid())
+		return;
+
 	const size_t ndx = is_raw ? 0 : 1;
 
 	// enough space in the last vertex buffer?
@@ -441,20 +515,8 @@ void MagCalibDialog::ClearCalibPoints()
 	_vb_mag_points[1].back().Alloc(_d3d_device, NUM_VERTICES_PER_VBUFFER);
 }
 
-void MagCalibDialog::CalcEllipsoidFit()
+void MagCalibDialog::SaveCalibCorrection()
 {
-	if (_mag_set.size() < 500)
-	{
-		MsgBox(L"Please record more points.", L"Error", MB_OK | MB_ICONERROR);
-		return;
-	}
-
-	WaitCursor wc;
-
-	// try to make an ellipsoid out of the points
-	_ellipsoid_fit.fitEllipsoid(_mag_set);
-	_ellipsoid_fit.calcCalibMatrix(MagPoint::CALIBRATED_SCALE);
-
 	// save the offsets and the matrix
 	FeatRep_DongleSettings rep;
 
@@ -477,6 +539,21 @@ void MagCalibDialog::CalcEllipsoidFit()
 	// send it back to the dongle
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	_dongle.SetFeatureReport(rep);
+}
+
+void MagCalibDialog::CalcEllipsoidFit()
+{
+	if (_mag_set.size() < 500)
+	{
+		MsgBox(L"Please record more points.", L"Error", MB_OK | MB_ICONERROR);
+		return;
+	}
+
+	WaitCursor wc;
+
+	// try to make an ellipsoid out of the points
+	_ellipsoid_fit.fitEllipsoid(_mag_set);
+	_ellipsoid_fit.calcCalibMatrix(MagPoint::CALIBRATED_SCALE);
 
 	// draw the ellipsoid axes
 	_ellipsoid_axes.Build(_ellipsoid_fit.center, _ellipsoid_fit.radii, _ellipsoid_fit.evecs);

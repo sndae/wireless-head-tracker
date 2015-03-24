@@ -46,7 +46,17 @@ public:
 		return ::SetWindowText(_hWnd, str) == TRUE;
 	}
 
+	bool SetText(const char* str)
+	{
+		return ::SetWindowTextA(_hWnd, str) == TRUE;
+	}
+
 	bool SetText(const std::wstring& str)
+	{
+		return SetText(str.c_str());
+	}
+
+	bool SetText(const std::string& str)
 	{
 		return SetText(str.c_str());
 	}
@@ -87,6 +97,16 @@ public:
 	int16_t GetInt16()
 	{
 		return (int16_t) GetInt();
+	}
+
+	bool HasFocus() const
+	{
+		return _hWnd == ::GetFocus();
+	}
+
+	void SetFocus()
+	{
+		::SetFocus(_hWnd);
 	}
 };
 

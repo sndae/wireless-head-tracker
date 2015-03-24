@@ -32,7 +32,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 		do {
 			if (::PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) != 0)
 			{
-				if (!IsDialogMessage(mainDlg.GetHandle(), &msg))
+				if (!IsDialogMessage(mainDlg.GetHandle(), &msg)  &&  !IsDialogMessage(mainDlg.GetMagCompDialog().GetHandle(), &msg))
 				{
 					::TranslateMessage(&msg);
 					::DispatchMessage(&msg);
