@@ -454,6 +454,7 @@ void WHTDialog::SendConfigToDevice()
 	FeatRep_DongleSettings rep;
 
 	// get the current settings
+	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	_dongle.GetFeatureReport(rep);
 
 	// change the values we are interested in
