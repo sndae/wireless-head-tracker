@@ -17,4 +17,12 @@ struct Point
 	{
 		return x == lhs.x ? (y == lhs.y ? z < lhs.z : y < lhs.y) : x < lhs.x;
 	}
+
+	void Normalize(const T normal_mag = 1)
+	{
+		double m = sqrt(double(x*x + y*y + z*z));
+		x = T(x / m * normal_mag);
+		y = T(y / m * normal_mag);
+		z = T(z / m * normal_mag);
+	}
 };
