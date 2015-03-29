@@ -225,7 +225,6 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler, bool should_reset)
 		raw_mag_samples.num_samples++;
 	}
 
-	/*
 	//
 	// apply the mag calibration
 	//
@@ -256,6 +255,7 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler, bool should_reset)
 	// do we have enough samples for a magnetic heading offset?
 	if (mag_head_off_cnt < CALIB_MAG_HEADING_OFFSET_SAMPLES)
 	{
+		// not yet, sum the mag_delta to cal the average of the quaternion-mag difference
 		++mag_head_off_cnt;
 
 		mag_heading_offset += mag_delta;
@@ -272,8 +272,8 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler, bool should_reset)
 	mag_delta -= mag_heading_offset;	// apply the heading offset
 	
 	// debug
-	euler[ROLL] = mag_heading;
-	euler[PITCH] = mag_delta;
+	//euler[ROLL] = mag_heading;
+	//euler[PITCH] = mag_delta;
 	
 	// EDtracker quote:
 	//
@@ -297,11 +297,15 @@ void do_mag(__xdata int16_t* mag, __xdata int16_t* euler, bool should_reset)
 		behind = false;
 	}
 
-	mag_correction += (int16_t) (mul_16x16(consec_count, abs(consec_count)) / 80);
+	{	
+	int16_t mc = (int16_t) (mul_16x16(consec_count, abs(consec_count)) / 80);
+	if (mc)
+		dprintf("mc=%d\n", mc);
+	mag_correction += mc;
+	}
 
-	if (dbgEmpty())
-		dprintf("delta=%6d  corr=%6d  conscnt=%4d\n", mag_delta, mag_correction, consec_count);
-	*/
+	//if (dbgEmpty())
+	//	dprintf("delta=%6d  corr=%6d  conscnt=%4d\n", mag_delta, mag_correction, consec_count);
 	
 	// Also tweak the overall drift compensation.
 	// DMP still suffers from 'warm-up' issues and this helps greatly.
@@ -363,22 +367,22 @@ bool process_packet(__xdata tracker_readings_packet_t* pckt)
 	bool should_reset = (pckt->pckt_cnt - last_pckt_cnt > 10);
 	last_pckt_cnt = pckt->pckt_cnt;
 	
-	euler[YAW] = pckt->pckt_cnt;
-	
 	// recenter if we noticed a glitch in the packet counter field
 	if (should_reset)
-		should_recenter = true;
+		recenter();
 
 	// we're getting the settings pointer here, and use it in some of the functions above
 	pSettings = get_dongle_settings();
 	
 	quat2euler(pckt->quat, euler);	// convert quaternions to euler angles
 	
+	// recenter if the button on the tracker was pressed
 	if (pckt->flags & FLAG_RECENTER)
 		recenter();
 
-	// magnetometer
-	if (pckt->flags & FLAG_MAG_VALID)
+	// magnetometer - do mag correction only if the mag data is present
+	// and we don't already do some other autocentering
+	if (pckt->flags & FLAG_MAG_VALID  &&  pSettings->autocenter == 0)
 		do_mag(pckt->mag, euler, should_reset);
 
 	// calc and/or apply the centering offset

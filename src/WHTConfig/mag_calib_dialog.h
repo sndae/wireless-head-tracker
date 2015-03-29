@@ -69,6 +69,8 @@ private:
 	void ClearCalibPoints();
 	void RefreshControls();
 
+	void GenerateEllipsoid();
+
 	void StartSampling();
 	void StopSampling();
 

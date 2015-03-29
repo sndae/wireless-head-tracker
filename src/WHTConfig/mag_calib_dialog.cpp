@@ -326,7 +326,7 @@ void MagCalibDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 	else if (ctrlID == IDC_BTN_SAVE_RAW_POINTS)
 		SaveData();
 	else if (ctrlID == IDC_BTN_LOAD_RAW_POINTS)
-		LoadData();
+		GenerateEllipsoid();		//LoadData();
 	else if (ctrlID == IDC_BTN_CALC_CALIBRATION)
 		CalcEllipsoidFit();
 	else if (ctrlID == IDC_BTN_CLEAR_CALIBRATED_POINTS)
@@ -335,6 +335,8 @@ void MagCalibDialog::OnControl(int ctrlID, int notifyID, HWND hWndCtrl)
 		StartSampling();
 	else if (ctrlID == IDC_BTN_STOP_SAMPLING)
 		StopSampling();
+	else if (ctrlID == IDC_BTN_SAVE_CALIBRATION)
+		SaveCalibCorrection();
 }
 
 void MagCalibDialog::OnLButtonDown(int x, int y, WPARAM wParam)
@@ -447,15 +449,6 @@ void MagCalibDialog::AddPoint(const Point<int16_t>& p, bool is_raw)
 
 void MagCalibDialog::LoadData()
 {
-/*
-#if _DEBUG
-	std::wstring fname(L"..\\samples\\tracker2.csv");
-	{
-		WaitCursor wc;
-		SimpleFile f;
-		if (f.Open(fname, false))
-#else
-*/
 	OpenSaveFileDialog openFile;
 	openFile.AddFilter(L"CSV file (*.csv)", L"*.csv");
 	openFile.AddFilter(L"All files (*.*)", L"*.*");
@@ -467,7 +460,6 @@ void MagCalibDialog::LoadData()
 		SimpleFile f;
 
 		if (f.Open(openFile.GetFullFileName(), false))
-//#endif
 		{
 			// ellipsoid fit becomes invalid
 			_is_ellipsoid_fit_valid = false;
@@ -536,9 +528,65 @@ void MagCalibDialog::SaveCalibCorrection()
 			rep.mag_matrix[i][j] = int16_t(_ellipsoid_fit.calibMatrix[i][j] * (1 << MAG_MATRIX_SCALE_BITS) + 0.5);
 	}
 
+	// output the calibration 
+	debug(L"\t{" + int2str(rep.mag_offset[0]) + L"," + int2str(rep.mag_offset[1]) + L"," + int2str(rep.mag_offset[2]) + L"},\t\t// mag_offset");
+	debug(L"\t{");
+	for (int i = 0; i < 3; ++i)
+		debug(L"\t\t{" + int2str(rep.mag_matrix[i][0]) + L"," + int2str(rep.mag_matrix[i][1]) + L"," + int2str(rep.mag_matrix[i][2]) + L"},");
+	debug(L"\t}");
+
 	// send it back to the dongle
 	rep.report_id = DONGLE_SETTINGS_REPORT_ID;
 	_dongle.SetFeatureReport(rep);
+}
+
+void MagCalibDialog::GenerateEllipsoid()
+{
+	srand(GetTickCount());
+
+	ClearSamples();
+
+	// make a scale/rotate/translate matrix
+	D3DXMATRIX scale, rotate, translate, srt;
+	D3DXMatrixScaling(&scale, 0.2f + float(rand()) / RAND_MAX * 2,
+								0.2f + float(rand()) / RAND_MAX * 2,
+								0.2f + float(rand()) / RAND_MAX * 2);
+	D3DXMatrixRotationYawPitchRoll(&rotate, float(M_PI * rand() / RAND_MAX),
+											float(M_PI * rand() / RAND_MAX),
+											float(M_PI * rand() / RAND_MAX));
+	D3DXMatrixTranslation(&translate,	float(rand() % 1000 - 500),
+										float(rand() % 1000 - 500),
+										float(rand() % 1000 - 500));
+
+	srt = scale * rotate * translate;
+
+	for (int i = 0; i < 5000; ++i)
+	{
+		// generate a random vector and normalize it, which places it on a sphere
+		D3DXVECTOR3 v;
+		v.x = float(rand() % 400 - 200);
+		v.y = float(rand() % 400 - 200);
+		v.z = float(rand() % 400 - 200);
+
+		float m = sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+		v.x = v.x / m * 200;
+		v.y = v.y / m * 200;
+		v.z = v.z / m * 200;
+
+		D3DXVECTOR4 vout;
+		D3DXVec3Transform(&vout, &v, &srt);
+
+		Point<int16_t> p(int16_t(vout.x), int16_t(vout.y), int16_t(vout.z));
+
+		// add the vector
+		if (_mag_set.insert(p).second)
+		{
+			// make the 3D represantations
+			AddPoint(p, true);
+		}
+	}
+
+	CalcEllipsoidFit();
 }
 
 void MagCalibDialog::CalcEllipsoidFit()
