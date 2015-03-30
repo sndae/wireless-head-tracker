@@ -551,9 +551,9 @@ void MagCalibDialog::GenerateEllipsoid()
 	D3DXMatrixScaling(&scale, 0.2f + float(rand()) / RAND_MAX * 2,
 								0.2f + float(rand()) / RAND_MAX * 2,
 								0.2f + float(rand()) / RAND_MAX * 2);
-	D3DXMatrixRotationYawPitchRoll(&rotate, float(M_PI * rand() / RAND_MAX),
-											float(M_PI * rand() / RAND_MAX),
-											float(M_PI * rand() / RAND_MAX));
+	D3DXMatrixRotationYawPitchRoll(&rotate, float(M_PI * rand() / RAND_MAX * 2 - M_PI),
+											float(M_PI * rand() / RAND_MAX * 2 - M_PI),
+											float(M_PI * rand() / RAND_MAX * 2 - M_PI));
 	D3DXMatrixTranslation(&translate,	float(rand() % 1000 - 500),
 										float(rand() % 1000 - 500),
 										float(rand() % 1000 - 500));
@@ -568,15 +568,15 @@ void MagCalibDialog::GenerateEllipsoid()
 		v.y = float(rand() % 400 - 200);
 		v.z = float(rand() % 400 - 200);
 
-		float m = sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
-		v.x = v.x / m * 200;
-		v.y = v.y / m * 200;
-		v.z = v.z / m * 200;
+		float m = sqrt(v.x*v.x + v.y*v.y + v.z*v.z) / 200;
+		v.x = v.x / m;
+		v.y = v.y / m;
+		v.z = v.z / m;
 
 		D3DXVECTOR4 vout;
 		D3DXVec3Transform(&vout, &v, &srt);
 
-		Point<int16_t> p(int16_t(vout.x), int16_t(vout.y), int16_t(vout.z));
+		Point<int16_t> p(int16_t(vout.x + 0.5), int16_t(vout.y + 0.5), int16_t(vout.z + 0.5));
 
 		// add the vector
 		if (_mag_set.insert(p).second)
