@@ -24,7 +24,7 @@ The PC software needed to communicate with the flash programmer, the flash image
 
 https://docs.google.com/uc?authuser=0&id=0B5QsMM8GX6NEYkViVDhmSGFGN3c&export=download
 
-Unzip this file into a new folder. The ZIP contains two folders: flash and config.
+Unzip this file into a new folder. The ZIP contains two folders: *flash* and *config*.
 
 folder: *flash\*
  * *nrfburn.exe* - the software which communicates with the programmer
@@ -37,7 +37,7 @@ folder: *config\*
  * *WHTConfig.exe* - the WHT configuration program (not needed for this guide)
  * *WHTConfig.ini* - the WHT configuration settings (not needed for this guide)
 
- We will deal with the flash folder in this tutorial. 
+We will deal with the flash folder in this tutorial. 
  
 === Tracker flashing details ===
 
@@ -71,4 +71,4 @@ folder: *config\*
  # Remove the USB dongle from the programmer
  # You're done!
 
-After the dongle and tracker have been flashed you will need to recalibrate and reconfigure the devices with the WHTConfig.exe program. Go here for calibration instructions.
+After the dongle and tracker have been flashed you will need to recalibrate and reconfigure the devices with the WHTConfig.exe program.
