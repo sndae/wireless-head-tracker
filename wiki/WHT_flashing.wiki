@@ -4,17 +4,17 @@
 
 === Flashing background information ===
 
-The WHT consists of two separate devices: the first device is the tracker which contains the movement sensor (MPU-6050 or MPU-9150) and a microcontroller (fancy word for low power computer) with an 2.4GHz radio transmitter and receiver. The second device is a dongle with USB connector, another microcontroller and a 2.4GHz radio. This USB dongle receives the movement sensor information from the tracker, then processes it and sends it over USB to the PC.
+The WHT consists of two separate devices: the first device is the tracker which contains the movement sensor (MPU-6050 or MPU-9150) and a microcontroller (just fancy word for a low power computer) with a 2.4GHz radio transmitter and receiver. The second device is a dongle with a USB plug, another microcontroller and a 2.4GHz radio. This USB dongle receives the movement sensor information from the tracker, then processes it and sends it over USB to the PC.
 
 http://wireless-head-tracker.googlecode.com/svn/wiki/images/wht_dongle_and_tracker.jpg
 
 As I've mentioned, the microcontrollers on these two devices are essentially small computers and they contain a little bit of flash memory (16KB each). This flash memory stores the software these small computers are running. Software running on microcontrollers is often called firmware but in essence it is not much different from software running on your PC or smartphone. And just like any software, the firmware on the tracker and the dongle can be updated to fix bugs or add new features. This update process is called firmware flashing.
 
-In order to flash the two devices, you need to have another device called a flash programmer. It connects to the PC though a USB cable, and to the tracker through a cable or to the dongle by directly plugging it into the programmer. The programmer receives commands and data from the PC, then sends these commands to the microcontroller on the tracker or dongle which overwrites their flash memory.
+In order to flash the two devices, you need to have another device called a flash programmer. It connects to the PC though a USB cable, and to the tracker through another cable, or to the dongle by directly plugging it into the programmer. The programmer receives commands and data from the PC, then sends these commands to the microcontroller on the tracker or dongle which overwrites the program contained in their flash memory.
 
 The programmer with tracker flashing cable: http://wireless-head-tracker.googlecode.com/svn/wiki/images/programmer_and_tracker_cable.jpg
 
-The flash programmer does not need drivers, but you will need to wait a few minutes after plugging in the programmer for the first time for Windows to figure that out.
+The flash programmer doesn't need drivers, but you will need to wait a few minutes after plugging in the programmer for the first time for Windows to figure that out.
 
 During the flashing process, the tracker and the dongle need to be powered and they receive this power from the programmer. It is very important to remember that the tracker and dongle require different voltages to run correctly. The dongle needs 5V and the tracker needs 3.3V. The output voltage level of the programmer is selected with the red jumper. Powering the tracker with 5V will probably damage it beyond repair, so be careful and follow the instruction below to the letter.
 
@@ -24,7 +24,7 @@ The PC software needed to communicate with the flash programmer, the flash image
 
 https://docs.google.com/uc?authuser=0&id=0B5QsMM8GX6NEYkViVDhmSGFGN3c&export=download
 
-Unzip this file into a new folder. The ZIP contains the following files:
+Unzip this file into a new folder. The ZIP contains two folders: flash and config. It contains the following files:
 
  * *nrfburn.exe* - the software which communicates with the programmer
  * *flash_dongle.bat* - the windows batch file which calls *nrfburn.exe* with the required arguments to flash the dongle
@@ -33,6 +33,8 @@ Unzip this file into a new folder. The ZIP contains the following files:
  * *whtdngl.hex* - the dongle flash image
  * *WHTConfig.exe* - the WHT configuration program (not used in this guide)
 
+ We will deal with the flash folder in this tutorial. 
+ 
 === Tracker flashing details ===
 
  # Make sure you have downloaded and unzipped the WHT software package
