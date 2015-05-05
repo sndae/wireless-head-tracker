@@ -24,14 +24,18 @@ The PC software needed to communicate with the flash programmer, the flash image
 
 https://docs.google.com/uc?authuser=0&id=0B5QsMM8GX6NEYkViVDhmSGFGN3c&export=download
 
-Unzip this file into a new folder. The ZIP contains two folders: flash and config. It contains the following files:
+Unzip this file into a new folder. The ZIP contains two folders: flash and config.
 
+folder: *flash\*
  * *nrfburn.exe* - the software which communicates with the programmer
  * *flash_dongle.bat* - the windows batch file which calls *nrfburn.exe* with the required arguments to flash the dongle
  * *flash_tracker.bat* - the windows batch file which calls *nrfburn.exe* with the required arguments to flash the tracker
  * *tracker.hex* - the tracker flash image
  * *whtdngl.hex* - the dongle flash image
- * *WHTConfig.exe* - the WHT configuration program (not used in this guide)
+
+folder: *config\*
+ * *WHTConfig.exe* - the WHT configuration program (not needed for this guide)
+ * *WHTConfig.ini* - the WHT configuration settings (not needed for this guide)
 
  We will deal with the flash folder in this tutorial. 
  
