@@ -72,3 +72,6 @@ We will deal with the flash folder in this tutorial.
  # You're done!
 
 After the dongle and tracker have been flashed you will need to recalibrate and reconfigure the devices with the WHTConfig.exe program.
+
+Calibration and configuration instructions:
+http://youtu.be/GKqRHQjisI0
