@@ -22,7 +22,7 @@ During the flashing process, the tracker and the dongle need to be powered and t
 
 The PC software needed to communicate with the flash programmer, the flash images for the dongle and tracker and the WHT configuration program are all contained in the WHT software package which you can download from this link:
 
-https://docs.google.com/uc?authuser=0&id=0B5QsMM8GX6NEVDRfVm1EQ1ZOdnc&export=download
+https://docs.google.com/uc?authuser=0&id=0B5QsMM8GX6NEV01oVFdwOVRJS3M&export=download
 
 Unzip this file into a new folder. The ZIP contains two folders: *flash* and *config*.
 
